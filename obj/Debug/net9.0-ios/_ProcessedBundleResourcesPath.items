@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <BundleResource Include="Platforms\iOS\Resources\PrivacyInfo.xcprivacy" />
+    <BundleResource Include="C:\Users\CADDILAC\OneDrive\Documents\Contrator_Project\CraftConnect Mobile App\obj\Debug\net9.0-ios\resizetizer\sp\splash_00A36CE537AD4422B12E77F909B58F8455EBD93A5B92697AE89B337EACEC233F.png" />
+    <BundleResource Include="C:\Users\CADDILAC\OneDrive\Documents\Contrator_Project\CraftConnect Mobile App\obj\Debug\net9.0-ios\resizetizer\sp\splash_00A36CE537AD4422B12E77F909B58F8455EBD93A5B92697AE89B337EACEC233F@2x.png" />
+    <BundleResource Include="C:\Users\CADDILAC\OneDrive\Documents\Contrator_Project\CraftConnect Mobile App\obj\Debug\net9.0-ios\resizetizer\sp\splash_00A36CE537AD4422B12E77F909B58F8455EBD93A5B92697AE89B337EACEC233F@3x.png" />
+    <BundleResource Include="obj\Debug\net9.0-ios\resizetizer\f\FluentSystemIcons-Regular.ttf" />
+    <BundleResource Include="obj\Debug\net9.0-ios\resizetizer\f\FluentUI.cs" />
+    <BundleResource Include="obj\Debug\net9.0-ios\resizetizer\f\MauiMaterialAssets.ttf" />
+    <BundleResource Include="obj\Debug\net9.0-ios\resizetizer\f\OpenSans-Regular.ttf" />
+    <BundleResource Include="obj\Debug\net9.0-ios\resizetizer\f\OpenSans-Semibold.ttf" />
+    <BundleResource Include="obj\Debug\net9.0-ios\resizetizer\f\SegoeUI-Semibold.ttf" />
+  </ItemGroup>
+</Project>

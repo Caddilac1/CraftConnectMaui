@@ -1,0 +1,287 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:CraftConnect_Mobile_App"
+             xmlns:converters="clr-namespace:CraftConnect_Mobile_App.Converters"
+             x:Class="CraftConnect_Mobile_App.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <!-- Register all converters globally -->
+            <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+            <converters:StringNotEmptyConverter x:Key="StringNotEmptyConverter" />
+            <converters:StringEmptyConverter x:Key="StringEmptyConverter" />
+            <converters:PasswordIconConverter x:Key="PasswordIconConverter" />
+            <converters:PasswordTextConverter x:Key="PasswordTextConverter" />
+            <!-- ✅ NEW -->
+            <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
+            <converters:StringToInitialsConverter x:Key="StringToInitialsConverter" />
+            <converters:LastMessageTimeConverter x:Key="LastMessageTimeConverter" />
+            <converters:UnreadToVisibilityConverter x:Key="UnreadToVisibilityConverter" />
+            <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
+            <converters:MessageCountToVisibilityConverter x:Key="MessageCountToVisibilityConverter" />
+            <converters:IsGroupToIconConverter x:Key="IsGroupToIconConverter" />
+            <converters:IsMutedToIconConverter x:Key="IsMutedToIconConverter" />
+            <converters:IsPinnedToIconConverter x:Key="IsPinnedToIconConverter" />
+            <converters:LastMessagePreviewConverter x:Key="LastMessagePreviewConverter" />
+            <converters:TabSelectionConverter x:Key="TabSelectionConverter" />
+            <converters:OnlineStatusConverter x:Key="OnlineStatusConverter" />
+            <converters:MessageStatusConverter x:Key="MessageStatusConverter" />
+            <converters:FirstLetterConverter x:Key="FirstLetterConverter"/>
+            <converters:StringIsEmptyConverter x:Key="StringIsEmptyConverter"/>
+            <converters:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter"/>
+
+            <!-- WhatsApp-like Color Scheme -->
+            <!-- Primary Colors -->
+            <Color x:Key="WhatsAppPrimary">#075E54</Color>
+            <Color x:Key="WhatsAppSecondary">#128C7E</Color>
+            <Color x:Key="WhatsAppLightGreen">#25D366</Color>
+            <Color x:Key="WhatsAppLightGray">#ECE5DD</Color>
+            <Color x:Key="WhatsAppMessageIncoming">#FFFFFF</Color>
+            <Color x:Key="WhatsAppMessageOutgoing">#DCF8C6</Color>
+
+            <!-- UI Colors -->
+            <Color x:Key="PrimaryColor">#075E54</Color>
+            <Color x:Key="SecondaryColor">#128C7E</Color>
+            <Color x:Key="LightGreen">#25D366</Color>
+            <Color x:Key="LightGray">#ECE5DD</Color>
+            <Color x:Key="MediumGray">#757575</Color>
+            <Color x:Key="DarkGray">#1A1A1A</Color>
+            <Color x:Key="UnreadColor">#25D366</Color>
+            <Color x:Key="TabBarColor">#FFFFFF</Color>
+            <Color x:Key="TabBarIconActive">#075E54</Color>
+            <Color x:Key="TabBarIconInactive">#8E8E93</Color>
+            <Color x:Key="SearchBarBackground">#F0F2F5</Color>
+            <Color x:Key="BorderLight">#E0E0E0</Color>
+
+            <!-- Status Colors -->
+            <Color x:Key="OnlineStatus">#25D366</Color>
+            <Color x:Key="OfflineStatus">#8E8E93</Color>
+            <Color x:Key="AwayStatus">#FFA500</Color>
+
+            <!-- Chat Item Colors -->
+            <Color x:Key="ChatBackground">#FFFFFF</Color>
+            <Color x:Key="ChatNameUnread">#075E54</Color>
+            <Color x:Key="ChatNameRead">#1A1A1A</Color>
+            <Color x:Key="LastMessageUnread">#075E54</Color>
+            <Color x:Key="LastMessageRead">#8E8E93</Color>
+            <Color x:Key="TimeStampUnread">#25D366</Color>
+            <Color x:Key="TimeStampRead">#666666</Color>
+
+            <!-- Badge Colors -->
+            <Color x:Key="BadgeGreen">#25D366</Color>
+            <Color x:Key="BadgeRed">#FF3B30</Color>
+            <Color x:Key="BadgeOrange">#FF9500</Color>
+            <Color x:Key="BadgeBlue">#007AFF</Color>
+
+            <!-- Swipe Action Colors -->
+            <Color x:Key="SwipeArchive">#FF9500</Color>
+            <Color x:Key="SwipeDelete">#FF3B30</Color>
+            <Color x:Key="SwipePin">#007AFF</Color>
+            <Color x:Key="SwipeMute">#8E8E93</Color>
+
+            <!-- Original Blue & White Color Scheme (from GroupChatListPage) -->
+            <Color x:Key="PrimaryBlue">#007AFF</Color>
+            <Color x:Key="DarkBlue">#0051D5</Color>
+            <Color x:Key="LightBlue">#E3F2FD</Color>
+            <Color x:Key="BackgroundWhite">#FFFFFF</Color>
+            <Color x:Key="BorderColor">#E0E0E0</Color>
+            <Color x:Key="TextPrimary">#1A1A1A</Color>
+            <Color x:Key="TextSecondary">#666666</Color>
+
+            <!-- Original Color Palette -->
+            <Color x:Key="Primary">#007AFF</Color>
+            <Color x:Key="Secondary">#6C757D</Color>
+            <Color x:Key="Success">#28A745</Color>
+            <Color x:Key="Danger">#DC3545</Color>
+            <Color x:Key="Warning">#FFC107</Color>
+            <Color x:Key="Info">#17A2B8</Color>
+            <Color x:Key="Light">#F8F9FA</Color>
+            <Color x:Key="Dark">#343A40</Color>
+
+            <!-- Neutral Colors -->
+            <Color x:Key="White">#FFFFFF</Color>
+            <Color x:Key="Black">#000000</Color>
+            <Color x:Key="OffBlack">#1A1A1A</Color>
+
+            <!-- Gray Scale (Tailwind-inspired) -->
+            <Color x:Key="Gray50">#F9FAFB</Color>
+            <Color x:Key="Gray100">#F3F4F6</Color>
+            <Color x:Key="Gray200">#E5E7EB</Color>
+            <Color x:Key="Gray300">#D1D5DB</Color>
+            <Color x:Key="Gray400">#9CA3AF</Color>
+            <Color x:Key="Gray500">#6B7280</Color>
+            <Color x:Key="Gray600">#4B5563</Color>
+            <Color x:Key="Gray700">#374151</Color>
+            <Color x:Key="Gray800">#1F2937</Color>
+            <Color x:Key="Gray900">#111827</Color>
+
+            <!-- WhatsApp Color Palette (added from second file) -->
+            <Color x:Key="WhatsAppAccent">#25D366</Color>
+            <Color x:Key="WhatsAppLight">#DCF8C6</Color>
+            <Color x:Key="WhatsAppTeal">#128C7E</Color>
+            <Color x:Key="WhatsAppBlue">#34B7F1</Color>
+            <Color x:Key="WhatsAppBackground">#ECE5DD</Color>
+
+            <!-- Store page colors -->
+            <Color x:Key="StorePrimary">#6366F1</Color>
+            <Color x:Key="StoreAccent">#818CF8</Color>
+            <Color x:Key="StoreBackground">#F8F9FA</Color>
+
+            <!-- Font Sizes -->
+            <x:Double x:Key="FontSizeMicro">10</x:Double>
+            <x:Double x:Key="FontSizeSmall">12</x:Double>
+            <x:Double x:Key="FontSizeMedium">14</x:Double>
+            <x:Double x:Key="FontSizeLarge">16</x:Double>
+            <x:Double x:Key="FontSizeXLarge">18</x:Double>
+            <x:Double x:Key="FontSizeXXLarge">20</x:Double>
+            <x:Double x:Key="FontSizeTitle">22</x:Double>
+            <x:Double x:Key="FontSizeHeader">26</x:Double>
+
+            <!-- Common Thickness Values -->
+            <Thickness x:Key="DefaultPadding">16</Thickness>
+            <Thickness x:Key="SmallPadding">8</Thickness>
+            <Thickness x:Key="MediumPadding">12</Thickness>
+            <Thickness x:Key="LargePadding">24</Thickness>
+            <Thickness x:Key="ChatItemPadding">16,12</Thickness>
+            <Thickness x:Key="SearchBarPadding">12,8</Thickness>
+
+            <!-- Corner Radius Values -->
+            <CornerRadius x:Key="SmallCornerRadius">8</CornerRadius>
+            <CornerRadius x:Key="MediumCornerRadius">12</CornerRadius>
+            <CornerRadius x:Key="LargeCornerRadius">16</CornerRadius>
+            <CornerRadius x:Key="RoundCornerRadius">20</CornerRadius>
+            <CornerRadius x:Key="FullCornerRadius">28</CornerRadius>
+            <CornerRadius x:Key="BadgeCornerRadius">12</CornerRadius>
+            <CornerRadius x:Key="SearchBarCornerRadius">20</CornerRadius>
+
+            <!-- Font Styles -->
+            <Style TargetType="Label">
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="TextColor" Value="{StaticResource DarkGray}"/>
+            </Style>
+
+            <Style x:Key="HeaderLabel" TargetType="Label">
+                <Setter Property="FontSize" Value="{StaticResource FontSizeHeader}"/>
+                <Setter Property="FontAttributes" Value="Bold"/>
+                <Setter Property="TextColor" Value="White"/>
+            </Style>
+
+            <Style x:Key="TitleLabel" TargetType="Label">
+                <Setter Property="FontSize" Value="{StaticResource FontSizeTitle}"/>
+                <Setter Property="FontAttributes" Value="Bold"/>
+                <Setter Property="TextColor" Value="{StaticResource DarkGray}"/>
+            </Style>
+
+            <Style x:Key="ChatNameLabel" TargetType="Label">
+                <Setter Property="FontSize" Value="17"/>
+                <Setter Property="FontAttributes" Value="Bold"/>
+                <Setter Property="LineBreakMode" Value="TailTruncation"/>
+                <Setter Property="MaxLines" Value="1"/>
+            </Style>
+
+            <Style x:Key="LastMessageLabel" TargetType="Label">
+                <Setter Property="FontSize" Value="15"/>
+                <Setter Property="LineBreakMode" Value="TailTruncation"/>
+                <Setter Property="MaxLines" Value="1"/>
+            </Style>
+
+            <Style x:Key="TimeStampLabel" TargetType="Label">
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="HorizontalOptions" Value="End"/>
+            </Style>
+
+            <Style x:Key="UnreadBadgeLabel" TargetType="Label">
+                <Setter Property="FontSize" Value="11"/>
+                <Setter Property="FontAttributes" Value="Bold"/>
+                <Setter Property="TextColor" Value="White"/>
+                <Setter Property="HorizontalOptions" Value="Center"/>
+                <Setter Property="VerticalOptions" Value="Center"/>
+            </Style>
+
+            <!-- Border Styles -->
+            <Style x:Key="RoundBorder" TargetType="Border">
+                <Setter Property="StrokeThickness" Value="0"/>
+                <Setter Property="Padding" Value="{StaticResource SmallPadding}"/>
+            </Style>
+
+            <Style x:Key="ProfileImageBorder" TargetType="Border">
+                <Setter Property="WidthRequest" Value="56"/>
+                <Setter Property="HeightRequest" Value="56"/>
+                <Setter Property="StrokeThickness" Value="0"/>
+                <Setter Property="VerticalOptions" Value="Center"/>
+                <Setter Property="StrokeShape">
+                    <RoundRectangle CornerRadius="28"/>
+                </Setter>
+            </Style>
+
+            <Style x:Key="OnlineStatusBorder" TargetType="Border">
+                <Setter Property="WidthRequest" Value="14"/>
+                <Setter Property="HeightRequest" Value="14"/>
+                <Setter Property="StrokeThickness" Value="2"/>
+                <Setter Property="Stroke" Value="White"/>
+                <Setter Property="HorizontalOptions" Value="End"/>
+                <Setter Property="VerticalOptions" Value="End"/>
+                <Setter Property="StrokeShape">
+                    <RoundRectangle CornerRadius="7"/>
+                </Setter>
+            </Style>
+
+            <Style x:Key="UnreadBadgeBorder" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="{StaticResource BadgeGreen}"/>
+                <Setter Property="Padding" Value="6,3"/>
+                <Setter Property="MinimumWidthRequest" Value="22"/>
+                <Setter Property="HeightRequest" Value="22"/>
+                <Setter Property="StrokeThickness" Value="0"/>
+                <Setter Property="HorizontalOptions" Value="End"/>
+                <Setter Property="StrokeShape">
+                    <RoundRectangle CornerRadius="11"/>
+                </Setter>
+            </Style>
+
+            <Style x:Key="FloatingActionButton" TargetType="Border">
+                <Setter Property="WidthRequest" Value="60"/>
+                <Setter Property="HeightRequest" Value="60"/>
+                <Setter Property="StrokeThickness" Value="0"/>
+                <Setter Property="BackgroundColor" Value="{StaticResource LightGreen}"/>
+                <Setter Property="StrokeShape">
+                    <RoundRectangle CornerRadius="30"/>
+                </Setter>
+                <Setter Property="Shadow">
+                    <Shadow Brush="{StaticResource LightGreen}"
+                            Offset="0,4"
+                            Radius="12"
+                            Opacity="0.4"/>
+                </Setter>
+            </Style>
+
+            <Style x:Key="SearchBarBorder" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="{StaticResource SearchBarBackground}"/>
+                <Setter Property="StrokeThickness" Value="0"/>
+                <Setter Property="Padding" Value="{StaticResource SearchBarPadding}"/>
+                <Setter Property="HeightRequest" Value="40"/>
+                <Setter Property="StrokeShape">
+                    <RoundRectangle CornerRadius="{StaticResource SearchBarCornerRadius}"/>
+                </Setter>
+            </Style>
+
+            <!-- Tab Bar Styles -->
+            <Style x:Key="TabBarItem" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="Transparent"/>
+                <Setter Property="StrokeThickness" Value="0"/>
+                <Setter Property="VerticalOptions" Value="Fill"/>
+                <Setter Property="HorizontalOptions" Value="Fill"/>
+            </Style>
+
+            <Style x:Key="TabIconLabel" TargetType="Label">
+                <Setter Property="FontSize" Value="20"/>
+                <Setter Property="HorizontalOptions" Value="Center"/>
+            </Style>
+
+            <Style x:Key="TabTextLabel" TargetType="Label">
+                <Setter Property="FontSize" Value="10"/>
+                <Setter Property="HorizontalOptions" Value="Center"/>
+            </Style>
+
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

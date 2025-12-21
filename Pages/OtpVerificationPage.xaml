@@ -1,0 +1,278 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CraftConnect_Mobile_App.Pages.OtpVerificationPage"
+             xmlns:pagemodels="clr-namespace:CraftConnect_Mobile_App.PageModels"
+             x:DataType="pagemodels:OtpVerificationPageModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{StaticResource Primary}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="0.35*" />
+            <RowDefinition Height="0.65*" />
+        </Grid.RowDefinitions>
+
+        <BoxView Grid.Row="0" Color="{StaticResource Primary}" />
+        <BoxView Grid.Row="1" Color="{StaticResource White}" />
+
+        <ScrollView Grid.RowSpan="2">
+            <VerticalStackLayout 
+                Padding="30"
+                Spacing="20"
+                VerticalOptions="Center">
+
+                <!-- Header -->
+                <VerticalStackLayout 
+                    Spacing="16"
+                    HorizontalOptions="Center"
+                    Margin="0,0,0,20">
+
+                    <Frame 
+                        BackgroundColor="{StaticResource White}"
+                        CornerRadius="16"
+                        HasShadow="True"
+                        HeightRequest="70"
+                        WidthRequest="70"
+                        Padding="0"
+                        HorizontalOptions="Center">
+                        <Label
+                            Text="??"
+                            FontSize="40"
+                            HorizontalOptions="Center"
+                            VerticalOptions="Center"/>
+                    </Frame>
+
+                    <VerticalStackLayout Spacing="8">
+                        <Label 
+                            Text="Verify Your Email"
+                            FontSize="28"
+                            FontAttributes="Bold"
+                            HorizontalOptions="Center"
+                            TextColor="{StaticResource White}"/>
+
+                        <Label 
+                            Text="Enter the code we sent to your email"
+                            FontSize="14"
+                            TextColor="{StaticResource White}"
+                            HorizontalOptions="Center"
+                            Opacity="0.9"/>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+
+                <!-- OTP Card -->
+                <Frame 
+                    BackgroundColor="{StaticResource White}"
+                    CornerRadius="20"
+                    HasShadow="True"
+                    Padding="28"
+                    Margin="0,0,0,20">
+
+                    <VerticalStackLayout Spacing="24">
+
+                        <!-- Email Display -->
+                        <VerticalStackLayout Spacing="8">
+                            <Label 
+                                Text="Code sent to:"
+                                FontSize="14"
+                                TextColor="{StaticResource Gray500}"
+                                HorizontalOptions="Center"/>
+
+                            <Label 
+                                Text="{Binding Email}"
+                                FontSize="16"
+                                FontAttributes="Bold"
+                                TextColor="{StaticResource OffBlack}"
+                                HorizontalOptions="Center"/>
+                        </VerticalStackLayout>
+
+                        <!-- OTP Input -->
+                        <VerticalStackLayout Spacing="12">
+                            <Label 
+                                Text="Enter OTP Code"
+                                FontSize="13"
+                                FontAttributes="Bold"
+                                TextColor="{StaticResource OffBlack}"
+                                HorizontalOptions="Center"/>
+
+                            <Frame 
+                                BackgroundColor="#FEFEFE"
+                                BorderColor="{StaticResource Gray200}"
+                                CornerRadius="12"
+                                Padding="0"
+                                HasShadow="False">
+                                <Entry 
+                                    x:Name="OtpEntry"
+                                    Placeholder="000000"
+                                    Text="{Binding OtpCode}"
+                                    Keyboard="Numeric"
+                                    MaxLength="6"
+                                    TextColor="{StaticResource OffBlack}"
+                                    PlaceholderColor="{StaticResource Gray400}"
+                                    FontSize="24"
+                                    FontAttributes="Bold"
+                                    HorizontalTextAlignment="Center"
+                                    Margin="16,20"/>
+                            </Frame>
+
+                            <Label 
+                                Text="Enter the 6-digit code"
+                                FontSize="12"
+                                TextColor="{StaticResource Gray500}"
+                                HorizontalOptions="Center"/>
+                        </VerticalStackLayout>
+
+                        <!-- Timer / Resend -->
+                        <HorizontalStackLayout 
+                            HorizontalOptions="Center"
+                            Spacing="6">
+
+                            <Label 
+                                Text="{Binding TimerText}"
+                                FontSize="14"
+                                TextColor="{StaticResource Gray500}"
+                                IsVisible="{Binding CanResend, Converter={StaticResource InvertedBoolConverter}}"/>
+
+                            <Label 
+                                Text="Didn't receive code?"
+                                FontSize="14"
+                                TextColor="{StaticResource Gray500}"
+                                IsVisible="{Binding CanResend}"/>
+
+                            <Label 
+                                Text="Resend OTP"
+                                FontSize="14"
+                                FontAttributes="Bold"
+                                TextColor="{StaticResource Primary}"
+                                IsVisible="{Binding CanResend}">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer 
+                                        Command="{Binding ResendOtpCommand}"/>
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </HorizontalStackLayout>
+
+                        <!-- Messages -->
+                        <Frame 
+                            IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyConverter}}"
+                            BackgroundColor="#FEE2E2"
+                            BorderColor="#FCA5A5"
+                            CornerRadius="10"
+                            Padding="14,12"
+                            HasShadow="False">
+                            <Label 
+                                Text="{Binding ErrorMessage}"
+                                TextColor="#991B1B"
+                                FontSize="13"
+                                LineBreakMode="WordWrap"/>
+                        </Frame>
+
+                        <Frame 
+                            IsVisible="{Binding SuccessMessage, Converter={StaticResource StringNotEmptyConverter}}"
+                            BackgroundColor="#D1FAE5"
+                            BorderColor="#6EE7B7"
+                            CornerRadius="10"
+                            Padding="14,12"
+                            HasShadow="False">
+                            <Label 
+                                Text="{Binding SuccessMessage}"
+                                TextColor="#065F46"
+                                FontSize="13"
+                                LineBreakMode="WordWrap"/>
+                        </Frame>
+
+                        <Frame 
+                            IsVisible="{Binding InfoMessage, Converter={StaticResource StringNotEmptyConverter}}"
+                            BackgroundColor="#DBEAFE"
+                            BorderColor="#93C5FD"
+                            CornerRadius="10"
+                            Padding="14,12"
+                            HasShadow="False">
+                            <Label 
+                                Text="{Binding InfoMessage}"
+                                TextColor="#1E40AF"
+                                FontSize="13"
+                                LineBreakMode="WordWrap"/>
+                        </Frame>
+
+                        <!-- Verify Button -->
+                        <Button 
+                            Text="Verify &amp; Continue"
+                            Command="{Binding VerifyOtpCommand}"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="White"
+                            CornerRadius="12"
+                            HeightRequest="56"
+                            FontSize="16"
+                            FontAttributes="Bold"
+                            Margin="0,8,0,0">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" 
+                                             Binding="{Binding IsBusy}" 
+                                             Value="True">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                    <Setter Property="Opacity" Value="0.6"/>
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+
+                        <!-- Switch to Password Option -->
+                        <Button 
+                            Text="Use Password Instead"
+                            Command="{Binding SwitchToPasswordCommand}"
+                            BackgroundColor="White"
+                            TextColor="{StaticResource Primary}"
+                            BorderColor="{StaticResource Gray200}"
+                            BorderWidth="2"
+                            CornerRadius="12"
+                            HeightRequest="48"
+                            FontSize="15"
+                            FontAttributes="Bold"
+                            IsVisible="{Binding HasPasswordOption}">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" 
+                                             Binding="{Binding IsBusy}" 
+                                             Value="True">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                    <Setter Property="Opacity" Value="0.6"/>
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+
+                        <!-- Loading -->
+                        <ActivityIndicator 
+                            IsRunning="{Binding IsBusy}"
+                            IsVisible="{Binding IsBusy}"
+                            Color="{StaticResource Primary}"
+                            HorizontalOptions="Center"
+                            HeightRequest="24"
+                            WidthRequest="24"/>
+
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Back to Login -->
+                <HorizontalStackLayout 
+                    HorizontalOptions="Center"
+                    Spacing="6">
+
+                    <Label 
+                        Text="? Back to"
+                        FontSize="15"
+                        TextColor="{StaticResource Gray500}"/>
+
+                    <Label 
+                        Text="Login"
+                        FontSize="15"
+                        FontAttributes="Bold"
+                        TextColor="{StaticResource Primary}">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer 
+                                Command="{Binding BackToLoginCommand}"/>
+                        </Label.GestureRecognizers>
+                    </Label>
+                </HorizontalStackLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

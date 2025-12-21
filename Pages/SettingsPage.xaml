@@ -1,0 +1,418 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CraftConnect_Mobile_App.Pages.SettingsPage"
+             Title="Settings"
+             BackgroundColor="{StaticResource Gray50}">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+
+            <Style x:Key="SectionHeaderStyle" TargetType="Label">
+                <Setter Property="TextColor" Value="{StaticResource Gray400}"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}"/>
+                <Setter Property="FontAttributes" Value="Bold"/>
+                <Setter Property="Margin" Value="20,20,20,10"/>
+                <Setter Property="TextTransform" Value="Uppercase"/>
+            </Style>
+
+            <Style x:Key="SettingItemStyle" TargetType="Frame">
+                <Setter Property="BackgroundColor" Value="{StaticResource White}"/>
+                <Setter Property="CornerRadius" Value="12"/>
+                <Setter Property="Padding" Value="16"/>
+                <Setter Property="Margin" Value="16,4"/>
+                <Setter Property="HasShadow" Value="False"/>
+                <Setter Property="BorderColor" Value="{StaticResource BorderLight}"/>
+            </Style>
+
+            <Style x:Key="SettingTitleStyle" TargetType="Label">
+                <Setter Property="TextColor" Value="{StaticResource TextPrimary}"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSizeLarge}"/>
+                <Setter Property="FontAttributes" Value="Bold"/>
+            </Style>
+
+            <Style x:Key="SettingDescriptionStyle" TargetType="Label">
+                <Setter Property="TextColor" Value="{StaticResource TextSecondary}"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSizeMedium}"/>
+                <Setter Property="Margin" Value="0,4,0,0"/>
+            </Style>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="8" Padding="0,10">
+
+            <!-- Profile Section -->
+            <Label Text="PROFILE" Style="{StaticResource SectionHeaderStyle}"/>
+
+            <Frame Style="{StaticResource SettingItemStyle}">
+                <Grid ColumnDefinitions="60,*,Auto" ColumnSpacing="12">
+                    <Frame Grid.Column="0" 
+                           WidthRequest="60" 
+                           HeightRequest="60" 
+                           CornerRadius="30" 
+                           Padding="0"
+                           IsClippedToBounds="True"
+                           BackgroundColor="{StaticResource Gray200}">
+                        <Image x:Name="ProfileImage"
+                               Source="dotnet_bot.png"
+                               Aspect="AspectFill"/>
+                    </Frame>
+
+                    <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                        <Label x:Name="UserNameLabel" 
+                               Text="John Doe" 
+                               Style="{StaticResource SettingTitleStyle}"/>
+                        <Label x:Name="UserEmailLabel" 
+                               Text="john.doe@example.com" 
+                               Style="{StaticResource SettingDescriptionStyle}"/>
+                        <Label x:Name="UserRoleLabel" 
+                               Text="Artisan" 
+                               TextColor="{StaticResource WhatsAppLightGreen}"
+                               FontSize="{StaticResource FontSizeSmall}"
+                               FontAttributes="Bold"
+                               Margin="0,4,0,0"/>
+                    </VerticalStackLayout>
+
+                    <ImageButton Grid.Column="2"
+                                 Source="chevron_right.png"
+                                 WidthRequest="24"
+                                 HeightRequest="24"
+                                 VerticalOptions="Center"
+                                 Clicked="OnEditProfileClicked"/>
+                </Grid>
+            </Frame>
+
+            <!-- Account Settings -->
+            <Label Text="ACCOUNT" Style="{StaticResource SectionHeaderStyle}"/>
+
+            <Frame Style="{StaticResource SettingItemStyle}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                        <Label Text="Email Address" Style="{StaticResource SettingTitleStyle}"/>
+                        <Label x:Name="EmailLabel" 
+                               Text="john.doe@example.com" 
+                               Style="{StaticResource SettingDescriptionStyle}"/>
+                    </VerticalStackLayout>
+                    <ImageButton Grid.Column="1"
+                                 Source="edit.png"
+                                 WidthRequest="24"
+                                 HeightRequest="24"
+                                 VerticalOptions="Center"
+                                 Clicked="OnEditEmailClicked"/>
+                </Grid>
+            </Frame>
+
+            <Frame Style="{StaticResource SettingItemStyle}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                        <Label Text="Phone Number" Style="{StaticResource SettingTitleStyle}"/>
+                        <Label x:Name="PhoneLabel" 
+                               Text="+233 24 123 4567" 
+                               Style="{StaticResource SettingDescriptionStyle}"/>
+                    </VerticalStackLayout>
+                    <ImageButton Grid.Column="1"
+                                 Source="edit.png"
+                                 WidthRequest="24"
+                                 HeightRequest="24"
+                                 VerticalOptions="Center"
+                                 Clicked="OnEditPhoneClicked"/>
+                </Grid>
+            </Frame>
+
+            <Frame Style="{StaticResource SettingItemStyle}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <Label Text="Change Password" 
+                           Style="{StaticResource SettingTitleStyle}"
+                           VerticalOptions="Center"/>
+                    <ImageButton Grid.Column="1"
+                                 Source="chevron_right.png"
+                                 WidthRequest="24"
+                                 HeightRequest="24"
+                                 VerticalOptions="Center"
+                                 Clicked="OnChangePasswordClicked"/>
+                </Grid>
+            </Frame>
+
+            <!-- Artisan-Specific Settings (Visibility controlled in code-behind) -->
+            <Label x:Name="ArtisanSectionHeader" 
+                   Text="ARTISAN PROFILE" 
+                   Style="{StaticResource SectionHeaderStyle}"
+                   IsVisible="False"/>
+
+            <Frame x:Name="BusinessProfileFrame" 
+                   Style="{StaticResource SettingItemStyle}"
+                   IsVisible="False">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                        <Label Text="Business Profile" Style="{StaticResource SettingTitleStyle}"/>
+                        <Label x:Name="BusinessNameLabel" 
+                               Text="Artisan Services Ltd." 
+                               Style="{StaticResource SettingDescriptionStyle}"/>
+                    </VerticalStackLayout>
+                    <ImageButton Grid.Column="1"
+                                 Source="chevron_right.png"
+                                 WidthRequest="24"
+                                 HeightRequest="24"
+                                 VerticalOptions="Center"
+                                 Clicked="OnEditBusinessClicked"/>
+                </Grid>
+            </Frame>
+
+            <Frame x:Name="SpecializationFrame" 
+                   Style="{StaticResource SettingItemStyle}"
+                   IsVisible="False">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                        <Label Text="Specialization" Style="{StaticResource SettingTitleStyle}"/>
+                        <Label x:Name="SpecializationLabel" 
+                               Text="Carpentry, Plumbing" 
+                               Style="{StaticResource SettingDescriptionStyle}"/>
+                    </VerticalStackLayout>
+                    <ImageButton Grid.Column="1"
+                                 Source="edit.png"
+                                 WidthRequest="24"
+                                 HeightRequest="24"
+                                 VerticalOptions="Center"
+                                 Clicked="OnEditSpecializationClicked"/>
+                </Grid>
+            </Frame>
+
+            <Frame x:Name="AvailabilityFrame" 
+                   Style="{StaticResource SettingItemStyle}"
+                   IsVisible="False">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                        <Label Text="Availability Status" Style="{StaticResource SettingTitleStyle}"/>
+                        <Label x:Name="AvailabilityLabel" 
+                               Text="Available" 
+                               TextColor="{StaticResource AccentColor}"
+                               Style="{StaticResource SettingDescriptionStyle}"/>
+                    </VerticalStackLayout>
+                    <Switch x:Name="AvailabilitySwitch"
+                            Grid.Column="1"
+                            OnColor="{StaticResource WhatsAppLightGreen}"
+                            ThumbColor="White"
+                            IsToggled="True"
+                            Toggled="OnAvailabilityToggled"/>
+                </Grid>
+            </Frame>
+
+            <!-- Admin-Specific Settings -->
+            <Label x:Name="AdminSectionHeader" 
+                   Text="ADMINISTRATION" 
+                   Style="{StaticResource SectionHeaderStyle}"
+                   IsVisible="False"/>
+
+            <Frame x:Name="ManageUsersFrame" 
+                   Style="{StaticResource SettingItemStyle}"
+                   IsVisible="False">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <Label Text="Manage Users" 
+                           Style="{StaticResource SettingTitleStyle}"
+                           VerticalOptions="Center"/>
+                    <ImageButton Grid.Column="1"
+                                 Source="chevron_right.png"
+                                 WidthRequest="24"
+                                 HeightRequest="24"
+                                 VerticalOptions="Center"
+                                 Clicked="OnManageUsersClicked"/>
+                </Grid>
+            </Frame>
+
+            <Frame x:Name="SystemReportsFrame" 
+                   Style="{StaticResource SettingItemStyle}"
+                   IsVisible="False">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <Label Text="View Reports" 
+                           Style="{StaticResource SettingTitleStyle}"
+                           VerticalOptions="Center"/>
+                    <ImageButton Grid.Column="1"
+                                 Source="chevron_right.png"
+                                 WidthRequest="24"
+                                 HeightRequest="24"
+                                 VerticalOptions="Center"
+                                 Clicked="OnViewReportsClicked"/>
+                </Grid>
+            </Frame>
+
+            <Frame x:Name="VerificationFrame" 
+                   Style="{StaticResource SettingItemStyle}"
+                   IsVisible="False">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <Label Text="Artisan Verifications" 
+                           Style="{StaticResource SettingTitleStyle}"
+                           VerticalOptions="Center"/>
+                    <ImageButton Grid.Column="1"
+                                 Source="chevron_right.png"
+                                 WidthRequest="24"
+                                 HeightRequest="24"
+                                 VerticalOptions="Center"
+                                 Clicked="OnVerificationsClicked"/>
+                </Grid>
+            </Frame>
+
+            <!-- Preferences -->
+            <Label Text="PREFERENCES" Style="{StaticResource SectionHeaderStyle}"/>
+
+            <Frame Style="{StaticResource SettingItemStyle}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                        <Label Text="Push Notifications" Style="{StaticResource SettingTitleStyle}"/>
+                        <Label Text="Receive updates and alerts" 
+                               Style="{StaticResource SettingDescriptionStyle}"/>
+                    </VerticalStackLayout>
+                    <Switch x:Name="NotificationsSwitch"
+                            Grid.Column="1"
+                            OnColor="{StaticResource WhatsAppLightGreen}"
+                            ThumbColor="White"
+                            IsToggled="True"
+                            Toggled="OnNotificationsToggled"/>
+                </Grid>
+            </Frame>
+
+            <Frame Style="{StaticResource SettingItemStyle}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                        <Label Text="Email Notifications" Style="{StaticResource SettingTitleStyle}"/>
+                        <Label Text="Get updates via email" 
+                               Style="{StaticResource SettingDescriptionStyle}"/>
+                    </VerticalStackLayout>
+                    <Switch x:Name="EmailNotificationsSwitch"
+                            Grid.Column="1"
+                            OnColor="{StaticResource WhatsAppLightGreen}"
+                            ThumbColor="White"
+                            IsToggled="True"
+                            Toggled="OnEmailNotificationsToggled"/>
+                </Grid>
+            </Frame>
+
+            <Frame Style="{StaticResource SettingItemStyle}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <Label Text="Language" 
+                           Style="{StaticResource SettingTitleStyle}"
+                           VerticalOptions="Center"/>
+                    <HorizontalStackLayout Grid.Column="1" Spacing="8">
+                        <Label Text="English" 
+                               TextColor="{StaticResource TextSecondary}"
+                               VerticalOptions="Center"
+                               FontSize="{StaticResource FontSizeMedium}"/>
+                        <ImageButton Source="chevron_right.png"
+                                     WidthRequest="24"
+                                     HeightRequest="24"
+                                     VerticalOptions="Center"
+                                     Clicked="OnLanguageClicked"/>
+                    </HorizontalStackLayout>
+                </Grid>
+            </Frame>
+
+            <!-- Support & Legal -->
+            <Label Text="SUPPORT &amp; LEGAL" Style="{StaticResource SectionHeaderStyle}"/>
+
+            <Frame Style="{StaticResource SettingItemStyle}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <Label Text="Help &amp; Support" 
+                           Style="{StaticResource SettingTitleStyle}"
+                           VerticalOptions="Center"/>
+                    <ImageButton Grid.Column="1"
+                                 Source="chevron_right.png"
+                                 WidthRequest="24"
+                                 HeightRequest="24"
+                                 VerticalOptions="Center"
+                                 Clicked="OnHelpClicked"/>
+                </Grid>
+            </Frame>
+
+            <Frame Style="{StaticResource SettingItemStyle}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <Label Text="Terms &amp; Conditions" 
+                           Style="{StaticResource SettingTitleStyle}"
+                           VerticalOptions="Center"/>
+                    <ImageButton Grid.Column="1"
+                                 Source="chevron_right.png"
+                                 WidthRequest="24"
+                                 HeightRequest="24"
+                                 VerticalOptions="Center"
+                                 Clicked="OnTermsClicked"/>
+                </Grid>
+            </Frame>
+
+            <Frame Style="{StaticResource SettingItemStyle}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <Label Text="Privacy Policy" 
+                           Style="{StaticResource SettingTitleStyle}"
+                           VerticalOptions="Center"/>
+                    <ImageButton Grid.Column="1"
+                                 Source="chevron_right.png"
+                                 WidthRequest="24"
+                                 HeightRequest="24"
+                                 VerticalOptions="Center"
+                                 Clicked="OnPrivacyClicked"/>
+                </Grid>
+            </Frame>
+
+            <Frame Style="{StaticResource SettingItemStyle}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <Label Text="About" 
+                           Style="{StaticResource SettingTitleStyle}"
+                           VerticalOptions="Center"/>
+                    <HorizontalStackLayout Grid.Column="1" Spacing="8">
+                        <Label Text="v1.0.0" 
+                               TextColor="{StaticResource Gray400}"
+                               VerticalOptions="Center"
+                               FontSize="14"/>
+                        <ImageButton Source="chevron_right.png"
+                                     WidthRequest="24"
+                                     HeightRequest="24"
+                                     VerticalOptions="Center"
+                                     Clicked="OnAboutClicked"/>
+                    </HorizontalStackLayout>
+                </Grid>
+            </Frame>
+
+            <!-- Danger Zone -->
+            <Label Text="ACCOUNT ACTIONS" Style="{StaticResource SectionHeaderStyle}"/>
+
+            <Frame Style="{StaticResource SettingItemStyle}" 
+                   BorderColor="{StaticResource Danger}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <Label Text="Logout" 
+                           TextColor="{StaticResource Danger}"
+                           FontSize="{StaticResource FontSizeLarge}"
+                           FontAttributes="Bold"
+                           VerticalOptions="Center"/>
+                    <ImageButton Grid.Column="1"
+                                 Source="logout.png"
+                                 WidthRequest="24"
+                                 HeightRequest="24"
+                                 VerticalOptions="Center"
+                                 Clicked="OnLogoutClicked"/>
+                </Grid>
+            </Frame>
+
+            <Frame Style="{StaticResource SettingItemStyle}" 
+                   BorderColor="{StaticResource Danger}"
+                   Margin="16,4,16,20">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                        <Label Text="Delete Account" 
+                               TextColor="{StaticResource Danger}"
+                               FontSize="{StaticResource FontSizeLarge}"
+                               FontAttributes="Bold"/>
+                        <Label Text="Permanently delete your account and data" 
+                               TextColor="{StaticResource Danger}"
+                               FontSize="{StaticResource FontSizeSmall}"
+                               Margin="0,4,0,0"/>
+                    </VerticalStackLayout>
+                    <ImageButton Grid.Column="1"
+                                 Source="trash.png"
+                                 WidthRequest="24"
+                                 HeightRequest="24"
+                                 VerticalOptions="Center"
+                                 Clicked="OnDeleteAccountClicked"/>
+                </Grid>
+            </Frame>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

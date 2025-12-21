@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:CraftConnect_Mobile_App.PageModels"
+             xmlns:models="clr-namespace:CraftConnect_Mobile_App.Models"
+             xmlns:converters="clr-namespace:CraftConnect_Mobile_App.Converters"
+             xmlns:controls="clr-namespace:CraftConnect_Mobile_App.Controls"
+             x:Class="CraftConnect_Mobile_App.Pages.GroupChatListPage"
+             x:DataType="vm:GroupChatListPageModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#FFFFFF">
+
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="0" Margin="0">
+
+        <!-- Premium Header - Edge to edge -->
+        <Grid Grid.Row="0" Padding="16,48,16,16" BackgroundColor="#FFFFFF">
+            <Label Text="CraftConnect"
+                   FontSize="28"
+                   FontAttributes="Bold"
+                   TextColor="#000000"
+                   VerticalOptions="Center"
+                   HorizontalOptions="Start"/>
+
+            <HorizontalStackLayout HorizontalOptions="End" VerticalOptions="Center" Spacing="8">
+                <!-- Edit - Ultra minimal -->
+                <Border WidthRequest="36" HeightRequest="36" 
+                        BackgroundColor="Transparent"
+                        StrokeThickness="0">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnEditModeClicked"/>
+                    </Border.GestureRecognizers>
+                    <Label Text="⋮" FontSize="22" TextColor="#000000" 
+                           HorizontalOptions="Center" VerticalOptions="Center"/>
+                </Border>
+
+                <!-- New Chat - Clean black square -->
+                <Border WidthRequest="36" HeightRequest="36"
+                        BackgroundColor="#000000"
+                        StrokeThickness="0">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="8"/>
+                    </Border.StrokeShape>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnAddGroupClicked"/>
+                    </Border.GestureRecognizers>
+                    <Label Text="+" FontSize="22" TextColor="White" 
+                           HorizontalOptions="Center" VerticalOptions="Center"/>
+                </Border>
+            </HorizontalStackLayout>
+        </Grid>
+
+        <!-- Full Width Search - WhatsApp style -->
+        <Border Grid.Row="1" 
+                Margin="16,0,16,16"
+                BackgroundColor="#F0F2F5"
+                Padding="12,10"
+                StrokeThickness="0">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="8"/>
+            </Border.StrokeShape>
+            <Grid ColumnDefinitions="Auto,*">
+                <Label Text="🔍" FontSize="16" Opacity="0.5" VerticalOptions="Center" Margin="4,0,0,0"/>
+                <Entry Grid.Column="1"
+                       Placeholder="Search conversations"
+                       PlaceholderColor="#8696A0"
+                       TextColor="#000000"
+                       FontSize="15"
+                       BackgroundColor="Transparent"
+                       Margin="8,0,0,0"
+                       VerticalOptions="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- Filter Tabs - Clean WhatsApp style -->
+        <ScrollView Grid.Row="2" 
+                    Orientation="Horizontal"
+                    HorizontalScrollBarVisibility="Never"
+                    Padding="16,0,16,12"
+                    HeightRequest="44"
+                    BackgroundColor="#FFFFFF">
+            <HorizontalStackLayout Spacing="8">
+                <Border x:Name="AllChip" BackgroundColor="#000000" Padding="16,8" StrokeThickness="0">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16"/>
+                    </Border.StrokeShape>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnFilterAllClicked"/>
+                    </Border.GestureRecognizers>
+                    <Label Text="All" TextColor="White" FontSize="14" FontAttributes="Bold"/>
+                </Border>
+
+                <Border BackgroundColor="#F0F2F5" Padding="16,8" StrokeThickness="0">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16"/>
+                    </Border.StrokeShape>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnFilterUnreadClicked"/>
+                    </Border.GestureRecognizers>
+                    <Label Text="Unread" TextColor="#667781" FontSize="14"/>
+                </Border>
+
+                <Border BackgroundColor="#F0F2F5" Padding="16,8" StrokeThickness="0">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16"/>
+                    </Border.StrokeShape>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnFilterGroupsClicked"/>
+                    </Border.GestureRecognizers>
+                    <Label Text="Groups" TextColor="#667781" FontSize="14"/>
+                </Border>
+
+                <Border BackgroundColor="#F0F2F5" Padding="16,8" StrokeThickness="0">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16"/>
+                    </Border.StrokeShape>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnFilterPersonalClicked"/>
+                    </Border.GestureRecognizers>
+                    <Label Text="Personal" TextColor="#667781" FontSize="14"/>
+                </Border>
+            </HorizontalStackLayout>
+        </ScrollView>
+
+        <!-- Chat List - Full height, edge to edge -->
+        <CollectionView Grid.Row="3"
+                        ItemsSource="{Binding Groups}"
+                        SelectionMode="Single"
+                        SelectedItem="{Binding SelectedGroup, Mode=TwoWay}"
+                        BackgroundColor="#FFFFFF">
+
+            <CollectionView.EmptyView>
+                <StackLayout HorizontalOptions="Center"
+                             VerticalOptions="Center"
+                             Spacing="12"
+                             Padding="32">
+
+                    <Label Text="💬"
+                           FontSize="56"
+                           HorizontalOptions="Center"
+                           Opacity="0.2"/>
+
+                    <StackLayout Spacing="4">
+                        <Label Text="No conversations yet"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               TextColor="#000000"
+                               HorizontalTextAlignment="Center"/>
+
+                        <Label Text="Tap + to start chatting"
+                               FontSize="14"
+                               TextColor="#667781"
+                               HorizontalTextAlignment="Center"/>
+                    </StackLayout>
+                </StackLayout>
+            </CollectionView.EmptyView>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:GroupChatItem">
+                    <!-- WhatsApp-style clean list item -->
+                    <Grid Padding="16,12" BackgroundColor="#FFFFFF">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                            <!-- Avatar - WhatsApp style -->
+                            <Border WidthRequest="50" HeightRequest="50"
+                                    BackgroundColor="{Binding Name, Converter={StaticResource StringToInitialsConverter}, ConverterParameter=color}"
+                                    StrokeThickness="0">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="25"/>
+                                </Border.StrokeShape>
+                                <Label Text="{Binding Name, Converter={StaticResource StringToInitialsConverter}}"
+                                       FontSize="16" 
+                                       FontAttributes="Bold" 
+                                       TextColor="White"
+                                       HorizontalOptions="Center" 
+                                       VerticalOptions="Center"/>
+                            </Border>
+
+                            <!-- Content - Tight, clean -->
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                <Label Text="{Binding Name}"
+                                       FontSize="16"
+                                       FontAttributes="Bold"
+                                       TextColor="#000000"
+                                       LineBreakMode="TailTruncation"
+                                       MaxLines="1"/>
+                                <Label Text="{Binding LastMessage}"
+                                       FontSize="14"
+                                       TextColor="#667781"
+                                       LineBreakMode="TailTruncation"
+                                       MaxLines="1">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding LastMessage}" Value="{x:Null}">
+                                            <Setter Property="Text" Value="Tap to chat"/>
+                                            <Setter Property="TextColor" Value="#8696A0"/>
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Label" Binding="{Binding LastMessage}" Value="">
+                                            <Setter Property="Text" Value="Tap to chat"/>
+                                            <Setter Property="TextColor" Value="#8696A0"/>
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                            </VerticalStackLayout>
+
+                            <!-- Right column - Time & badge -->
+                            <VerticalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Start" HorizontalOptions="End">
+                                <Label Text="{Binding LastMessageTime, StringFormat='{0:HH:mm}'}"
+                                       FontSize="12"
+                                       TextColor="#8696A0"
+                                       HorizontalOptions="End"
+                                       Margin="0,2,0,0">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" 
+                                                     Binding="{Binding LastMessageTime.Year}" 
+                                                     Value="1">
+                                            <Setter Property="IsVisible" Value="False"/>
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+
+                                <!-- Unread Badge - WhatsApp green -->
+                                <Border IsVisible="{Binding UnreadCount, Converter={StaticResource IntToBoolConverter}}"
+                                        BackgroundColor="#25D366"
+                                        MinimumWidthRequest="20"
+                                        HeightRequest="20"
+                                        Padding="6,2"
+                                        StrokeThickness="0"
+                                        HorizontalOptions="End">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="10"/>
+                                    </Border.StrokeShape>
+                                    <Label Text="{Binding UnreadCount}"
+                                           FontSize="11"
+                                           FontAttributes="Bold"
+                                           TextColor="White"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"/>
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <!-- Divider line -->
+                        <BoxView HeightRequest="0.33" 
+                                 BackgroundColor="#E9EDEF" 
+                                 VerticalOptions="End"
+                                 Margin="62,0,0,0"/>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- ✅ Reusable Bottom Navigation Component -->
+        <controls:BottomNavBar Grid.Row="4" ActiveTab="Chats"/>
+
+    </Grid>
+</ContentPage>

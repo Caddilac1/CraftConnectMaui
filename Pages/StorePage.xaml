@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CraftConnect_Mobile_App.Pages.StorePage"
+             xmlns:pagemodels="clr-namespace:CraftConnect_Mobile_App.PageModels"
+             xmlns:models="clr-namespace:CraftConnect_Mobile_App.Models"
+             xmlns:converters="clr-namespace:CraftConnect_Mobile_App.Converters"
+             xmlns:controls="clr-namespace:CraftConnect_Mobile_App.Controls"
+             x:DataType="pagemodels:StorePageModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#F8F9FA">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <Shadow x:Key="CardShadow"
+                    Brush="#000000"
+                    Opacity="0.08"
+                    Radius="12"
+                    Offset="0,4"/>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+        <!-- ========================================
+             HEADER WITH SEARCH
+             ======================================== -->
+        <Border Grid.Row="0"
+                BackgroundColor="White"
+                StrokeThickness="0"
+                Padding="16,12">
+            <Border.Shadow>
+                <Shadow Brush="#000000"
+                        Opacity="0.05"
+                        Radius="8"
+                        Offset="0,2"/>
+            </Border.Shadow>
+
+            <Grid RowDefinitions="Auto,Auto"
+                  RowSpacing="12">
+
+                <!-- Top bar with title and cart -->
+                <Grid Grid.Row="0"
+                      ColumnDefinitions="*,Auto,Auto">
+                    <Label Grid.Column="0"
+                           Text="CraftStore"
+                           FontSize="26"
+                           FontAttributes="Bold"
+                           TextColor="#1F2937"
+                           VerticalOptions="Center"/>
+
+                    <!-- Cart Icon with Badge -->
+                    <Grid Grid.Column="1"
+                          WidthRequest="48"
+                          HeightRequest="48"
+                          Margin="0,0,8,0">
+                        <Border BackgroundColor="#F3F4F6"
+                                StrokeThickness="0"
+                                WidthRequest="48"
+                                HeightRequest="48">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="24"/>
+                            </Border.StrokeShape>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding ViewCartCommand}"/>
+                            </Border.GestureRecognizers>
+                            <Label Text="🛒"
+                                   FontSize="22"
+                                   VerticalOptions="Center"
+                                   HorizontalOptions="Center"/>
+                        </Border>
+
+                        <!-- Cart badge -->
+                        <Border IsVisible="{Binding CartItemCount, Converter={StaticResource GreaterThanZeroConverter}}"
+                                BackgroundColor="#EF4444"
+                                WidthRequest="20"
+                                HeightRequest="20"
+                                VerticalOptions="Start"
+                                HorizontalOptions="End"
+                                Margin="0,-2,-2,0"
+                                StrokeThickness="0">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="10"/>
+                            </Border.StrokeShape>
+                            <Label Text="{Binding CartItemCount}"
+                                   FontSize="11"
+                                   FontAttributes="Bold"
+                                   TextColor="White"
+                                   VerticalOptions="Center"
+                                   HorizontalOptions="Center"/>
+                        </Border>
+                    </Grid>
+
+                    <!-- Menu -->
+                    <Border Grid.Column="2"
+                            BackgroundColor="#F3F4F6"
+                            StrokeThickness="0"
+                            WidthRequest="48"
+                            HeightRequest="48">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="24"/>
+                        </Border.StrokeShape>
+                        <Label Text="☰"
+                               FontSize="22"
+                               TextColor="#6B7280"
+                               VerticalOptions="Center"
+                               HorizontalOptions="Center"/>
+                    </Border>
+                </Grid>
+
+                <!-- Search Bar -->
+                <Border Grid.Row="1"
+                        BackgroundColor="#F3F4F6"
+                        StrokeThickness="0"
+                        Padding="16,10">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="12"/>
+                    </Border.StrokeShape>
+
+                    <Grid ColumnDefinitions="Auto,*">
+                        <Label Grid.Column="0"
+                               Text="🔍"
+                               FontSize="18"
+                               VerticalOptions="Center"
+                               Margin="0,0,8,0"/>
+                        <Entry Grid.Column="1"
+                               Text="{Binding SearchText}"
+                               Placeholder="Search products and services..."
+                               FontSize="15"
+                               TextColor="#1F2937"
+                               PlaceholderColor="#9CA3AF"
+                               BackgroundColor="Transparent"
+                               VerticalOptions="Center"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ========================================
+             CATEGORY FILTER CHIPS
+             ======================================== -->
+        <ScrollView Grid.Row="1"
+                    Orientation="Horizontal"
+                    HorizontalScrollBarVisibility="Never"
+                    Padding="16,12,16,8">
+            <HorizontalStackLayout Spacing="10">
+                <!-- All Category -->
+                <Border BackgroundColor="#6366F1"
+                        StrokeThickness="0"
+                        Padding="20,10">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="20"/>
+                    </Border.StrokeShape>
+                    <Label Text="All"
+                           FontSize="14"
+                           FontAttributes="Bold"
+                           TextColor="White"/>
+                </Border>
+
+                <!-- Products Category -->
+                <Border BackgroundColor="#F3F4F6"
+                        StrokeThickness="0"
+                        Padding="20,10">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="20"/>
+                    </Border.StrokeShape>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding FilterCategoryCommand}"
+                                            CommandParameter="Products"/>
+                    </Border.GestureRecognizers>
+                    <Label Text="📦 Products"
+                           FontSize="14"
+                           TextColor="#6B7280"/>
+                </Border>
+
+                <!-- Services Category -->
+                <Border BackgroundColor="#F3F4F6"
+                        StrokeThickness="0"
+                        Padding="20,10">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="20"/>
+                    </Border.StrokeShape>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding FilterCategoryCommand}"
+                                            CommandParameter="Services"/>
+                    </Border.GestureRecognizers>
+                    <Label Text="🔧 Services"
+                           FontSize="14"
+                           TextColor="#6B7280"/>
+                </Border>
+
+                <!-- Other categories -->
+                <Border BackgroundColor="#F3F4F6"
+                        StrokeThickness="0"
+                        Padding="20,10">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="20"/>
+                    </Border.StrokeShape>
+                    <Label Text="🏗 Construction"
+                           FontSize="14"
+                           TextColor="#6B7280"/>
+                </Border>
+
+                <Border BackgroundColor="#F3F4F6"
+                        StrokeThickness="0"
+                        Padding="20,10">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="20"/>
+                    </Border.StrokeShape>
+                    <Label Text="🎨 Design"
+                           FontSize="14"
+                           TextColor="#6B7280"/>
+                </Border>
+
+                <Border BackgroundColor="#F3F4F6"
+                        StrokeThickness="0"
+                        Padding="20,10">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="20"/>
+                    </Border.StrokeShape>
+                    <Label Text="🛠 Tools"
+                           FontSize="14"
+                           TextColor="#6B7280"/>
+                </Border>
+            </HorizontalStackLayout>
+        </ScrollView>
+
+        <!-- ========================================
+             STORE ITEMS GRID
+             ======================================== -->
+        <RefreshView Grid.Row="2"
+                     Command="{Binding RefreshCommand}"
+                     IsRefreshing="{Binding IsBusy}"
+                     RefreshColor="#6366F1">
+            <ScrollView>
+                <CollectionView ItemsSource="{Binding StoreItems}"
+                                SelectionMode="None"
+                                Margin="12,0,12,12">
+
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical"
+                                       Span="2"
+                                       HorizontalItemSpacing="12"
+                                       VerticalItemSpacing="12"/>
+                    </CollectionView.ItemsLayout>
+
+                    <CollectionView.EmptyView>
+                        <VerticalStackLayout Padding="40"
+                                           VerticalOptions="Center"
+                                           Spacing="16">
+                            <Label Text="🏪"
+                                   FontSize="64"
+                                   HorizontalOptions="Center"/>
+                            <Label Text="No items available"
+                                   FontSize="20"
+                                   FontAttributes="Bold"
+                                   TextColor="#1F2937"
+                                   HorizontalTextAlignment="Center"/>
+                            <Label Text="Check back later for products and services"
+                                   FontSize="14"
+                                   TextColor="#9CA3AF"
+                                   HorizontalTextAlignment="Center"/>
+                        </VerticalStackLayout>
+                    </CollectionView.EmptyView>
+
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:StoreItem">
+                            <Border BackgroundColor="White"
+                                    StrokeThickness="0"
+                                    Shadow="{StaticResource CardShadow}">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="16"/>
+                                </Border.StrokeShape>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type pagemodels:StorePageModel}}, Path=ItemTappedCommand}"
+                                                        CommandParameter="{Binding .}"/>
+                                </Border.GestureRecognizers>
+
+                                <Grid RowDefinitions="140,Auto,Auto,Auto,Auto,Auto"
+                                      RowSpacing="8"
+                                      Padding="0">
+
+                                    <!-- Product/Service Image -->
+                                    <Border Grid.Row="0"
+                                            BackgroundColor="#F3F4F6"
+                                            StrokeThickness="0">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="16,16,0,0"/>
+                                        </Border.StrokeShape>
+                                        <Grid>
+                                            <Image Source="{Binding ImageUrl}"
+                                                   Aspect="AspectFill"
+                                                   HeightRequest="140"/>
+
+                                            <!-- Type Badge (Product/Service) -->
+                                            <Border BackgroundColor="#1F2937"
+                                                    StrokeThickness="0"
+                                                    Padding="10,4"
+                                                    VerticalOptions="Start"
+                                                    HorizontalOptions="Start"
+                                                    Margin="8">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="6"/>
+                                                </Border.StrokeShape>
+                                                <Label Text="{Binding TypeBadge}"
+                                                       FontSize="10"
+                                                       FontAttributes="Bold"
+                                                       TextColor="White"/>
+                                            </Border>
+
+                                            <!-- Favorite Icon -->
+                                            <Border BackgroundColor="#FFFFFF"
+                                                    StrokeThickness="0"
+                                                    WidthRequest="32"
+                                                    HeightRequest="32"
+                                                    VerticalOptions="Start"
+                                                    HorizontalOptions="End"
+                                                    Margin="8">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="16"/>
+                                                </Border.StrokeShape>
+                                                <Label Text="♡"
+                                                       FontSize="18"
+                                                       TextColor="#EF4444"
+                                                       VerticalOptions="Center"
+                                                       HorizontalOptions="Center"/>
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Item Name -->
+                                    <Label Grid.Row="1"
+                                           Text="{Binding Name}"
+                                           FontSize="14"
+                                           FontAttributes="Bold"
+                                           TextColor="#1F2937"
+                                           LineBreakMode="TailTruncation"
+                                           MaxLines="2"
+                                           Margin="10,8,10,0"/>
+
+                                    <!-- Seller Name -->
+                                    <Label Grid.Row="2"
+                                           Text="{Binding SellerName}"
+                                           FontSize="12"
+                                           TextColor="#6B7280"
+                                           LineBreakMode="TailTruncation"
+                                           Margin="10,0"/>
+
+                                    <!-- Rating -->
+                                    <HorizontalStackLayout Grid.Row="3"
+                                                          Spacing="4"
+                                                          Margin="10,0">
+                                        <Label Text="⭐"
+                                               FontSize="12"
+                                               VerticalOptions="Center"/>
+                                        <Label Text="{Binding Rating, StringFormat='{0:F1}'}"
+                                               FontSize="12"
+                                               TextColor="#1F2937"
+                                               VerticalOptions="Center"/>
+                                        <Label Text="{Binding ReviewCount, StringFormat='({0})'}"
+                                               FontSize="11"
+                                               TextColor="#9CA3AF"
+                                               VerticalOptions="Center"/>
+                                    </HorizontalStackLayout>
+
+                                    <!-- Price -->
+                                    <Label Grid.Row="4"
+                                           Text="{Binding DisplayPrice}"
+                                           FontSize="16"
+                                           FontAttributes="Bold"
+                                           TextColor="#6366F1"
+                                           Margin="10,4,10,0"/>
+
+                                    <!-- Action Button -->
+                                    <Border Grid.Row="5"
+                                            BackgroundColor="#6366F1"
+                                            StrokeThickness="0"
+                                            Padding="0,10"
+                                            Margin="8,8,8,10">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="10"/>
+                                        </Border.StrokeShape>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type pagemodels:StorePageModel}}, Path=AddToCartOrBookCommand}"
+                                                                CommandParameter="{Binding .}"/>
+                                        </Border.GestureRecognizers>
+                                        <Label Text="{Binding ActionButtonText}"
+                                               FontSize="13"
+                                               FontAttributes="Bold"
+                                               TextColor="White"
+                                               HorizontalOptions="Center"/>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </ScrollView>
+        </RefreshView>
+
+        <!-- ========================================
+             BOTTOM NAVIGATION - Reusable Component
+             ======================================== -->
+        <controls:BottomNavBar Grid.Row="3" ActiveTab="Store"/>
+    </Grid>
+</ContentPage>

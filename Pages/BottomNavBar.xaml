@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CraftConnect_Mobile_App.Controls.BottomNavBar"
+             x:Name="NavBarRoot">
+
+    <!-- Bottom Nav Bar - Reusable Component -->
+    <Grid BackgroundColor="#FFFFFF"
+          ColumnDefinitions="*,*,*,*,*"
+          RowDefinitions="Auto,*"
+          VerticalOptions="FillAndExpand">
+
+        <!-- Top border -->
+        <BoxView Grid.ColumnSpan="5" 
+                 Grid.Row="0"
+                 HeightRequest="0.33" 
+                 BackgroundColor="#E9EDEF" 
+                 VerticalOptions="Start"/>
+
+        <!-- Content Grid -->
+        <Grid Grid.Row="1" Grid.ColumnSpan="5" 
+              ColumnDefinitions="*,*,*,*,*"
+              Padding="0,8,0,8"
+              VerticalOptions="Start">
+
+            <!-- Updates -->
+            <VerticalStackLayout Grid.Column="0" Spacing="2" HorizontalOptions="Center">
+                <VerticalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnUpdatesTapped"/>
+                </VerticalStackLayout.GestureRecognizers>
+                <Label Text="🔄" FontSize="22" HorizontalOptions="Center">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding Source={x:Reference NavBarRoot}, Path=ActiveTab}" Value="Updates">
+                            <Setter Property="FontSize" Value="24"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Label.Triggers>
+                    <Label.Style>
+                        <Style TargetType="Label">
+                            <Setter Property="Opacity" Value="0.35"/>
+                        </Style>
+                    </Label.Style>
+                </Label>
+                <Label Text="Updates" FontSize="10" HorizontalOptions="Center">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding Source={x:Reference NavBarRoot}, Path=ActiveTab}" Value="Updates">
+                            <Setter Property="FontAttributes" Value="Bold"/>
+                            <Setter Property="TextColor" Value="#000000"/>
+                        </DataTrigger>
+                    </Label.Triggers>
+                    <Label.Style>
+                        <Style TargetType="Label">
+                            <Setter Property="TextColor" Value="#667781"/>
+                        </Style>
+                    </Label.Style>
+                </Label>
+            </VerticalStackLayout>
+
+            <!-- Contacts -->
+            <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="Center">
+                <VerticalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnContactsTapped"/>
+                </VerticalStackLayout.GestureRecognizers>
+                <Label Text="👥" FontSize="22" HorizontalOptions="Center">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding Source={x:Reference NavBarRoot}, Path=ActiveTab}" Value="Contacts">
+                            <Setter Property="FontSize" Value="24"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Label.Triggers>
+                    <Label.Style>
+                        <Style TargetType="Label">
+                            <Setter Property="Opacity" Value="0.35"/>
+                        </Style>
+                    </Label.Style>
+                </Label>
+                <Label Text="Contacts" FontSize="10" HorizontalOptions="Center">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding Source={x:Reference NavBarRoot}, Path=ActiveTab}" Value="Contacts">
+                            <Setter Property="FontAttributes" Value="Bold"/>
+                            <Setter Property="TextColor" Value="#000000"/>
+                        </DataTrigger>
+                    </Label.Triggers>
+                    <Label.Style>
+                        <Style TargetType="Label">
+                            <Setter Property="TextColor" Value="#667781"/>
+                        </Style>
+                    </Label.Style>
+                </Label>
+            </VerticalStackLayout>
+
+            <!-- Chats -->
+            <VerticalStackLayout Grid.Column="2" Spacing="2" HorizontalOptions="Center">
+                <VerticalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnChatsTapped"/>
+                </VerticalStackLayout.GestureRecognizers>
+                <Label Text="💬" FontSize="22" HorizontalOptions="Center">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding Source={x:Reference NavBarRoot}, Path=ActiveTab}" Value="Chats">
+                            <Setter Property="FontSize" Value="24"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Label.Triggers>
+                    <Label.Style>
+                        <Style TargetType="Label">
+                            <Setter Property="Opacity" Value="0.35"/>
+                        </Style>
+                    </Label.Style>
+                </Label>
+                <Label Text="Chats" FontSize="10" HorizontalOptions="Center">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding Source={x:Reference NavBarRoot}, Path=ActiveTab}" Value="Chats">
+                            <Setter Property="FontAttributes" Value="Bold"/>
+                            <Setter Property="TextColor" Value="#000000"/>
+                        </DataTrigger>
+                    </Label.Triggers>
+                    <Label.Style>
+                        <Style TargetType="Label">
+                            <Setter Property="TextColor" Value="#667781"/>
+                        </Style>
+                    </Label.Style>
+                </Label>
+            </VerticalStackLayout>
+
+            <!-- Store -->
+            <VerticalStackLayout Grid.Column="3" Spacing="2" HorizontalOptions="Center">
+                <VerticalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnStoreTapped"/>
+                </VerticalStackLayout.GestureRecognizers>
+                <Label Text="🛍️" FontSize="22" HorizontalOptions="Center">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding Source={x:Reference NavBarRoot}, Path=ActiveTab}" Value="Store">
+                            <Setter Property="FontSize" Value="24"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Label.Triggers>
+                    <Label.Style>
+                        <Style TargetType="Label">
+                            <Setter Property="Opacity" Value="0.35"/>
+                        </Style>
+                    </Label.Style>
+                </Label>
+                <Label Text="Store" FontSize="10" HorizontalOptions="Center">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding Source={x:Reference NavBarRoot}, Path=ActiveTab}" Value="Store">
+                            <Setter Property="FontAttributes" Value="Bold"/>
+                            <Setter Property="TextColor" Value="#000000"/>
+                        </DataTrigger>
+                    </Label.Triggers>
+                    <Label.Style>
+                        <Style TargetType="Label">
+                            <Setter Property="TextColor" Value="#667781"/>
+                        </Style>
+                    </Label.Style>
+                </Label>
+            </VerticalStackLayout>
+
+            <!-- Settings -->
+            <VerticalStackLayout Grid.Column="4" Spacing="2" HorizontalOptions="Center">
+                <VerticalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnSettingsTapped"/>
+                </VerticalStackLayout.GestureRecognizers>
+                <Label Text="⚙️" FontSize="22" HorizontalOptions="Center">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding Source={x:Reference NavBarRoot}, Path=ActiveTab}" Value="Settings">
+                            <Setter Property="FontSize" Value="24"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Label.Triggers>
+                    <Label.Style>
+                        <Style TargetType="Label">
+                            <Setter Property="Opacity" Value="0.35"/>
+                        </Style>
+                    </Label.Style>
+                </Label>
+                <Label Text="Settings" FontSize="10" HorizontalOptions="Center">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding Source={x:Reference NavBarRoot}, Path=ActiveTab}" Value="Settings">
+                            <Setter Property="FontAttributes" Value="Bold"/>
+                            <Setter Property="TextColor" Value="#000000"/>
+                        </DataTrigger>
+                    </Label.Triggers>
+                    <Label.Style>
+                        <Style TargetType="Label">
+                            <Setter Property="TextColor" Value="#667781"/>
+                        </Style>
+                    </Label.Style>
+                </Label>
+            </VerticalStackLayout>
+        </Grid>
+    </Grid>
+</ContentView>

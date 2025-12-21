@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="CraftConnect_Mobile_App.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:pages="clr-namespace:CraftConnect_Mobile_App.Pages"
+    Shell.FlyoutBehavior="Disabled">
+
+    <!-- Use TabBar for proper route hierarchy -->
+    <TabBar>
+        <!-- Login Page as a separate flyout item -->
+        <Tab Route="auth">
+            <ShellContent
+                Route="LoginPage"
+                ContentTemplate="{DataTemplate pages:LoginPage}" />
+        </Tab>
+
+        <!-- Main app content -->
+        <Tab Route="main">
+            <ShellContent
+                Route="GroupChatListPage"
+                ContentTemplate="{DataTemplate pages:GroupChatListPage}" />
+        </Tab>
+    </TabBar>
+</Shell>

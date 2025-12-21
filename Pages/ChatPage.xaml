@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CraftConnect_Mobile_App.Pages.ChatPage"
+             xmlns:pagemodels="clr-namespace:CraftConnect_Mobile_App.PageModels"
+             xmlns:converters="clr-namespace:CraftConnect_Mobile_App.Converters"
+             x:DataType="pagemodels:ChatPageModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#E8EAF6">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <!-- Message bubble shadows -->
+            <Shadow x:Key="MessageShadow"
+                    Brush="#000000"
+                    Opacity="0.08"
+                    Radius="8"
+                    Offset="0,2"/>
+
+            <!-- Header shadow -->
+            <Shadow x:Key="HeaderShadow"
+                    Brush="#000000"
+                    Opacity="0.12"
+                    Radius="6"
+                    Offset="0,2"/>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- ========================================
+             HEADER
+             ======================================== -->
+        <Border Grid.Row="0"
+                BackgroundColor="#5E35B1"
+                StrokeThickness="0"
+                Shadow="{StaticResource HeaderShadow}">
+            <Grid Padding="8,8"
+                  ColumnDefinitions="Auto,Auto,*,Auto"
+                  RowDefinitions="Auto"
+                  HeightRequest="60">
+
+                <!-- Back Button -->
+                <Border Grid.Column="0"
+                        WidthRequest="36"
+                        HeightRequest="36"
+                        BackgroundColor="Transparent"
+                        Stroke="Transparent"
+                        StrokeThickness="0"
+                        VerticalOptions="Center">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnBackButtonTapped"/>
+                    </Border.GestureRecognizers>
+                    <Label Text="&#xe5c4;"
+                           FontFamily="MaterialIcons"
+                           FontSize="24"
+                           TextColor="White"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center"/>
+                </Border>
+
+                <!-- Group Avatar -->
+                <Border Grid.Column="1"
+                        WidthRequest="40"
+                        HeightRequest="40"
+                        BackgroundColor="#B39DDB"
+                        StrokeThickness="0"
+                        VerticalOptions="Center"
+                        Margin="4,0,10,0">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="20"/>
+                    </Border.StrokeShape>
+                    <Label Text="{Binding GroupName, Converter={StaticResource FirstLetterConverter}}"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           TextColor="White"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center"/>
+                </Border>
+
+                <!-- Group Name & Status -->
+                <VerticalStackLayout Grid.Column="2"
+                                     VerticalOptions="Center"
+                                     Spacing="1">
+                    <Label Text="{Binding GroupName}"
+                           FontSize="16"
+                           FontAttributes="Bold"
+                           TextColor="White"
+                           LineBreakMode="TailTruncation"/>
+                    <Label Text="Active now"
+                           FontSize="12"
+                           TextColor="#E1BEE7"
+                           LineBreakMode="TailTruncation"/>
+                </VerticalStackLayout>
+
+                <!-- Menu Icon (3 dots) -->
+                <Label Grid.Column="3"
+                       Text="&#xe5d4;"
+                       FontFamily="MaterialIcons"
+                       FontSize="24"
+                       TextColor="White"
+                       VerticalOptions="Center"
+                       Margin="0,0,4,0"/>
+            </Grid>
+        </Border>
+
+        <!-- ========================================
+             MESSAGES AREA
+             ======================================== -->
+        <RefreshView Grid.Row="1"
+                     Command="{Binding RefreshCommand}"
+                     IsRefreshing="{Binding IsBusy}"
+                     RefreshColor="#5E35B1"
+                     BackgroundColor="#E8EAF6">
+            <CollectionView x:Name="MessagesCollectionView"
+                            ItemsSource="{Binding Messages}"
+                            SelectionMode="None"
+                            VerticalOptions="FillAndExpand"
+                            Margin="0,8,0,8">
+
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout Padding="40"
+                                         VerticalOptions="Center"
+                                         HorizontalOptions="Center"
+                                         Spacing="16">
+                        <Border WidthRequest="80"
+                                HeightRequest="80"
+                                BackgroundColor="White"
+                                StrokeThickness="0"
+                                HorizontalOptions="Center"
+                                Shadow="{StaticResource MessageShadow}">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="40"/>
+                            </Border.StrokeShape>
+                            <Label Text="&#xe0c9;"
+                                   FontFamily="MaterialIcons"
+                                   FontSize="40"
+                                   TextColor="#9E9E9E"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"/>
+                        </Border>
+                        <Label Text="No messages yet"
+                               FontSize="18"
+                               TextColor="#424242"
+                               HorizontalTextAlignment="Center"/>
+                        <Label Text="Send a message to start chatting"
+                               FontSize="14"
+                               TextColor="#757575"
+                               HorizontalTextAlignment="Center"
+                               Margin="0,-8,0,0"/>
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="pagemodels:GroupMessageItemViewModel">
+                        <Grid Padding="8,3">
+
+                            <!-- Messages from others (LEFT) -->
+                            <VerticalStackLayout IsVisible="{Binding IsFromCurrentUser, Converter={StaticResource InvertedBoolConverter}}"
+                                                 HorizontalOptions="Start"
+                                                 MaximumWidthRequest="300"
+                                                 Spacing="4">
+
+                                <!-- Sender name -->
+                                <Label Text="{Binding DisplayName}"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       TextColor="#7E57C2"
+                                       Margin="10,0,0,0"/>
+
+                                <!-- Message bubble (white background) -->
+                                <Border BackgroundColor="White"
+                                        StrokeThickness="0"
+                                        Padding="10,8,10,8"
+                                        Shadow="{StaticResource MessageShadow}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="16,16,16,4"/>
+                                    </Border.StrokeShape>
+
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="{Binding Message}"
+                                               FontSize="14.5"
+                                               TextColor="#212121"
+                                               LineBreakMode="WordWrap"/>
+                                        <Label Text="{Binding DisplayTime}"
+                                               FontSize="11"
+                                               TextColor="#9E9E9E"
+                                               HorizontalOptions="End"/>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <!-- Messages from you (RIGHT - purple background) -->
+                            <VerticalStackLayout IsVisible="{Binding IsFromCurrentUser}"
+                                                 HorizontalOptions="End"
+                                                 MaximumWidthRequest="300"
+                                                 Spacing="4">
+
+                                <!-- Message bubble (purple/indigo) -->
+                                <Border BackgroundColor="#B39DDB"
+                                        StrokeThickness="0"
+                                        Padding="10,8,10,8"
+                                        Shadow="{StaticResource MessageShadow}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="16,16,4,16"/>
+                                    </Border.StrokeShape>
+
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="{Binding Message}"
+                                               FontSize="14.5"
+                                               TextColor="White"
+                                               LineBreakMode="WordWrap"/>
+                                        <HorizontalStackLayout HorizontalOptions="End"
+                                                               Spacing="4">
+                                            <Label Text="{Binding DisplayTime}"
+                                                   FontSize="11"
+                                                   TextColor="#EDE7F6"
+                                                   VerticalOptions="Center"/>
+                                            <Label Text="&#xe877;"
+                                                   FontFamily="MaterialIcons"
+                                                   FontSize="16"
+                                                   TextColor="#EDE7F6"
+                                                   VerticalOptions="Center"/>
+                                        </HorizontalStackLayout>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+
+        <!-- ========================================
+             MESSAGE INPUT AREA (Transparent background)
+             ======================================== -->
+        <Grid Grid.Row="2"
+              BackgroundColor="Transparent"
+              Padding="12,8,12,12"
+              ColumnDefinitions="*,Auto"
+              ColumnSpacing="8">
+
+            <!-- Input Container with Emoji & Attachment -->
+            <Border Grid.Column="0"
+                    BackgroundColor="White"
+                    StrokeThickness="0"
+                    Padding="0"
+                    VerticalOptions="End"
+                    MinimumHeightRequest="46"
+                    MaximumHeightRequest="120"
+                    Shadow="{StaticResource MessageShadow}"
+                    StrokeShape="RoundRectangle 23">
+
+                <Grid ColumnDefinitions="Auto,*,Auto"
+                      ColumnSpacing="4"
+                      Padding="4,0">
+
+                    <!-- Emoji Button (Tappable) -->
+                    <Border Grid.Column="0"
+                            BackgroundColor="Transparent"
+                            StrokeThickness="0"
+                            WidthRequest="40"
+                            HeightRequest="40"
+                            VerticalOptions="Center">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnEmojiButtonTapped"/>
+                        </Border.GestureRecognizers>
+                        <Label Text="&#xe24e;"
+                               FontFamily="MaterialIcons"
+                               FontSize="24"
+                               TextColor="#9E9E9E"
+                               VerticalOptions="Center"
+                               HorizontalOptions="Center"/>
+                    </Border>
+
+                    <!-- Text Input -->
+                    <Editor Grid.Column="1"
+                            Text="{Binding MessageText}"
+                            Placeholder="Type a message..."
+                            AutoSize="TextChanges"
+                            FontSize="16"
+                            TextColor="#212121"
+                            PlaceholderColor="#BDBDBD"
+                            BackgroundColor="Transparent"
+                            VerticalOptions="Center"
+                            MinimumHeightRequest="28"
+                            MaximumHeightRequest="100"/>
+
+                    <!-- Attachment & Camera Buttons -->
+                    <HorizontalStackLayout Grid.Column="2"
+                                           Spacing="4"
+                                           VerticalOptions="Center"
+                                           Margin="0,0,8,0">
+                        <Border BackgroundColor="Transparent"
+                                StrokeThickness="0"
+                                WidthRequest="36"
+                                HeightRequest="36"
+                                VerticalOptions="Center"
+                                IsVisible="{Binding MessageText, Converter={StaticResource StringIsEmptyConverter}}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnAttachmentButtonTapped"/>
+                            </Border.GestureRecognizers>
+                            <Label Text="&#xe226;"
+                                   FontFamily="MaterialIcons"
+                                   FontSize="24"
+                                   TextColor="#9E9E9E"
+                                   Rotation="-45"
+                                   VerticalOptions="Center"
+                                   HorizontalOptions="Center"/>
+                        </Border>
+
+                        <Border BackgroundColor="Transparent"
+                                StrokeThickness="0"
+                                WidthRequest="36"
+                                HeightRequest="36"
+                                VerticalOptions="Center"
+                                IsVisible="{Binding MessageText, Converter={StaticResource StringIsEmptyConverter}}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnCameraButtonTapped"/>
+                            </Border.GestureRecognizers>
+                            <Label Text="&#xe3b0;"
+                                   FontFamily="MaterialIcons"
+                                   FontSize="24"
+                                   TextColor="#9E9E9E"
+                                   VerticalOptions="Center"
+                                   HorizontalOptions="Center"/>
+                        </Border>
+                    </HorizontalStackLayout>
+                </Grid>
+            </Border>
+
+            <!-- Microphone OR Send Button -->
+            <Border Grid.Column="1"
+                    WidthRequest="48"
+                    HeightRequest="48"
+                    BackgroundColor="#7E57C2"
+                    StrokeThickness="0"
+                    VerticalOptions="End"
+                    Shadow="{StaticResource MessageShadow}">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="24"/>
+                </Border.StrokeShape>
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding SendMessageCommand}"/>
+                </Border.GestureRecognizers>
+
+                <Grid>
+                    <!-- Send icon (when text exists) -->
+                    <Label Text="&#xe163;"
+                           FontFamily="MaterialIcons"
+                           FontSize="24"
+                           TextColor="White"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center"
+                           IsVisible="{Binding MessageText, Converter={StaticResource StringNotEmptyConverter}}"/>
+
+                    <!-- Microphone icon (when empty) -->
+                    <Label Text="&#xe029;"
+                           FontFamily="MaterialIcons"
+                           FontSize="24"
+                           TextColor="White"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center"
+                           IsVisible="{Binding MessageText, Converter={StaticResource StringIsEmptyConverter}}"/>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Loading Indicator -->
+        <ActivityIndicator Grid.Row="1"
+                          IsRunning="{Binding IsBusy}"
+                          IsVisible="{Binding IsBusy}"
+                          Color="#7E57C2"
+                          WidthRequest="32"
+                          HeightRequest="32"
+                          VerticalOptions="Start"
+                          HorizontalOptions="Center"
+                          Margin="0,16,0,0"/>
+    </Grid>
+</ContentPage>
