@@ -1,87 +1,130 @@
 ﻿using Microsoft.Maui.Controls;
 using System;
+using System.Linq;
+using System.Threading.Tasks;
+using CraftConnect_Mobile_App.Services;
+using CraftConnect_Mobile_App.Models;
 
 namespace CraftConnect_Mobile_App.Pages
 {
     public partial class SettingsPage : ContentPage
     {
-        // Hardcoded user data for demonstration
-        private UserRole currentUserRole = UserRole.Artisan; // Change this to test different roles
-        private string userName = "John Doe";
-        private string userEmail = "john.doe@example.com";
-        private string userPhone = "+233 24 123 4567";
-        private string businessName = "Artisan Services Ltd.";
-        private string specialization = "Carpentry, Plumbing";
+        private readonly AuthService _authService;
+        private readonly IUserService _userService;
+        private UserProfile _currentUser;
+        private ArtisanUser _artisanUser;
+        private string _primaryRole;
 
-        public enum UserRole
-        {
-            Customer,
-            Artisan,
-            Admin,
-            Moderator
-        }
-
-        public SettingsPage()
+        public SettingsPage(AuthService authService, IUserService userService)
         {
             InitializeComponent();
-            LoadUserData();
-            ConfigureUIForRole();
+            _authService = authService;
+            _userService = userService;
         }
 
-        private void LoadUserData()
+        protected override async void OnAppearing()
         {
-            // Load hardcoded data (later replace with actual user data)
-            UserNameLabel.Text = userName;
-            UserEmailLabel.Text = userEmail;
-            EmailLabel.Text = userEmail;
-            PhoneLabel.Text = userPhone;
+            base.OnAppearing();
+            await LoadUserDataAsync();
+        }
 
-            // Set role display
-            UserRoleLabel.Text = GetRoleDisplayName();
-
-            // Artisan-specific data
-            if (currentUserRole == UserRole.Artisan)
+        private async Task LoadUserDataAsync()
+        {
+            try
             {
-                BusinessNameLabel.Text = businessName;
-                SpecializationLabel.Text = specialization;
+                IsBusy = true;
+
+                // Load user profile from API
+                _currentUser = await _userService.LoadUserProfileAsync();
+
+                // Get current user info from AuthService for roles
+                var authUser = await _authService.GetCurrentUserAsync();
+
+                if (_currentUser != null && authUser != null)
+                {
+                    // Display basic info
+                    UserNameLabel.Text = _currentUser.FullName ?? "User";
+                    UserEmailLabel.Text = _currentUser.Email ?? "";
+                    EmailLabel.Text = _currentUser.Email ?? "";
+                    PhoneLabel.Text = _currentUser.PhoneNumber ?? "Not set";
+
+                    // Get primary role
+                    _primaryRole = authUser.Roles?.FirstOrDefault() ?? _currentUser.Role ?? "Customer";
+                    UserRoleLabel.Text = GetRoleDisplayName(_primaryRole);
+
+                    // Load artisan-specific data if user is artisan
+                    if (_primaryRole.Equals("Artisan", StringComparison.OrdinalIgnoreCase) &&
+                        _currentUser is ArtisanUser artisan)
+                    {
+                        _artisanUser = artisan;
+
+                        BusinessNameLabel.Text = artisan.BusinessName ?? "Not set";
+                        SpecializationLabel.Text = artisan.Specializations?.Any() == true
+                            ? string.Join(", ", artisan.Specializations)
+                            : "Not set";
+
+                        AvailabilitySwitch.IsToggled = artisan.IsAvailable;
+
+                        if (artisan.IsAvailable)
+                        {
+                            AvailabilityLabel.Text = "Available";
+                            AvailabilityLabel.TextColor = Color.FromArgb("#10B981");
+                        }
+                        else
+                        {
+                            AvailabilityLabel.Text = "Unavailable";
+                            AvailabilityLabel.TextColor = Color.FromArgb("#EF4444");
+                        }
+                    }
+
+                    ConfigureUIForRole(_primaryRole);
+                }
+                else
+                {
+                    await DisplayAlert("Error", "Unable to load user profile. Please try logging in again.", "OK");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Error loading user data: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Stack trace: {ex.StackTrace}");
+                await DisplayAlert("Error", "Failed to load user data. Please try again.", "OK");
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
-        private string GetRoleDisplayName()
+        private string GetRoleDisplayName(string role)
         {
-            return currentUserRole switch
+            return role?.ToLower() switch
             {
-                UserRole.Admin => "Administrator",
-                UserRole.Artisan => "Artisan",
-                UserRole.Moderator => "Moderator",
-                UserRole.Customer => "Customer",
+                "admin" => "Administrator",
+                "artisan" => "Artisan",
+                "customer" => "Customer",
                 _ => "User"
             };
         }
 
-        private void ConfigureUIForRole()
+        private void ConfigureUIForRole(string role)
         {
             // Hide all role-specific sections first
             HideAllRoleSpecificSections();
 
             // Show sections based on role
-            switch (currentUserRole)
+            switch (role?.ToLower())
             {
-                case UserRole.Artisan:
+                case "artisan":
                     ShowArtisanSections();
                     break;
 
-                case UserRole.Admin:
+                case "admin":
                     ShowAdminSections();
-                    ShowArtisanSections(); // Admin can also be artisan
                     break;
 
-                case UserRole.Moderator:
-                    ShowModeratorSections();
-                    break;
-
-                case UserRole.Customer:
-                    // Customer has only basic settings, no special sections
+                case "customer":
+                    // Customer has only basic settings
                     break;
             }
         }
@@ -117,130 +160,322 @@ namespace CraftConnect_Mobile_App.Pages
             VerificationFrame.IsVisible = true;
         }
 
-        private void ShowModeratorSections()
-        {
-            AdminSectionHeader.IsVisible = true;
-            SystemReportsFrame.IsVisible = true;
-            VerificationFrame.IsVisible = true;
-        }
-
         // Profile Actions
         private async void OnEditProfileClicked(object sender, EventArgs e)
         {
-            await DisplayAlert("Edit Profile", "Navigate to profile editing page", "OK");
-            // TODO: Navigate to profile edit page
+            try
+            {
+                await Shell.Current.GoToAsync("EditProfilePage");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Navigation error: {ex.Message}");
+                await DisplayAlert("Info", "Profile editing page is not yet available.", "OK");
+            }
         }
 
         // Account Actions
         private async void OnEditEmailClicked(object sender, EventArgs e)
         {
+            if (_currentUser == null)
+            {
+                await DisplayAlert("Error", "User data not loaded.", "OK");
+                return;
+            }
+
             string result = await DisplayPromptAsync(
                 "Change Email",
                 "Enter your new email address",
-                initialValue: userEmail,
+                initialValue: _currentUser.Email,
                 keyboard: Keyboard.Email);
 
-            if (!string.IsNullOrWhiteSpace(result))
+            if (!string.IsNullOrWhiteSpace(result) && result != _currentUser.Email)
             {
-                userEmail = result;
-                UserEmailLabel.Text = result;
-                EmailLabel.Text = result;
-                await DisplayAlert("Success", "Email updated successfully", "OK");
+                try
+                {
+                    IsBusy = true;
+
+                    System.Diagnostics.Debug.WriteLine($"[SETTINGS] Updating email to: {result}");
+                    bool success = await _userService.UpdateEmailAsync(result);
+
+                    if (success)
+                    {
+                        _currentUser.Email = result;
+                        UserEmailLabel.Text = result;
+                        EmailLabel.Text = result;
+                        await DisplayAlert("Success", "Email updated successfully", "OK");
+                    }
+                    else
+                    {
+                        await DisplayAlert("Error", "Failed to update email. Please try again.", "OK");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SETTINGS] Error updating email: {ex.Message}");
+                    await DisplayAlert("Error", $"Failed to update email: {ex.Message}", "OK");
+                }
+                finally
+                {
+                    IsBusy = false;
+                }
             }
         }
 
         private async void OnEditPhoneClicked(object sender, EventArgs e)
         {
+            if (_currentUser == null)
+            {
+                await DisplayAlert("Error", "User data not loaded.", "OK");
+                return;
+            }
+
             string result = await DisplayPromptAsync(
                 "Change Phone",
                 "Enter your new phone number",
-                initialValue: userPhone,
+                initialValue: _currentUser.PhoneNumber,
                 keyboard: Keyboard.Telephone);
 
-            if (!string.IsNullOrWhiteSpace(result))
+            if (!string.IsNullOrWhiteSpace(result) && result != _currentUser.PhoneNumber)
             {
-                userPhone = result;
-                PhoneLabel.Text = result;
-                await DisplayAlert("Success", "Phone number updated successfully", "OK");
+                try
+                {
+                    IsBusy = true;
+
+                    System.Diagnostics.Debug.WriteLine($"[SETTINGS] Updating phone to: {result}");
+                    bool success = await _userService.UpdatePhoneNumberAsync(result);
+
+                    if (success)
+                    {
+                        _currentUser.PhoneNumber = result;
+                        PhoneLabel.Text = result;
+                        await DisplayAlert("Success", "Phone number updated successfully", "OK");
+                    }
+                    else
+                    {
+                        await DisplayAlert("Error", "Failed to update phone number. Please try again.", "OK");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SETTINGS] Error updating phone: {ex.Message}");
+                    await DisplayAlert("Error", $"Failed to update phone: {ex.Message}", "OK");
+                }
+                finally
+                {
+                    IsBusy = false;
+                }
             }
         }
 
         private async void OnChangePasswordClicked(object sender, EventArgs e)
         {
-            await DisplayAlert("Change Password", "Navigate to password change page", "OK");
-            // TODO: Navigate to change password page
+            try
+            {
+                await Shell.Current.GoToAsync("ChangePasswordPage");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Navigation error: {ex.Message}");
+                await DisplayAlert("Info", "Password change page is not yet available.", "OK");
+            }
         }
 
         // Artisan-Specific Actions
         private async void OnEditBusinessClicked(object sender, EventArgs e)
         {
-            await DisplayAlert("Business Profile", "Navigate to business profile editor", "OK");
-            // TODO: Navigate to business profile page
+            try
+            {
+                await Shell.Current.GoToAsync("BusinessProfilePage");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Navigation error: {ex.Message}");
+                await DisplayAlert("Info", "Business profile page is not yet available.", "OK");
+            }
         }
 
         private async void OnEditSpecializationClicked(object sender, EventArgs e)
         {
+            if (_artisanUser == null)
+            {
+                await DisplayAlert("Error", "Artisan profile not loaded.", "OK");
+                return;
+            }
+
+            string currentSpecs = _artisanUser.Specializations?.Any() == true
+                ? string.Join(", ", _artisanUser.Specializations)
+                : "";
+
             string result = await DisplayPromptAsync(
                 "Update Specialization",
                 "Enter your specializations (comma-separated)",
-                initialValue: specialization);
+                initialValue: currentSpecs);
 
-            if (!string.IsNullOrWhiteSpace(result))
+            if (!string.IsNullOrWhiteSpace(result) && result != currentSpecs)
             {
-                specialization = result;
-                SpecializationLabel.Text = result;
-                await DisplayAlert("Success", "Specialization updated", "OK");
+                try
+                {
+                    IsBusy = true;
+
+                    // Parse comma-separated specializations
+                    _artisanUser.Specializations = result
+                        .Split(',')
+                        .Select(s => s.Trim())
+                        .Where(s => !string.IsNullOrEmpty(s))
+                        .ToList();
+
+                    System.Diagnostics.Debug.WriteLine($"[SETTINGS] Updating specializations: {string.Join(", ", _artisanUser.Specializations)}");
+                    bool success = await _userService.UpdateUserAsync(_artisanUser);
+
+                    if (success)
+                    {
+                        SpecializationLabel.Text = string.Join(", ", _artisanUser.Specializations);
+                        await DisplayAlert("Success", "Specialization updated", "OK");
+                    }
+                    else
+                    {
+                        await DisplayAlert("Error", "Failed to update specialization.", "OK");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SETTINGS] Error updating specialization: {ex.Message}");
+                    await DisplayAlert("Error", $"Failed to update specialization: {ex.Message}", "OK");
+                }
+                finally
+                {
+                    IsBusy = false;
+                }
             }
         }
 
-        private void OnAvailabilityToggled(object sender, ToggledEventArgs e)
+        private async void OnAvailabilityToggled(object sender, ToggledEventArgs e)
         {
-            if (e.Value)
+            if (_artisanUser == null)
             {
-                AvailabilityLabel.Text = "Available";
-                AvailabilityLabel.TextColor = Color.FromArgb("#10B981");
-            }
-            else
-            {
-                AvailabilityLabel.Text = "Unavailable";
-                AvailabilityLabel.TextColor = Color.FromArgb("#EF4444");
+                await DisplayAlert("Error", "Artisan profile not loaded.", "OK");
+                AvailabilitySwitch.IsToggled = !e.Value;
+                return;
             }
 
-            // TODO: Update availability status in backend
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Updating availability to: {e.Value}");
+
+                _artisanUser.IsAvailable = e.Value;
+                bool success = await _userService.UpdateUserAsync(_artisanUser);
+
+                if (success)
+                {
+                    if (e.Value)
+                    {
+                        AvailabilityLabel.Text = "Available";
+                        AvailabilityLabel.TextColor = Color.FromArgb("#10B981");
+                    }
+                    else
+                    {
+                        AvailabilityLabel.Text = "Unavailable";
+                        AvailabilityLabel.TextColor = Color.FromArgb("#EF4444");
+                    }
+                }
+                else
+                {
+                    await DisplayAlert("Error", "Failed to update availability status.", "OK");
+                    AvailabilitySwitch.IsToggled = !e.Value;
+                    _artisanUser.IsAvailable = !e.Value;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Error updating availability: {ex.Message}");
+                await DisplayAlert("Error", $"Failed to update availability: {ex.Message}", "OK");
+                AvailabilitySwitch.IsToggled = !e.Value;
+                _artisanUser.IsAvailable = !e.Value;
+            }
         }
 
         // Admin-Specific Actions
         private async void OnManageUsersClicked(object sender, EventArgs e)
         {
-            await DisplayAlert("Manage Users", "Navigate to user management panel", "OK");
-            // TODO: Navigate to user management page
+            try
+            {
+                await Shell.Current.GoToAsync("ManageUsersPage");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Navigation error: {ex.Message}");
+                await DisplayAlert("Info", "User management page is not yet available.", "OK");
+            }
         }
 
         private async void OnViewReportsClicked(object sender, EventArgs e)
         {
-            await DisplayAlert("View Reports", "Navigate to reports dashboard", "OK");
-            // TODO: Navigate to reports page
+            try
+            {
+                await Shell.Current.GoToAsync("ReportsPage");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Navigation error: {ex.Message}");
+                await DisplayAlert("Info", "Reports page is not yet available.", "OK");
+            }
         }
 
         private async void OnVerificationsClicked(object sender, EventArgs e)
         {
-            await DisplayAlert("Verifications", "Navigate to artisan verification queue", "OK");
-            // TODO: Navigate to verification page
+            try
+            {
+                await Shell.Current.GoToAsync("VerificationPage");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Navigation error: {ex.Message}");
+                await DisplayAlert("Info", "Verification page is not yet available.", "OK");
+            }
         }
 
         // Preferences Actions
-        private void OnNotificationsToggled(object sender, ToggledEventArgs e)
+        private async void OnNotificationsToggled(object sender, ToggledEventArgs e)
         {
-            // TODO: Save notification preference
-            var status = e.Value ? "enabled" : "disabled";
-            Console.WriteLine($"Push notifications {status}");
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Updating push notifications to: {e.Value}");
+                bool success = await _userService.UpdateNotificationPreferenceAsync(e.Value);
+
+                if (!success)
+                {
+                    await DisplayAlert("Error", "Failed to update notification settings.", "OK");
+                    ((Switch)sender).IsToggled = !e.Value;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Error updating notifications: {ex.Message}");
+                await DisplayAlert("Error", $"Failed to update notifications: {ex.Message}", "OK");
+                ((Switch)sender).IsToggled = !e.Value;
+            }
         }
 
-        private void OnEmailNotificationsToggled(object sender, ToggledEventArgs e)
+        private async void OnEmailNotificationsToggled(object sender, ToggledEventArgs e)
         {
-            // TODO: Save email notification preference
-            var status = e.Value ? "enabled" : "disabled";
-            Console.WriteLine($"Email notifications {status}");
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Updating email notifications to: {e.Value}");
+                bool success = await _userService.UpdateEmailNotificationPreferenceAsync(e.Value);
+
+                if (!success)
+                {
+                    await DisplayAlert("Error", "Failed to update email notification settings.", "OK");
+                    ((Switch)sender).IsToggled = !e.Value;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Error updating email notifications: {ex.Message}");
+                await DisplayAlert("Error", $"Failed to update email notifications: {ex.Message}", "OK");
+                ((Switch)sender).IsToggled = !e.Value;
+            }
         }
 
         private async void OnLanguageClicked(object sender, EventArgs e)
@@ -256,35 +491,56 @@ namespace CraftConnect_Mobile_App.Pages
 
             if (result != "Cancel" && result != null)
             {
-                await DisplayAlert("Language", $"Language changed to {result}", "OK");
-                // TODO: Implement language change
+                await DisplayAlert("Language", $"Language changed to {result}\n\nThis feature will be implemented in a future update.", "OK");
+                // TODO: Implement actual language change logic
             }
         }
 
         // Support & Legal Actions
         private async void OnHelpClicked(object sender, EventArgs e)
         {
-            await DisplayAlert("Help & Support", "Navigate to help center", "OK");
-            // TODO: Navigate to help page or open support chat
+            try
+            {
+                await Shell.Current.GoToAsync("HelpPage");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Navigation error: {ex.Message}");
+                await DisplayAlert("Info", "Help page is not yet available.", "OK");
+            }
         }
 
         private async void OnTermsClicked(object sender, EventArgs e)
         {
-            await DisplayAlert("Terms & Conditions", "Navigate to terms page", "OK");
-            // TODO: Navigate to terms page or open web view
+            try
+            {
+                await Shell.Current.GoToAsync("TermsPage");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Navigation error: {ex.Message}");
+                await DisplayAlert("Info", "Terms & Conditions page is not yet available.", "OK");
+            }
         }
 
         private async void OnPrivacyClicked(object sender, EventArgs e)
         {
-            await DisplayAlert("Privacy Policy", "Navigate to privacy policy page", "OK");
-            // TODO: Navigate to privacy page or open web view
+            try
+            {
+                await Shell.Current.GoToAsync("PrivacyPage");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Navigation error: {ex.Message}");
+                await DisplayAlert("Info", "Privacy Policy page is not yet available.", "OK");
+            }
         }
 
         private async void OnAboutClicked(object sender, EventArgs e)
         {
             await DisplayAlert(
-                "About Artisan Marketplace",
-                "Version 1.0.0\n\n© 2024 Artisan Marketplace\nAll rights reserved.",
+                "About CraftConnect",
+                "Version 1.0.0\n\n© 2024 CraftConnect\nConnecting skilled artisans with customers.\n\nAll rights reserved.",
                 "OK");
         }
 
@@ -299,9 +555,30 @@ namespace CraftConnect_Mobile_App.Pages
 
             if (confirm)
             {
-                // TODO: Implement logout logic
-                await DisplayAlert("Logged Out", "You have been logged out successfully", "OK");
-                // Navigate to login page
+                try
+                {
+                    IsBusy = true;
+
+                    System.Diagnostics.Debug.WriteLine("[SETTINGS] Logging out...");
+
+                    await _userService.LogoutAsync();
+                    await _authService.LogoutAsync();
+
+                    System.Diagnostics.Debug.WriteLine("[SETTINGS] Logout successful, navigating to login...");
+
+                    // Navigate to login page
+                    await Shell.Current.GoToAsync("//LoginPage");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SETTINGS] Error during logout: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[SETTINGS] Stack trace: {ex.StackTrace}");
+                    await DisplayAlert("Error", "Failed to logout. Please try again.", "OK");
+                }
+                finally
+                {
+                    IsBusy = false;
+                }
             }
         }
 
@@ -315,26 +592,45 @@ namespace CraftConnect_Mobile_App.Pages
 
             if (confirm)
             {
-                bool doubleConfirm = await DisplayAlert(
+                string password = await DisplayPromptAsync(
                     "Final Confirmation",
-                    "Type your password to confirm deletion:",
-                    "Confirm",
-                    "Cancel");
+                    "Enter your password to confirm deletion:",
+                    placeholder: "Password",
+                    maxLength: 50,
+                    keyboard: Keyboard.Text);
 
-                if (doubleConfirm)
+                if (!string.IsNullOrWhiteSpace(password))
                 {
-                    // TODO: Implement account deletion
-                    await DisplayAlert("Account Deleted", "Your account has been permanently deleted", "OK");
+                    try
+                    {
+                        IsBusy = true;
+
+                        System.Diagnostics.Debug.WriteLine("[SETTINGS] Attempting to delete account...");
+                        bool success = await _userService.DeleteAccountAsync(password);
+
+                        if (success)
+                        {
+                            System.Diagnostics.Debug.WriteLine("[SETTINGS] Account deleted successfully");
+                            await DisplayAlert("Account Deleted", "Your account has been permanently deleted", "OK");
+                            await Shell.Current.GoToAsync("//LoginPage");
+                        }
+                        else
+                        {
+                            await DisplayAlert("Error", "Failed to delete account. Please check your password.", "OK");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[SETTINGS] Error deleting account: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"[SETTINGS] Stack trace: {ex.StackTrace}");
+                        await DisplayAlert("Error", "Failed to delete account. Please check your password.", "OK");
+                    }
+                    finally
+                    {
+                        IsBusy = false;
+                    }
                 }
             }
-        }
-
-        // Helper method to simulate role changes for testing
-        public void SetUserRole(UserRole role)
-        {
-            currentUserRole = role;
-            UserRoleLabel.Text = GetRoleDisplayName();
-            ConfigureUIForRole();
         }
     }
 }

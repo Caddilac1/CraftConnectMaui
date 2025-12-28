@@ -47,6 +47,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.1" />
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.8" />
   </ItemGroup>
@@ -60,6 +61,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <MauiXaml Update="Pages\AiFeedChatPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </MauiXaml>
     <MauiXaml Update="Pages\BottomNavBar.xaml">
       <Generator>MSBuild:Compile</Generator>
     </MauiXaml>

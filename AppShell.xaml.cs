@@ -17,6 +17,7 @@ namespace CraftConnect_Mobile_App
             Routing.RegisterRoute(nameof(OtpVerificationPage), typeof(OtpVerificationPage));
             Routing.RegisterRoute("main/UpdatesFeedPage", typeof(UpdatesFeedPage));
             Routing.RegisterRoute("SettingsPage", typeof(SettingsPage));
+            Routing.RegisterRoute("aifeedchat", typeof(AiFeedChatPage));
 
             // Note: LoginPage and GroupChatListPage don't need registration
             // because they're already defined in AppShell.xaml as ShellContent

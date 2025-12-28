@@ -3,7 +3,7 @@
   <PropertyGroup>
     <ActiveDebugFramework>net9.0-android</ActiveDebugFramework>
     <IsFirstTimeProjectOpen>False</IsFirstTimeProjectOpen>
-    <ActiveDebugProfile>Pixel 7 - API 36 (Android 16.0 - API 36)</ActiveDebugProfile>
+    <ActiveDebugProfile>Android Emulator</ActiveDebugProfile>
     <SelectedPlatformGroup>Emulator</SelectedPlatformGroup>
     <DefaultDevice>pixel_7_-_api_36</DefaultDevice>
   </PropertyGroup>

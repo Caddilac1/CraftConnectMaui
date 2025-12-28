@@ -24,6 +24,7 @@ namespace CraftConnect_Mobile_App
                     fonts.AddFont("MaterialIcons-Regular.ttf", "MaterialIcons");
                 });
 
+
             // SERVICES
             builder.Services.AddSingleton<AuthService>();
             builder.Services.AddSingleton<IChatService, ChatService>();
@@ -31,6 +32,8 @@ namespace CraftConnect_Mobile_App
             builder.Services.AddSingleton<IUserFeedService, UserFeedService>();
             builder.Services.AddSingleton<INavigationService, NavigationService>();
             builder.Services.AddSingleton<IDialogService, DialogService>();
+            builder.Services.AddSingleton<IUserService, UserService>();
+            builder.Services.AddSingleton<AiFeedChatService>();
 
 
             // VIEWMODELS
@@ -40,6 +43,7 @@ namespace CraftConnect_Mobile_App
             builder.Services.AddTransient<StorePageModel>();
             builder.Services.AddTransient<OtpVerificationPageModel>();
             builder.Services.AddTransient<SettingsPageViewModel>();
+            builder.Services.AddTransient<AiFeedChatPageModel>();
 
             // PAGES
             builder.Services.AddTransient<LoginPage>();
@@ -47,6 +51,7 @@ namespace CraftConnect_Mobile_App
             builder.Services.AddTransient<ChatPage>();
             builder.Services.AddTransient<OtpVerificationPage>();
             builder.Services.AddTransient<SettingsPage>();
+            builder.Services.AddTransient<AiFeedChatPage>();
 
 #if DEBUG
             builder.Logging.AddDebug();

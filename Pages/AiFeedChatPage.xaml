@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CraftConnect_Mobile_App.Pages.AiFeedChatPage"
+             xmlns:pagemodels="clr-namespace:CraftConnect_Mobile_App.PageModels"
+             xmlns:converters="clr-namespace:CraftConnect_Mobile_App.Converters"
+             x:DataType="pagemodels:AiFeedChatPageModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#E8EAF6">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <Shadow x:Key="MessageShadow" Brush="#000000" Opacity="0.08" Radius="8" Offset="0,2"/>
+            <Shadow x:Key="HeaderShadow" Brush="#000000" Opacity="0.12" Radius="6" Offset="0,2"/>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto,Auto">
+
+        <!-- HEADER -->
+        <Border Grid.Row="0" BackgroundColor="#7E57C2" StrokeThickness="0" Shadow="{StaticResource HeaderShadow}">
+            <Grid Padding="8,8" ColumnDefinitions="Auto,Auto,*,Auto" HeightRequest="60">
+
+                <!-- Back Button -->
+                <Border Grid.Column="0" WidthRequest="36" HeightRequest="36" 
+                        BackgroundColor="Transparent" StrokeThickness="0" VerticalOptions="Center">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnBackButtonTapped"/>
+                    </Border.GestureRecognizers>
+                    <Label Text="&#xe5c4;" FontFamily="MaterialIcons" FontSize="24" 
+                           TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+                </Border>
+
+                <!-- AI Avatar -->
+                <Border Grid.Column="1" WidthRequest="40" HeightRequest="40" 
+                        BackgroundColor="#B39DDB" StrokeThickness="0" 
+                        VerticalOptions="Center" Margin="4,0,10,0">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="20"/>
+                    </Border.StrokeShape>
+                    <Label Text="??" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center"/>
+                </Border>
+
+                <!-- AI Name & Status -->
+                <VerticalStackLayout Grid.Column="2" VerticalOptions="Center" Spacing="1">
+                    <Label Text="AI Feed Assistant" FontSize="16" FontAttributes="Bold" 
+                           TextColor="White" LineBreakMode="TailTruncation"/>
+                    <Label Text="{Binding StatusText}" FontSize="12" TextColor="#E1BEE7" 
+                           LineBreakMode="TailTruncation"/>
+                </VerticalStackLayout>
+
+                <!-- Info Icon -->
+                <Label Grid.Column="3" Text="&#xe88e;" FontFamily="MaterialIcons" 
+                       FontSize="24" TextColor="White" VerticalOptions="Center" Margin="0,0,4,0"/>
+            </Grid>
+        </Border>
+
+        <!-- MESSAGES AREA -->
+        <RefreshView Grid.Row="1" Command="{Binding RefreshCommand}" 
+                     IsRefreshing="{Binding IsBusy}" RefreshColor="#7E57C2" 
+                     BackgroundColor="#E8EAF6">
+            <CollectionView x:Name="MessagesCollectionView" ItemsSource="{Binding Messages}" 
+                           SelectionMode="None" VerticalOptions="FillAndExpand" 
+                           Margin="0,8,0,8">
+
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout Padding="40" VerticalOptions="Center" 
+                                        HorizontalOptions="Center" Spacing="16">
+                        <Border WidthRequest="80" HeightRequest="80" BackgroundColor="White" 
+                               StrokeThickness="0" HorizontalOptions="Center" 
+                               Shadow="{StaticResource MessageShadow}">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="40"/>
+                            </Border.StrokeShape>
+                            <Label Text="??" FontSize="40" HorizontalOptions="Center" 
+                                  VerticalOptions="Center"/>
+                        </Border>
+                        <Label Text="AI Assistant Ready" FontSize="18" TextColor="#424242" 
+                              HorizontalTextAlignment="Center"/>
+                        <Label Text="Let's create an amazing feed post together!" 
+                              FontSize="14" TextColor="#757575" HorizontalTextAlignment="Center" 
+                              Margin="0,-8,0,0"/>
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="pagemodels:AiChatMessageViewModel">
+                        <Grid Padding="8,3">
+
+                            <!-- AI Messages (LEFT) -->
+                            <VerticalStackLayout IsVisible="{Binding IsFromAi}" 
+                                                HorizontalOptions="Start" 
+                                                MaximumWidthRequest="300" Spacing="4">
+                                <Label Text="AI Assistant" FontSize="12" FontAttributes="Bold" 
+                                      TextColor="#7E57C2" Margin="10,0,0,0"/>
+
+                                <Border BackgroundColor="White" StrokeThickness="0" 
+                                       Padding="10,8" Shadow="{StaticResource MessageShadow}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="16,16,16,4"/>
+                                    </Border.StrokeShape>
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="{Binding Message}" FontSize="14.5" 
+                                              TextColor="#212121" LineBreakMode="WordWrap"/>
+                                        <Label Text="{Binding DisplayTime}" FontSize="11" 
+                                              TextColor="#9E9E9E" HorizontalOptions="End"/>
+                                    </VerticalStackLayout>
+                                </Border>
+
+                                <!-- Typing Indicator -->
+                                <Border IsVisible="{Binding IsTyping}" BackgroundColor="White" 
+                                       StrokeThickness="0" Padding="12,10" 
+                                       Shadow="{StaticResource MessageShadow}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="16,16,16,4"/>
+                                    </Border.StrokeShape>
+                                    <HorizontalStackLayout Spacing="4">
+                                        <Ellipse x:Name="Dot1" WidthRequest="8" HeightRequest="8" Fill="#9E9E9E" Opacity="0.3"/>
+                                        <Ellipse x:Name="Dot2" WidthRequest="8" HeightRequest="8" Fill="#9E9E9E" Opacity="0.3"/>
+                                        <Ellipse x:Name="Dot3" WidthRequest="8" HeightRequest="8" Fill="#9E9E9E" Opacity="0.3"/>
+                                    </HorizontalStackLayout>
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <!-- User Messages (RIGHT) -->
+                            <VerticalStackLayout IsVisible="{Binding IsFromUser}" 
+                                                HorizontalOptions="End" 
+                                                MaximumWidthRequest="300" Spacing="4">
+                                <Border BackgroundColor="#B39DDB" StrokeThickness="0" 
+                                       Padding="10,8" Shadow="{StaticResource MessageShadow}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="16,16,4,16"/>
+                                    </Border.StrokeShape>
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="{Binding Message}" FontSize="14.5" 
+                                              TextColor="White" LineBreakMode="WordWrap"/>
+                                        <Label Text="{Binding DisplayTime}" FontSize="11" 
+                                              TextColor="#EDE7F6" HorizontalOptions="End"/>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <!-- File Attachment Preview -->
+                            <Border IsVisible="{Binding HasAttachment}" HorizontalOptions="{Binding AttachmentAlignment}" 
+                                   BackgroundColor="#F5F5F5" StrokeThickness="1" Stroke="#E0E0E0" 
+                                   Padding="8" Margin="0,4,0,0" MaximumWidthRequest="300">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="8"/>
+                                </Border.StrokeShape>
+                                <HorizontalStackLayout Spacing="8">
+                                    <Label Text="??" FontSize="20"/>
+                                    <VerticalStackLayout Spacing="2">
+                                        <Label Text="{Binding AttachmentName}" FontSize="12" 
+                                              FontAttributes="Bold" TextColor="#212121"/>
+                                        <Label Text="{Binding AttachmentType}" FontSize="10" 
+                                              TextColor="#757575"/>
+                                    </VerticalStackLayout>
+                                </HorizontalStackLayout>
+                            </Border>
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+
+        <!-- Attached Files Summary -->
+        <Border Grid.Row="2" IsVisible="{Binding HasAttachedFiles}" 
+                HeightRequest="60" BackgroundColor="#F5F5F5" 
+                Padding="12,4" StrokeThickness="0">
+            <CollectionView ItemsSource="{Binding AttachedFiles}">
+                <CollectionView.ItemsLayout>
+                    <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8"/>
+                </CollectionView.ItemsLayout>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border BackgroundColor="White" StrokeThickness="1" 
+                               Stroke="#E0E0E0" Padding="8" WidthRequest="120">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="8"/>
+                            </Border.StrokeShape>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="{Binding FileName}" FontSize="11" 
+                                          FontAttributes="Bold" LineBreakMode="TailTruncation"/>
+                                    <Label Text="{Binding FileType}" FontSize="10" 
+                                          TextColor="#757575"/>
+                                </VerticalStackLayout>
+                                <Label Grid.Column="1" Text="?" FontSize="14" 
+                                      TextColor="#F44336" VerticalOptions="Start">
+                                    <Label.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type pagemodels:AiFeedChatPageModel}}, Path=RemoveFileCommand}" 
+                                                             CommandParameter="{Binding .}"/>
+                                    </Label.GestureRecognizers>
+                                </Label>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </Border>
+
+        <!-- MESSAGE INPUT -->
+        <Grid Grid.Row="3" BackgroundColor="Transparent" Padding="12,8,12,12" 
+             ColumnDefinitions="*,Auto" ColumnSpacing="8">
+
+            <Border Grid.Column="0" BackgroundColor="White" StrokeThickness="0" 
+                   Padding="0" VerticalOptions="End" MinimumHeightRequest="46" 
+                   MaximumHeightRequest="120" Shadow="{StaticResource MessageShadow}" 
+                   StrokeShape="RoundRectangle 23">
+
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="4" Padding="4,0">
+
+                    <Border Grid.Column="0" BackgroundColor="Transparent" StrokeThickness="0" 
+                           WidthRequest="40" HeightRequest="40" VerticalOptions="Center">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnEmojiButtonTapped"/>
+                        </Border.GestureRecognizers>
+                        <Label Text="&#xe24e;" FontFamily="MaterialIcons" FontSize="24" 
+                              TextColor="#9E9E9E" HorizontalOptions="Center" VerticalOptions="Center"/>
+                    </Border>
+
+                    <Editor Grid.Column="1" Text="{Binding MessageText}" 
+                           Placeholder="Type your message..." AutoSize="TextChanges" 
+                           FontSize="16" TextColor="#212121" PlaceholderColor="#BDBDBD" 
+                           BackgroundColor="Transparent" VerticalOptions="Center" 
+                           MinimumHeightRequest="28" MaximumHeightRequest="100"/>
+
+                    <HorizontalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Center" Margin="0,0,8,0">
+                        <Border BackgroundColor="Transparent" StrokeThickness="0" 
+                               WidthRequest="36" HeightRequest="36" VerticalOptions="Center" 
+                               IsVisible="{Binding MessageText, Converter={StaticResource StringIsEmptyConverter}}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnAttachmentButtonTapped"/>
+                            </Border.GestureRecognizers>
+                            <Label Text="&#xe226;" FontFamily="MaterialIcons" FontSize="24" 
+                                  TextColor="#9E9E9E" Rotation="-45" HorizontalOptions="Center" 
+                                  VerticalOptions="Center"/>
+                        </Border>
+                    </HorizontalStackLayout>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" WidthRequest="48" HeightRequest="48" 
+                   BackgroundColor="#7E57C2" StrokeThickness="0" VerticalOptions="End" 
+                   Shadow="{StaticResource MessageShadow}">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="24"/>
+                </Border.StrokeShape>
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding SendMessageCommand}"/>
+                </Border.GestureRecognizers>
+
+                <Label Text="&#xe163;" FontFamily="MaterialIcons" FontSize="24" 
+                      TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" 
+                      IsVisible="{Binding MessageText, Converter={StaticResource StringNotEmptyConverter}}"/>
+            </Border>
+        </Grid>
+
+        <!-- Loading Indicator -->
+        <ActivityIndicator Grid.Row="1" IsRunning="{Binding IsBusy}" 
+                          IsVisible="{Binding IsBusy}" Color="#7E57C2" 
+                          WidthRequest="32" HeightRequest="32" VerticalOptions="Start" 
+                          HorizontalOptions="Center" Margin="0,16,0,0"/>
+    </Grid>
+</ContentPage>
