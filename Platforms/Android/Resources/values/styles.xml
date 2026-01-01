@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<style name="MainTheme" parent="Maui.SplashTheme">
+		<item name="android:navigationBarColor">#FFFFFFFF</item>
+		<item name="android:windowLightNavigationBar">true</item>
+		<item name="android:windowDrawsSystemBarBackgrounds">true</item>
+		<item name="android:fitsSystemWindows">true</item>
+		<item name="android:enforceNavigationBarContrast">false</item>
+	</style>
+</resources>

@@ -29,7 +29,7 @@ namespace CraftConnect_Mobile_App.Services
     public class ChatService : IChatService
     {
         private readonly HttpClient _httpClient;
-        private const string BaseUrl = "https://192.168.201.112:7023"; // Match your AuthService URL
+        private const string BaseUrl = "https://192.168.28.112:7023"; // Match your AuthService URL
 
         public ChatService()
         {

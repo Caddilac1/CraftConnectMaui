@@ -58,7 +58,6 @@ namespace CraftConnect_Mobile_App.Pages
         private void OnEmojiButtonTapped(object sender, EventArgs e)
         {
             Debug.WriteLine("[AI CHAT PAGE] Emoji button tapped");
-            // Optional: Implement emoji picker
             DisplayAlert("Info", "Emoji picker coming soon!", "OK");
         }
 
@@ -66,87 +65,133 @@ namespace CraftConnect_Mobile_App.Pages
         {
             Debug.WriteLine("[AI CHAT PAGE] Attachment button tapped");
 
+            // Show the WhatsApp-style bottom sheet
+            AttachmentOverlay.IsVisible = true;
+
+            // Animate the bottom sheet sliding up
+            var sheet = AttachmentOverlay.Children[1] as VerticalStackLayout;
+            if (sheet != null)
+            {
+                sheet.TranslationY = 300;
+                await sheet.TranslateTo(0, 0, 250, Easing.CubicOut);
+            }
+        }
+
+        private async void OnDismissAttachmentSheet(object sender, EventArgs e)
+        {
+            await HideAttachmentSheet();
+        }
+
+        private async Task HideAttachmentSheet()
+        {
+            var sheet = AttachmentOverlay.Children[1] as VerticalStackLayout;
+            if (sheet != null)
+            {
+                await sheet.TranslateTo(0, 300, 200, Easing.CubicIn);
+            }
+            AttachmentOverlay.IsVisible = false;
+        }
+
+        private async void OnDocumentTapped(object sender, EventArgs e)
+        {
+            await HideAttachmentSheet();
+            await PickDocument("document");
+        }
+
+        private async void OnInvoiceTapped(object sender, EventArgs e)
+        {
+            await HideAttachmentSheet();
+            await PickDocument("invoice");
+        }
+
+        private async void OnCameraTapped(object sender, EventArgs e)
+        {
+            await HideAttachmentSheet();
+            await TakePhoto();
+        }
+
+        private async void OnGalleryTapped(object sender, EventArgs e)
+        {
+            await HideAttachmentSheet();
+            await PickPhoto();
+        }
+
+        private async Task PickDocument(string fileType)
+        {
             try
             {
-                var action = await DisplayActionSheet(
-                    "Attach File",
-                    "Cancel",
-                    null,
-                    "Invoice",
-                    "Document",
-                    "Photo"
+                var customFileType = new FilePickerFileType(
+                    new Dictionary<DevicePlatform, IEnumerable<string>>
+                    {
+                        { DevicePlatform.iOS, new[] { "public.pdf", "public.image", "public.data" } },
+                        { DevicePlatform.Android, new[] { "application/pdf", "image/*", "*/*" } },
+                        { DevicePlatform.WinUI, new[] { ".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx" } }
+                    }
                 );
 
-                if (action == "Cancel" || action == null)
-                    return;
-
-                FileResult? file = null;
-
-                if (action == "Photo")
+                var options = new PickOptions
                 {
-                    // Option 1: Take photo
-                    var photoAction = await DisplayActionSheet(
-                        "Photo",
-                        "Cancel",
-                        null,
-                        "Take Photo",
-                        "Choose from Gallery"
-                    );
+                    FileTypes = customFileType,
+                    PickerTitle = $"Select {fileType}"
+                };
 
-                    if (photoAction == "Take Photo")
-                    {
-                        if (MediaPicker.Default.IsCaptureSupported)
-                        {
-                            file = await MediaPicker.Default.CapturePhotoAsync();
-                        }
-                        else
-                        {
-                            await DisplayAlert("Not Supported", "Camera is not available on this device", "OK");
-                            return;
-                        }
-                    }
-                    else if (photoAction == "Choose from Gallery")
-                    {
-                        file = await MediaPicker.Default.PickPhotoAsync();
-                    }
+                var file = await FilePicker.Default.PickAsync(options);
 
-                    if (file != null)
-                    {
-                        await _viewModel.AttachFile(file, "photo");
-                    }
-                }
-                else if (action == "Invoice" || action == "Document")
+                if (file != null)
                 {
-                    // Pick document file
-                    var customFileType = new FilePickerFileType(
-                        new Dictionary<DevicePlatform, IEnumerable<string>>
-                        {
-                            { DevicePlatform.iOS, new[] { "public.pdf", "public.image", "public.data" } },
-                            { DevicePlatform.Android, new[] { "application/pdf", "image/*", "*/*" } },
-                            { DevicePlatform.WinUI, new[] { ".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx" } }
-                        }
-                    );
-
-                    var options = new PickOptions
-                    {
-                        FileTypes = customFileType,
-                        PickerTitle = $"Select {action}"
-                    };
-
-                    file = await FilePicker.Default.PickAsync(options);
-
-                    if (file != null)
-                    {
-                        var fileType = action.ToLower();
-                        await _viewModel.AttachFile(file, fileType);
-                        Debug.WriteLine($"[AI CHAT PAGE] ✅ File attached: {file.FileName}");
-                    }
+                    await _viewModel.AttachFile(file, fileType);
+                    Debug.WriteLine($"[AI CHAT PAGE] ✅ File attached: {file.FileName}");
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[AI CHAT PAGE] ❌ Error picking file: {ex.Message}");
                 await DisplayAlert("Error", "Failed to attach file. Please try again.", "OK");
+            }
+        }
+
+        private async Task TakePhoto()
+        {
+            try
+            {
+                if (MediaPicker.Default.IsCaptureSupported)
+                {
+                    var file = await MediaPicker.Default.CapturePhotoAsync();
+
+                    if (file != null)
+                    {
+                        await _viewModel.AttachFile(file, "photo");
+                        Debug.WriteLine($"[AI CHAT PAGE] ✅ Photo captured: {file.FileName}");
+                    }
+                }
+                else
+                {
+                    await DisplayAlert("Not Supported", "Camera is not available on this device", "OK");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[AI CHAT PAGE] ❌ Error taking photo: {ex.Message}");
+                await DisplayAlert("Error", "Failed to capture photo. Please try again.", "OK");
+            }
+        }
+
+        private async Task PickPhoto()
+        {
+            try
+            {
+                var file = await MediaPicker.Default.PickPhotoAsync();
+
+                if (file != null)
+                {
+                    await _viewModel.AttachFile(file, "photo");
+                    Debug.WriteLine($"[AI CHAT PAGE] ✅ Photo selected: {file.FileName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[AI CHAT PAGE] ❌ Error picking photo: {ex.Message}");
+                await DisplayAlert("Error", "Failed to select photo. Please try again.", "OK");
             }
         }
     }

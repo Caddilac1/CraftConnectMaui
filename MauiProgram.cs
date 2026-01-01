@@ -53,6 +53,10 @@ namespace CraftConnect_Mobile_App
             builder.Services.AddTransient<SettingsPage>();
             builder.Services.AddTransient<AiFeedChatPage>();
 
+
+
+
+
 #if DEBUG
             builder.Logging.AddDebug();
 #endif
