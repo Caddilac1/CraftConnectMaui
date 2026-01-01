@@ -5,7 +5,7 @@ using CraftConnect_Mobile_App.Services;
 
 namespace CraftConnect_Mobile_App.PageModels
 {
-    [QueryProperty(nameof(GroupIdString), "GroupId")]  // ✅ Changed to receive as string
+    [QueryProperty(nameof(GroupIdString), "GroupId")]
     [QueryProperty(nameof(GroupName), nameof(GroupName))]
     public class ChatPageModel : BasePageModel
     {
@@ -35,7 +35,6 @@ namespace CraftConnect_Mobile_App.PageModels
             Debug.WriteLine("[CHAT DETAILS VM] Initialized");
         }
 
-        // ✅ NEW: String property for QueryProperty to handle string-to-Guid conversion
         public string GroupIdString
         {
             set
@@ -81,6 +80,7 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 _messageText = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(MessageButtonIcon)); // Update button icon
                 ((Command)SendMessageCommand).ChangeCanExecute();
             }
         }
@@ -96,24 +96,21 @@ namespace CraftConnect_Mobile_App.PageModels
         }
 
         /// <summary>
-        /// Initialize the page - called when page appears
+        /// Icon for the send/microphone button - changes based on message text
         /// </summary>
+        public string MessageButtonIcon => string.IsNullOrWhiteSpace(MessageText) ? "\ue029" : "\ue163";
+
         public async Task InitializeAsync()
         {
             Debug.WriteLine($"[CHAT DETAILS VM] InitializeAsync called for group: {GroupId}");
 
-            // Get current user ID
             var userInfo = await _authService.GetCurrentUserAsync();
             CurrentUserId = userInfo.UserId;
             Debug.WriteLine($"[CHAT DETAILS VM] Current user ID: {CurrentUserId}");
 
-            // Load messages
             await LoadMessages();
         }
 
-        /// <summary>
-        /// Load messages for the current group
-        /// </summary>
         private async Task LoadMessages()
         {
             if (IsBusy || GroupId == Guid.Empty)
@@ -131,16 +128,14 @@ namespace CraftConnect_Mobile_App.PageModels
 
                 Debug.WriteLine($"[CHAT DETAILS VM] Received {messages.Count} messages");
 
-                // Clear and reload
                 Messages.Clear();
                 foreach (var message in messages.OrderBy(m => m.SentAt))
                 {
-                    // Wrap in ViewModel to add UI properties
                     var viewModel = new GroupMessageItemViewModel(message, CurrentUserId);
                     Messages.Add(viewModel);
                 }
 
-                Debug.WriteLine($"[CHAT DETAILS VM] ✅ Messages loaded successfully. Total in collection: {Messages.Count}");
+                Debug.WriteLine($"[CHAT DETAILS VM] ✅ Messages loaded successfully. Total: {Messages.Count}");
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -165,9 +160,6 @@ namespace CraftConnect_Mobile_App.PageModels
             }
         }
 
-        /// <summary>
-        /// Send a new message to the group
-        /// </summary>
         private async Task SendMessage()
         {
             if (string.IsNullOrWhiteSpace(MessageText) || IsBusy)
@@ -189,14 +181,13 @@ namespace CraftConnect_Mobile_App.PageModels
                 {
                     Debug.WriteLine($"[CHAT DETAILS VM] ✅ Message sent successfully");
 
-                    // Clear the input
                     var sentMessage = MessageText;
                     MessageText = string.Empty;
 
-                    // Add message to UI immediately (optimistic update)
+                    // Optimistic update
                     var newMessage = new GroupMessageItem
                     {
-                        Id = Guid.NewGuid(), // Temporary ID
+                        Id = Guid.NewGuid(),
                         Message = sentMessage,
                         SenderId = Guid.Parse(CurrentUserId),
                         SenderName = "You",
@@ -207,8 +198,7 @@ namespace CraftConnect_Mobile_App.PageModels
                     var viewModel = new GroupMessageItemViewModel(newMessage, CurrentUserId);
                     Messages.Add(viewModel);
 
-                    // Reload messages to get the actual message from server
-                    await Task.Delay(500); // Small delay
+                    await Task.Delay(500);
                     await LoadMessages();
                 }
                 else
@@ -243,9 +233,6 @@ namespace CraftConnect_Mobile_App.PageModels
             }
         }
 
-        /// <summary>
-        /// Refresh messages (pull to refresh)
-        /// </summary>
         private async Task RefreshMessages()
         {
             Debug.WriteLine($"[CHAT DETAILS VM] Refreshing messages...");
@@ -254,7 +241,7 @@ namespace CraftConnect_Mobile_App.PageModels
     }
 
     /// <summary>
-    /// ViewModel wrapper for GroupMessageItem that adds UI-specific properties
+    /// ViewModel wrapper for GroupMessageItem with UI-specific properties
     /// </summary>
     public class GroupMessageItemViewModel
     {
@@ -267,7 +254,6 @@ namespace CraftConnect_Mobile_App.PageModels
             _currentUserId = currentUserId;
         }
 
-        // Original properties from GroupMessageItem
         public Guid Id => _message.Id;
         public string Message => _message.Message;
         public DateTime SentAt => _message.SentAt;
@@ -275,7 +261,6 @@ namespace CraftConnect_Mobile_App.PageModels
         public string SenderName => _message.SenderName;
         public string SenderFullName => _message.SenderFullName;
 
-        // UI-specific properties
         public bool IsFromCurrentUser => SenderId.ToString() == _currentUserId;
 
         public string DisplayName => IsFromCurrentUser ? "You" : (SenderFullName ?? SenderName ?? "Unknown");
@@ -299,6 +284,34 @@ namespace CraftConnect_Mobile_App.PageModels
                     return SentAt.ToString("ddd h:mm tt");
                 else
                     return SentAt.ToString("MMM d, h:mm tt");
+            }
+        }
+
+        // Attachment properties (for future use when backend supports it)
+        public bool HasAttachment => !string.IsNullOrEmpty(AttachmentName);
+
+        public string AttachmentName { get; set; } // Will come from backend
+
+        public string AttachmentSize { get; set; } // Will come from backend
+
+        public string AttachmentIcon
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(AttachmentName))
+                    return string.Empty;
+
+                var extension = Path.GetExtension(AttachmentName)?.ToLower();
+                return extension switch
+                {
+                    ".pdf" => "\ue415", // picture_as_pdf
+                    ".doc" or ".docx" => "\ue873", // description
+                    ".xls" or ".xlsx" => "\ue873", // description
+                    ".jpg" or ".jpeg" or ".png" or ".gif" => "\ue3f4", // image
+                    ".mp4" or ".mov" or ".avi" => "\ue04b", // videocam
+                    ".mp3" or ".wav" => "\ue310", // audiotrack
+                    _ => "\ue24d" // insert_drive_file
+                };
             }
         }
     }

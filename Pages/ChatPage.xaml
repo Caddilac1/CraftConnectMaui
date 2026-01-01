@@ -8,6 +8,11 @@
              Shell.NavBarIsVisible="False"
              BackgroundColor="#E8EAF6">
 
+    <!-- Remove safe area padding -->
+    <Shell.TitleView>
+        <Grid/>
+    </Shell.TitleView>
+
     <ContentPage.Resources>
         <ResourceDictionary>
             <!-- Message bubble shadows -->
@@ -26,18 +31,20 @@
         </ResourceDictionary>
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="Auto,*,Auto">
+    <!-- Main Grid with 3 rows: Header, Messages, Input -->
+    <Grid RowDefinitions="Auto,*,Auto"
+          RowSpacing="0">
 
         <!-- ========================================
-             HEADER
+             FIXED HEADER (Row 0)
              ======================================== -->
         <Border Grid.Row="0"
                 BackgroundColor="#5E35B1"
                 StrokeThickness="0"
-                Shadow="{StaticResource HeaderShadow}">
-            <Grid Padding="8,8"
+                Shadow="{StaticResource HeaderShadow}"
+                ZIndex="100">
+            <Grid Padding="8"
                   ColumnDefinitions="Auto,Auto,*,Auto"
-                  RowDefinitions="Auto"
                   HeightRequest="60">
 
                 <!-- Back Button -->
@@ -93,7 +100,7 @@
                            LineBreakMode="TailTruncation"/>
                 </VerticalStackLayout>
 
-                <!-- Menu Icon (3 dots) -->
+                <!-- Menu Icon -->
                 <Label Grid.Column="3"
                        Text="&#xe5d4;"
                        FontFamily="MaterialIcons"
@@ -105,7 +112,7 @@
         </Border>
 
         <!-- ========================================
-             MESSAGES AREA
+             MESSAGES AREA (Row 1)
              ======================================== -->
         <RefreshView Grid.Row="1"
                      Command="{Binding RefreshCommand}"
@@ -182,6 +189,37 @@
                                                FontSize="14.5"
                                                TextColor="#212121"
                                                LineBreakMode="WordWrap"/>
+
+                                        <!-- Display attachment if present -->
+                                        <Border IsVisible="{Binding HasAttachment}"
+                                                BackgroundColor="#F5F5F5"
+                                                StrokeThickness="1"
+                                                Stroke="#E0E0E0"
+                                                Padding="8"
+                                                Margin="0,4,0,0">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="8"/>
+                                            </Border.StrokeShape>
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                                <Label Grid.Column="0"
+                                                       Text="{Binding AttachmentIcon}"
+                                                       FontFamily="MaterialIcons"
+                                                       FontSize="24"
+                                                       TextColor="#7E57C2"
+                                                       VerticalOptions="Center"/>
+                                                <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                    <Label Text="{Binding AttachmentName}"
+                                                           FontSize="12"
+                                                           FontAttributes="Bold"
+                                                           TextColor="#212121"
+                                                           LineBreakMode="TailTruncation"/>
+                                                    <Label Text="{Binding AttachmentSize}"
+                                                           FontSize="11"
+                                                           TextColor="#757575"/>
+                                                </VerticalStackLayout>
+                                            </Grid>
+                                        </Border>
+
                                         <Label Text="{Binding DisplayTime}"
                                                FontSize="11"
                                                TextColor="#9E9E9E"
@@ -210,6 +248,36 @@
                                                FontSize="14.5"
                                                TextColor="White"
                                                LineBreakMode="WordWrap"/>
+
+                                        <!-- Display attachment if present -->
+                                        <Border IsVisible="{Binding HasAttachment}"
+                                                BackgroundColor="#9575CD"
+                                                StrokeThickness="0"
+                                                Padding="8"
+                                                Margin="0,4,0,0">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="8"/>
+                                            </Border.StrokeShape>
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                                <Label Grid.Column="0"
+                                                       Text="{Binding AttachmentIcon}"
+                                                       FontFamily="MaterialIcons"
+                                                       FontSize="24"
+                                                       TextColor="White"
+                                                       VerticalOptions="Center"/>
+                                                <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                    <Label Text="{Binding AttachmentName}"
+                                                           FontSize="12"
+                                                           FontAttributes="Bold"
+                                                           TextColor="White"
+                                                           LineBreakMode="TailTruncation"/>
+                                                    <Label Text="{Binding AttachmentSize}"
+                                                           FontSize="11"
+                                                           TextColor="#EDE7F6"/>
+                                                </VerticalStackLayout>
+                                            </Grid>
+                                        </Border>
+
                                         <HorizontalStackLayout HorizontalOptions="End"
                                                                Spacing="4">
                                             <Label Text="{Binding DisplayTime}"
@@ -232,30 +300,29 @@
         </RefreshView>
 
         <!-- ========================================
-             MESSAGE INPUT AREA (Transparent background)
+             MESSAGE INPUT AREA (Row 2) - No bottom padding
              ======================================== -->
         <Grid Grid.Row="2"
-              BackgroundColor="Transparent"
-              Padding="12,8,12,12"
+              BackgroundColor="White"
+              Padding="12,8,12,8"
               ColumnDefinitions="*,Auto"
               ColumnSpacing="8">
 
             <!-- Input Container with Emoji & Attachment -->
             <Border Grid.Column="0"
-                    BackgroundColor="White"
+                    BackgroundColor="#F5F5F5"
                     StrokeThickness="0"
                     Padding="0"
-                    VerticalOptions="End"
+                    VerticalOptions="Center"
                     MinimumHeightRequest="46"
                     MaximumHeightRequest="120"
-                    Shadow="{StaticResource MessageShadow}"
                     StrokeShape="RoundRectangle 23">
 
                 <Grid ColumnDefinitions="Auto,*,Auto"
                       ColumnSpacing="4"
                       Padding="4,0">
 
-                    <!-- Emoji Button (Tappable) -->
+                    <!-- Emoji Button -->
                     <Border Grid.Column="0"
                             BackgroundColor="Transparent"
                             StrokeThickness="0"
@@ -275,6 +342,7 @@
 
                     <!-- Text Input -->
                     <Editor Grid.Column="1"
+                            x:Name="MessageEditor"
                             Text="{Binding MessageText}"
                             Placeholder="Type a message..."
                             AutoSize="TextChanges"
@@ -284,19 +352,21 @@
                             BackgroundColor="Transparent"
                             VerticalOptions="Center"
                             MinimumHeightRequest="28"
-                            MaximumHeightRequest="100"/>
+                            MaximumHeightRequest="100"
+                            Focused="OnMessageEditorFocused"
+                            Unfocused="OnMessageEditorUnfocused"/>
 
-                    <!-- Attachment & Camera Buttons -->
+                    <!-- Attachment & Camera Buttons (only when empty) -->
                     <HorizontalStackLayout Grid.Column="2"
                                            Spacing="4"
                                            VerticalOptions="Center"
-                                           Margin="0,0,8,0">
+                                           Margin="0,0,8,0"
+                                           IsVisible="{Binding MessageText, Converter={StaticResource StringIsEmptyConverter}}">
                         <Border BackgroundColor="Transparent"
                                 StrokeThickness="0"
                                 WidthRequest="36"
                                 HeightRequest="36"
-                                VerticalOptions="Center"
-                                IsVisible="{Binding MessageText, Converter={StaticResource StringIsEmptyConverter}}">
+                                VerticalOptions="Center">
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnAttachmentButtonTapped"/>
                             </Border.GestureRecognizers>
@@ -313,8 +383,7 @@
                                 StrokeThickness="0"
                                 WidthRequest="36"
                                 HeightRequest="36"
-                                VerticalOptions="Center"
-                                IsVisible="{Binding MessageText, Converter={StaticResource StringIsEmptyConverter}}">
+                                VerticalOptions="Center">
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnCameraButtonTapped"/>
                             </Border.GestureRecognizers>
@@ -329,14 +398,13 @@
                 </Grid>
             </Border>
 
-            <!-- Microphone OR Send Button -->
+            <!-- Send Button (only when text exists) OR Microphone (when empty) -->
             <Border Grid.Column="1"
                     WidthRequest="48"
                     HeightRequest="48"
                     BackgroundColor="#7E57C2"
                     StrokeThickness="0"
-                    VerticalOptions="End"
-                    Shadow="{StaticResource MessageShadow}">
+                    VerticalOptions="Center">
                 <Border.StrokeShape>
                     <RoundRectangle CornerRadius="24"/>
                 </Border.StrokeShape>
@@ -344,25 +412,13 @@
                     <TapGestureRecognizer Command="{Binding SendMessageCommand}"/>
                 </Border.GestureRecognizers>
 
-                <Grid>
-                    <!-- Send icon (when text exists) -->
-                    <Label Text="&#xe163;"
-                           FontFamily="MaterialIcons"
-                           FontSize="24"
-                           TextColor="White"
-                           VerticalOptions="Center"
-                           HorizontalOptions="Center"
-                           IsVisible="{Binding MessageText, Converter={StaticResource StringNotEmptyConverter}}"/>
-
-                    <!-- Microphone icon (when empty) -->
-                    <Label Text="&#xe029;"
-                           FontFamily="MaterialIcons"
-                           FontSize="24"
-                           TextColor="White"
-                           VerticalOptions="Center"
-                           HorizontalOptions="Center"
-                           IsVisible="{Binding MessageText, Converter={StaticResource StringIsEmptyConverter}}"/>
-                </Grid>
+                <!-- Only show ONE icon at a time -->
+                <Label Text="{Binding MessageButtonIcon}"
+                       FontFamily="MaterialIcons"
+                       FontSize="24"
+                       TextColor="White"
+                       VerticalOptions="Center"
+                       HorizontalOptions="Center"/>
             </Border>
         </Grid>
 
@@ -375,6 +431,7 @@
                           HeightRequest="32"
                           VerticalOptions="Start"
                           HorizontalOptions="Center"
-                          Margin="0,16,0,0"/>
+                          Margin="0,16,0,0"
+                          ZIndex="99"/>
     </Grid>
 </ContentPage>
