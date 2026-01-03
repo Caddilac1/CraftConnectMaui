@@ -12,6 +12,7 @@
             <converters:StringEmptyConverter x:Key="StringEmptyConverter" />
             <converters:PasswordIconConverter x:Key="PasswordIconConverter" />
             <converters:PasswordTextConverter x:Key="PasswordTextConverter" />
+            <converters:IsNotNullOrEmptyConverter x:Key="IsNotNullOrEmptyConverter"/>
             <!-- ✅ NEW -->
             <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
             <converters:StringToInitialsConverter x:Key="StringToInitialsConverter" />
@@ -158,6 +159,18 @@
             <Style TargetType="Label">
                 <Setter Property="FontFamily" Value="Segoe UI"/>
                 <Setter Property="TextColor" Value="{StaticResource DarkGray}"/>
+            </Style>
+
+            <!-- ✅ CRITICAL: ContentPage Style to Fix Gray Box -->
+            <Style TargetType="ContentPage" ApplyToDerivedTypes="True">
+                <Setter Property="Padding">
+                    <Setter.Value>
+                        <OnPlatform x:TypeArguments="Thickness">
+                            <On Platform="Android" Value="0,0,0,0"/>
+                            <On Platform="iOS" Value="0,0,0,0"/>
+                        </OnPlatform>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
             <Style x:Key="HeaderLabel" TargetType="Label">
