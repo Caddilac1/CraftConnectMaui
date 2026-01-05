@@ -6,7 +6,7 @@ namespace CraftConnect_Mobile_App.Pages
     public partial class ChatPage : ContentPage
     {
         private readonly ChatPageModel _viewModel;
-        private double _keyboardHeight = 0;
+        private bool _isInitialized = false;
 
         public ChatPage(ChatPageModel viewModel)
         {
@@ -15,8 +15,8 @@ namespace CraftConnect_Mobile_App.Pages
             BindingContext = _viewModel;
             Debug.WriteLine("[CHAT PAGE] Constructor - Page initialized");
 
-            // Subscribe to soft keyboard events
-            Microsoft.Maui.Controls.Application.Current.RequestedThemeChanged += OnKeyboardChanged;
+            // Subscribe to collection changes to auto-scroll
+            _viewModel.Messages.CollectionChanged += OnMessagesCollectionChanged;
         }
 
         protected override async void OnAppearing()
@@ -26,17 +26,20 @@ namespace CraftConnect_Mobile_App.Pages
             Debug.WriteLine($"[CHAT PAGE] GroupId: {_viewModel.GroupId}");
             Debug.WriteLine($"[CHAT PAGE] GroupName: {_viewModel.GroupName}");
 
+            if (_isInitialized)
+            {
+                Debug.WriteLine("[CHAT PAGE] Already initialized, skipping");
+                return;
+            }
+
             try
             {
-                await Task.Delay(100);
                 await _viewModel.InitializeAsync();
+                _isInitialized = true;
 
                 // Scroll to bottom after loading messages
-                if (_viewModel.Messages.Count > 0)
-                {
-                    await Task.Delay(200);
-                    ScrollToBottom(false);
-                }
+                await Task.Delay(300);
+                ScrollToBottom(false);
 
                 Debug.WriteLine("[CHAT PAGE] ✅ Initialization complete");
             }
@@ -51,16 +54,32 @@ namespace CraftConnect_Mobile_App.Pages
             }
         }
 
-        protected override void OnDisappearing()
+        protected override async void OnDisappearing()
         {
             base.OnDisappearing();
-            Microsoft.Maui.Controls.Application.Current.RequestedThemeChanged -= OnKeyboardChanged;
+            Debug.WriteLine("[CHAT PAGE] OnDisappearing");
+
+            try
+            {
+                await _viewModel.CleanupAsync();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CHAT PAGE] ❌ Error in OnDisappearing: {ex.Message}");
+            }
         }
 
-        private void OnKeyboardChanged(object sender, AppThemeChangedEventArgs e)
+        private void OnMessagesCollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            // This is a workaround for keyboard events
-            Debug.WriteLine("[CHAT PAGE] Theme changed (keyboard event)");
+            // Auto-scroll when new messages are added
+            if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+            {
+                MainThread.BeginInvokeOnMainThread(async () =>
+                {
+                    await Task.Delay(100);
+                    ScrollToBottom(true);
+                });
+            }
         }
 
         private async void OnBackButtonTapped(object sender, EventArgs e)
@@ -164,7 +183,7 @@ namespace CraftConnect_Mobile_App.Pages
                         position: ScrollToPosition.End,
                         animate: animate);
 
-                    Debug.WriteLine("[CHAT PAGE] Scrolled to bottom");
+                    Debug.WriteLine($"[CHAT PAGE] Scrolled to bottom (animate: {animate})");
                 }
             }
             catch (Exception ex)

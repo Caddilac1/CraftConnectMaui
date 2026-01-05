@@ -39,7 +39,7 @@ namespace CraftConnect_Mobile_App
                             {
                                 // Make navigation bar fully transparent
                                 activity.Window.SetNavigationBarColor(Android.Graphics.Color.Transparent);
-
+                                
                                 // Disable gray contrast enforcement (Android 10+)
                                 if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.Q)
                                 {
@@ -66,7 +66,7 @@ namespace CraftConnect_Mobile_App
                         if (activity?.Window != null)
                         {
                             activity.Window.SetNavigationBarColor(Android.Graphics.Color.Transparent);
-
+                            
                             if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.Q)
                             {
                                 activity.Window.NavigationBarContrastEnforced = false;
@@ -81,6 +81,7 @@ namespace CraftConnect_Mobile_App
             // ========================================
             builder.Services.AddSingleton<AuthService>();
             builder.Services.AddSingleton<IChatService, ChatService>();
+            builder.Services.AddSingleton<IChatSignalRService, ChatSignalRService>(); // ✅ ADD THIS
             builder.Services.AddSingleton<IUserFeedService, UserFeedService>(); // ✅ Changed to Singleton like ChatService
             builder.Services.AddSingleton<INavigationService, NavigationService>();
             builder.Services.AddSingleton<IDialogService, DialogService>();

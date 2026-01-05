@@ -11,11 +11,14 @@ namespace CraftConnect_Mobile_App.PageModels
     {
         private readonly IChatService _chatService;
         private readonly AuthService _authService;
+        private readonly IChatSignalRService _signalRService;
 
         private Guid _groupId;
         private string _groupName = string.Empty;
         private string _messageText = string.Empty;
         private string _currentUserId = string.Empty;
+        private string _currentUserName = string.Empty;
+        private string _currentUserFullName = string.Empty;
 
         public ObservableCollection<GroupMessageItemViewModel> Messages { get; } = new();
 
@@ -23,16 +26,20 @@ namespace CraftConnect_Mobile_App.PageModels
         public Command SendMessageCommand { get; }
         public Command RefreshCommand { get; }
 
-        public ChatPageModel(IChatService chatService, AuthService authService)
+        public ChatPageModel(IChatService chatService, AuthService authService, IChatSignalRService signalRService)
         {
             _chatService = chatService;
             _authService = authService;
+            _signalRService = signalRService;
 
             LoadMessagesCommand = new Command(async () => await LoadMessages());
             SendMessageCommand = new Command(async () => await SendMessage(), () => !string.IsNullOrWhiteSpace(MessageText) && !IsBusy);
             RefreshCommand = new Command(async () => await RefreshMessages());
 
-            Debug.WriteLine("[CHAT DETAILS VM] Initialized");
+            // Subscribe to SignalR events
+            _signalRService.MessageReceived += OnMessageReceived;
+
+            Debug.WriteLine("[CHAT PAGE MODEL] Initialized");
         }
 
         public string GroupIdString
@@ -42,11 +49,11 @@ namespace CraftConnect_Mobile_App.PageModels
                 if (Guid.TryParse(value, out var guidValue))
                 {
                     GroupId = guidValue;
-                    Debug.WriteLine($"[CHAT DETAILS VM] GroupIdString parsed: {value} → {guidValue}");
+                    Debug.WriteLine($"[CHAT PAGE MODEL] GroupIdString parsed: {value} → {guidValue}");
                 }
                 else
                 {
-                    Debug.WriteLine($"[CHAT DETAILS VM] ❌ Failed to parse GroupId: {value}");
+                    Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Failed to parse GroupId: {value}");
                 }
             }
         }
@@ -58,7 +65,7 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 _groupId = value;
                 OnPropertyChanged();
-                Debug.WriteLine($"[CHAT DETAILS VM] GroupId set to: {value}");
+                Debug.WriteLine($"[CHAT PAGE MODEL] GroupId set to: {value}");
             }
         }
 
@@ -69,7 +76,7 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 _groupName = value;
                 OnPropertyChanged();
-                Debug.WriteLine($"[CHAT DETAILS VM] GroupName set to: {value}");
+                Debug.WriteLine($"[CHAT PAGE MODEL] GroupName set to: {value}");
             }
         }
 
@@ -80,7 +87,7 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 _messageText = value;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(MessageButtonIcon)); // Update button icon
+                OnPropertyChanged(nameof(MessageButtonIcon));
                 ((Command)SendMessageCommand).ChangeCanExecute();
             }
         }
@@ -102,32 +109,74 @@ namespace CraftConnect_Mobile_App.PageModels
 
         public async Task InitializeAsync()
         {
-            Debug.WriteLine($"[CHAT DETAILS VM] InitializeAsync called for group: {GroupId}");
+            Debug.WriteLine($"[CHAT PAGE MODEL] InitializeAsync called for group: {GroupId}");
 
-            var userInfo = await _authService.GetCurrentUserAsync();
-            CurrentUserId = userInfo.UserId;
-            Debug.WriteLine($"[CHAT DETAILS VM] Current user ID: {CurrentUserId}");
+            try
+            {
+                // Get current user info
+                var userInfo = await _authService.GetCurrentUserAsync();
+                CurrentUserId = userInfo.UserId;
+                _currentUserName = userInfo.FullName ?? "User";
+                _currentUserFullName = userInfo.FullName ?? userInfo.FullName ?? "User";
+                Debug.WriteLine($"[CHAT PAGE MODEL] Current user: {CurrentUserId} - {_currentUserFullName}");
 
-            await LoadMessages();
+                // Connect to SignalR if not connected
+                if (!_signalRService.IsConnected)
+                {
+                    Debug.WriteLine("[CHAT PAGE MODEL] Connecting to SignalR...");
+                    await _signalRService.ConnectAsync();
+                }
+
+                // Join the group chat
+                Debug.WriteLine($"[CHAT PAGE MODEL] Joining group: {GroupId}");
+                await _signalRService.JoinGroupAsync(GroupId.ToString());
+
+                // Load existing messages
+                await LoadMessages();
+
+                Debug.WriteLine("[CHAT PAGE MODEL] ✅ Initialization complete");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Initialization error: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task CleanupAsync()
+        {
+            Debug.WriteLine("[CHAT PAGE MODEL] Cleanup called");
+
+            try
+            {
+                // Leave the group
+                await _signalRService.LeaveGroupAsync(GroupId.ToString());
+                Debug.WriteLine("[CHAT PAGE MODEL] ✅ Left group");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Cleanup error: {ex.Message}");
+            }
         }
 
         private async Task LoadMessages()
         {
-            if (IsBusy || GroupId == Guid.Empty)
+            if (GroupId == Guid.Empty)
             {
-                Debug.WriteLine($"[CHAT DETAILS VM] LoadMessages skipped - IsBusy: {IsBusy}, GroupId: {GroupId}");
+                Debug.WriteLine($"[CHAT PAGE MODEL] LoadMessages skipped - Invalid GroupId");
                 return;
             }
 
             try
             {
-                Debug.WriteLine($"[CHAT DETAILS VM] Loading messages for group: {GroupId}");
+                Debug.WriteLine($"[CHAT PAGE MODEL] Loading messages for group: {GroupId}");
                 IsBusy = true;
 
                 var messages = await _chatService.GetGroupMessagesAsync(GroupId);
 
-                Debug.WriteLine($"[CHAT DETAILS VM] Received {messages.Count} messages");
+                Debug.WriteLine($"[CHAT PAGE MODEL] Received {messages.Count} messages from API");
 
+                // Clear and reload messages
                 Messages.Clear();
                 foreach (var message in messages.OrderBy(m => m.SentAt))
                 {
@@ -135,11 +184,11 @@ namespace CraftConnect_Mobile_App.PageModels
                     Messages.Add(viewModel);
                 }
 
-                Debug.WriteLine($"[CHAT DETAILS VM] ✅ Messages loaded successfully. Total: {Messages.Count}");
+                Debug.WriteLine($"[CHAT PAGE MODEL] ✅ Messages loaded. Total: {Messages.Count}");
             }
             catch (UnauthorizedAccessException ex)
             {
-                Debug.WriteLine($"[CHAT DETAILS VM] ❌ Unauthorized: {ex.Message}");
+                Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Unauthorized: {ex.Message}");
                 await Application.Current.MainPage.DisplayAlert(
                     "Session Expired",
                     "Your session has expired. Please login again.",
@@ -148,7 +197,7 @@ namespace CraftConnect_Mobile_App.PageModels
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[CHAT DETAILS VM] ❌ Error loading messages: {ex.Message}");
+                Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Error loading messages: {ex.Message}");
                 await Application.Current.MainPage.DisplayAlert(
                     "Error",
                     $"Failed to load messages: {ex.Message}",
@@ -162,81 +211,128 @@ namespace CraftConnect_Mobile_App.PageModels
 
         private async Task SendMessage()
         {
-            if (string.IsNullOrWhiteSpace(MessageText) || IsBusy)
+            if (string.IsNullOrWhiteSpace(MessageText))
             {
-                Debug.WriteLine($"[CHAT DETAILS VM] SendMessage skipped - Empty message or busy");
+                Debug.WriteLine($"[CHAT PAGE MODEL] SendMessage skipped - Empty message");
                 return;
             }
 
+            if (IsBusy)
+            {
+                Debug.WriteLine($"[CHAT PAGE MODEL] SendMessage skipped - Already busy");
+                return;
+            }
+
+            var messageToSend = MessageText.Trim();
+
             try
             {
-                Debug.WriteLine($"[CHAT DETAILS VM] Sending message to group: {GroupId}");
-                Debug.WriteLine($"[CHAT DETAILS VM] Message: {MessageText}");
+                Debug.WriteLine($"[CHAT PAGE MODEL] Sending message to group: {GroupId}");
+                Debug.WriteLine($"[CHAT PAGE MODEL] Message: {messageToSend}");
 
-                IsBusy = true;
+                // Clear message text immediately for better UX
+                MessageText = string.Empty;
 
-                var success = await _chatService.SendMessageAsync(GroupId, MessageText);
+                // Send via SignalR for real-time delivery
+                await _signalRService.SendMessageAsync(
+                    GroupId.ToString(),
+                    messageToSend,
+                    _currentUserName,
+                    _currentUserFullName
+                );
 
-                if (success)
+                Debug.WriteLine($"[CHAT PAGE MODEL] ✅ Message sent via SignalR");
+
+                // Also save to backend via API
+                var success = await _chatService.SendMessageAsync(GroupId, messageToSend);
+
+                if (!success)
                 {
-                    Debug.WriteLine($"[CHAT DETAILS VM] ✅ Message sent successfully");
-
-                    var sentMessage = MessageText;
-                    MessageText = string.Empty;
-
-                    // Optimistic update
-                    var newMessage = new GroupMessageItem
-                    {
-                        Id = Guid.NewGuid(),
-                        Message = sentMessage,
-                        SenderId = Guid.Parse(CurrentUserId),
-                        SenderName = "You",
-                        SenderFullName = "You",
-                        SentAt = DateTime.Now
-                    };
-
-                    var viewModel = new GroupMessageItemViewModel(newMessage, CurrentUserId);
-                    Messages.Add(viewModel);
-
-                    await Task.Delay(500);
-                    await LoadMessages();
+                    Debug.WriteLine($"[CHAT PAGE MODEL] ⚠️ API save failed, but message sent via SignalR");
                 }
-                else
-                {
-                    Debug.WriteLine($"[CHAT DETAILS VM] ❌ Failed to send message");
-                    await Application.Current.MainPage.DisplayAlert(
-                        "Error",
-                        "Failed to send message. Please try again.",
-                        "OK");
-                }
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                Debug.WriteLine($"[CHAT DETAILS VM] ❌ Unauthorized: {ex.Message}");
-                await Application.Current.MainPage.DisplayAlert(
-                    "Session Expired",
-                    "Your session has expired. Please login again.",
-                    "OK");
-                await Shell.Current.GoToAsync("//auth/LoginPage");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[CHAT DETAILS VM] ❌ Error sending message: {ex.Message}");
+                Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Error sending message: {ex.Message}");
+
+                // Restore message text if send failed
+                MessageText = messageToSend;
+
                 await Application.Current.MainPage.DisplayAlert(
                     "Error",
                     $"Failed to send message: {ex.Message}",
                     "OK");
             }
-            finally
-            {
-                IsBusy = false;
-            }
         }
 
         private async Task RefreshMessages()
         {
-            Debug.WriteLine($"[CHAT DETAILS VM] Refreshing messages...");
+            Debug.WriteLine($"[CHAT PAGE MODEL] Refreshing messages...");
             await LoadMessages();
+        }
+
+        /// <summary>
+        /// Handle incoming SignalR messages
+        /// </summary>
+        private void OnMessageReceived(object sender, MessageReceivedEventArgs e)
+        {
+            try
+            {
+                Debug.WriteLine($"[CHAT PAGE MODEL] 📨 SignalR message received");
+                Debug.WriteLine($"[CHAT PAGE MODEL]    Group: {e.GroupChatId}");
+                Debug.WriteLine($"[CHAT PAGE MODEL]    Sender: {e.SenderFullName}");
+                Debug.WriteLine($"[CHAT PAGE MODEL]    Message: {e.Message}");
+
+                // Only add message if it's for this group
+                if (e.GroupChatId != GroupId.ToString())
+                {
+                    Debug.WriteLine($"[CHAT PAGE MODEL] Message not for this group, ignoring");
+                    return;
+                }
+
+                // Check if message already exists (to avoid duplicates)
+                var existingMessage = Messages.FirstOrDefault(m => m.Id.ToString() == e.Id);
+                if (existingMessage != null)
+                {
+                    Debug.WriteLine($"[CHAT PAGE MODEL] Message already exists, ignoring");
+                    return;
+                }
+
+                // Convert to domain model
+                var message = new GroupMessageItem
+                {
+                    Id = Guid.Parse(e.Id),
+                    GroupChatId = Guid.Parse(e.GroupChatId),
+                    SenderId = Guid.Parse(e.SenderId),
+                    SenderName = e.SenderName,
+                    SenderFullName = e.SenderFullName,
+                    Message = e.Message,
+                    SentAt = e.SentAt,
+                    HasAttachment = e.HasAttachment,
+                    AttachmentUrl = e.AttachmentUrl,
+                    AttachmentName = e.AttachmentName,
+                    AttachmentSize = e.AttachmentSize,
+                    AttachmentType = e.AttachmentType
+                };
+
+                // Add to UI on main thread
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    var viewModel = new GroupMessageItemViewModel(message, CurrentUserId);
+                    Messages.Add(viewModel);
+                    Debug.WriteLine($"[CHAT PAGE MODEL] ✅ Message added to UI. Total: {Messages.Count}");
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Error handling received message: {ex.Message}");
+            }
+        }
+
+        ~ChatPageModel()
+        {
+            // Unsubscribe from events
+            _signalRService.MessageReceived -= OnMessageReceived;
         }
     }
 
@@ -287,12 +383,12 @@ namespace CraftConnect_Mobile_App.PageModels
             }
         }
 
-        // Attachment properties (for future use when backend supports it)
-        public bool HasAttachment => !string.IsNullOrEmpty(AttachmentName);
-
-        public string AttachmentName { get; set; } // Will come from backend
-
-        public string AttachmentSize { get; set; } // Will come from backend
+        // Attachment properties
+        public bool HasAttachment => _message.HasAttachment && !string.IsNullOrEmpty(_message.AttachmentName);
+        public string AttachmentName => _message.AttachmentName;
+        public string AttachmentSize => _message.AttachmentSize;
+        public string AttachmentUrl => _message.AttachmentUrl;
+        public string AttachmentType => _message.AttachmentType;
 
         public string AttachmentIcon
         {

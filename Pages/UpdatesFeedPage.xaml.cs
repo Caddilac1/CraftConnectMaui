@@ -7,6 +7,7 @@ namespace CraftConnect_Mobile_App.Pages
         private readonly UpdatesFeedPageModel _viewModel;
         private int _currentScrollIndex = 0;
         private readonly List<BoxView> _indicatorDots = new();
+        private bool _isScrolling = false;
 
         public UpdatesFeedPage(UpdatesFeedPageModel viewModel)
         {
@@ -21,7 +22,7 @@ namespace CraftConnect_Mobile_App.Pages
             await _viewModel.InitializeAsync();
 
             // Initialize scroll indicators after data loads
-            await Task.Delay(300); // Small delay to ensure collection is rendered
+            await Task.Delay(300); // Small delay to ensure items are rendered
             InitializeScrollIndicators();
         }
 
@@ -42,12 +43,13 @@ namespace CraftConnect_Mobile_App.Pages
                 {
                     var dot = new BoxView
                     {
-                        WidthRequest = 6,
-                        HeightRequest = 6,
-                        CornerRadius = 3,
+                        WidthRequest = 8,
+                        HeightRequest = 8,
+                        CornerRadius = 4,
                         BackgroundColor = i == 0 ? Color.FromArgb("#5F67EA") : Color.FromArgb("#D1D5DB"),
                         HorizontalOptions = LayoutOptions.Center,
-                        VerticalOptions = LayoutOptions.Center
+                        VerticalOptions = LayoutOptions.Center,
+                        Margin = new Thickness(2, 0)
                     };
 
                     _indicatorDots.Add(dot);
@@ -60,12 +62,16 @@ namespace CraftConnect_Mobile_App.Pages
                     var ellipsis = new Label
                     {
                         Text = "...",
-                        FontSize = 10,
+                        FontSize = 14,
+                        FontAttributes = FontAttributes.Bold,
                         TextColor = Color.FromArgb("#9CA3AF"),
-                        VerticalOptions = LayoutOptions.Center
+                        VerticalOptions = LayoutOptions.Center,
+                        Margin = new Thickness(4, 0, 0, 0)
                     };
                     ScrollIndicators.Children.Add(ellipsis);
                 }
+
+                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] ✅ Initialized {dotsToShow} scroll indicators");
             }
             catch (Exception ex)
             {
@@ -73,23 +79,42 @@ namespace CraftConnect_Mobile_App.Pages
             }
         }
 
-        private void OnFeedsScrolled(object sender, ItemsViewScrolledEventArgs e)
+        private void OnFeedsScrolled(object sender, ScrolledEventArgs e)
         {
+            if (_isScrolling) return;
+
             try
             {
+                _isScrolling = true;
+
                 // Calculate current visible item index
-                var scrollX = e.HorizontalOffset;
+                var scrollX = e.ScrollX;
                 var itemWidth = 336; // Card width (320) + spacing (16)
                 var currentIndex = (int)Math.Round(scrollX / itemWidth);
 
-                if (currentIndex == _currentScrollIndex) return;
+                if (currentIndex == _currentScrollIndex)
+                {
+                    _isScrolling = false;
+                    return;
+                }
 
                 _currentScrollIndex = currentIndex;
                 UpdateScrollIndicators(currentIndex);
+
+                // Check if need to load more (when reaching end)
+                var feedCount = _viewModel.AllFeeds?.Count ?? 0;
+                if (feedCount > 0 && currentIndex >= feedCount - 3)
+                {
+                    _ = _viewModel.LoadMoreFeeds();
+                }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] Error updating scroll: {ex.Message}");
+            }
+            finally
+            {
+                _isScrolling = false;
             }
         }
 

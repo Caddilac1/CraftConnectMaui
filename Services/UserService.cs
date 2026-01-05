@@ -23,7 +23,7 @@ namespace CraftConnect_Mobile_App.Services
 #endif
             _httpClient = new HttpClient(handler)
             {
-                BaseAddress = new Uri("https://192.168.248.112:7023"),
+                BaseAddress = new Uri("https://192.168.43.232:7023"),
                 Timeout = TimeSpan.FromSeconds(30)
             };
         }

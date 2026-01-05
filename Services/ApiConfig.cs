@@ -3,6 +3,6 @@
     // Simple configuration class for API settings
     public class ApiConfig
     {
-        public string BaseUrl { get; set; } = "https://192.168.29.112:7023"; // Default value
+        public string BaseUrl { get; set; } = "https://192.168.43.232:7023"; // Default value
     }
 }
