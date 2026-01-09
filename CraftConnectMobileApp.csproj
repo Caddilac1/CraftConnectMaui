@@ -75,6 +75,9 @@
     <MauiXaml Update="Pages\ChatPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </MauiXaml>
+    <MauiXaml Update="Pages\ImageViewerPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </MauiXaml>
     <MauiXaml Update="Pages\OtpVerificationPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </MauiXaml>

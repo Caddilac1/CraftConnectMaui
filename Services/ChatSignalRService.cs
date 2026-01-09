@@ -35,6 +35,7 @@ namespace CraftConnect_Mobile_App.Services
         public string AttachmentName { get; set; }
         public string AttachmentSize { get; set; }
         public string AttachmentType { get; set; }
+        public string MediaType { get; set; }
     }
 
     public class TypingEventArgs : EventArgs
@@ -48,7 +49,7 @@ namespace CraftConnect_Mobile_App.Services
     {
         private HubConnection _hubConnection;
         private string _hubUrl;
-        private const string BaseUrl = "https://192.168.43.232:7023"; // Match ChatService URL
+        private const string BaseUrl = "https://192.168.188.112:7023"; // Match ChatService URL
 
         public event EventHandler<MessageReceivedEventArgs> MessageReceived;
         public event EventHandler<TypingEventArgs> UserTyping;

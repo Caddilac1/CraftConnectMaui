@@ -5,7 +5,6 @@ using Microsoft.Maui.Graphics;
 
 namespace CraftConnect_Mobile_App.Converters
 {
-
     public class IsNotNullOrEmptyConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -23,7 +22,9 @@ namespace CraftConnect_Mobile_App.Converters
         }
     }
 
-
+    /// <summary>
+    /// Inverts boolean value (true -> false, false -> true)
+    /// </summary>
     public class InvertedBoolConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -32,6 +33,7 @@ namespace CraftConnect_Mobile_App.Converters
                 return !boolValue;
             return false;
         }
+
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
             if (value is bool boolValue)
@@ -46,6 +48,7 @@ namespace CraftConnect_Mobile_App.Converters
         {
             return !string.IsNullOrEmpty(value as string);
         }
+
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
@@ -58,6 +61,7 @@ namespace CraftConnect_Mobile_App.Converters
         {
             return string.IsNullOrEmpty(value as string);
         }
+
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
@@ -72,6 +76,7 @@ namespace CraftConnect_Mobile_App.Converters
                 return "eye_off.png"; // Icon when password is visible (to hide it)
             return "eye.png"; // Icon when password is hidden (to show it)
         }
+
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
@@ -482,6 +487,77 @@ namespace CraftConnect_Mobile_App.Converters
                 return isVisible ? "Hide" : "Show";
             }
             return "Show";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts URL to absolute URL for image loading (WhatsApp-style chat attachments)
+    /// </summary>
+    public class UrlToImageConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is string url && !string.IsNullOrEmpty(url))
+            {
+                // If it's already an absolute URL, return as is
+                if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                    url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    return url;
+                }
+
+                // Convert relative URL to absolute
+                var baseUrl = Preferences.Get("api_base_url", "https://192.168.33.112:7023");
+                baseUrl = baseUrl.TrimEnd('/');
+                var relativePath = url.TrimStart('/');
+
+                return $"{baseUrl}/{relativePath}";
+            }
+            return null;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts downloading state to button color (Green for download, Red for cancel)
+    /// </summary>
+    public class DownloadButtonColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool isDownloading)
+            {
+                // Red when downloading (to cancel), Green when ready to download
+                return isDownloading ? Color.FromArgb("#F44336") : Color.FromArgb("#25D366");
+            }
+            return Color.FromArgb("#25D366");
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts downloading state to status text
+    /// </summary>
+    public class DownloadStatusTextConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            // This converter needs the full message object to show file size
+            // We'll handle this differently - see below
+            return "";
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

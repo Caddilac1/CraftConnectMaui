@@ -10,6 +10,12 @@
         public string Message { get; set; }
         public DateTime SentAt { get; set; }
 
+        public bool IsPending { get; set; }
+        public bool IsSent { get; set; }
+        public bool IsDelivered { get; set; }
+        public bool IsRead { get; set; }
+        public string MediaType { get; set; } = "none";
+
         // Attachment properties
         public bool HasAttachment { get; set; }
         public string AttachmentUrl { get; set; }

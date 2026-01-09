@@ -24,7 +24,7 @@ namespace CraftConnect_Mobile_App.Services
                 (message, cert, chain, errors) => true;
 
             // For local development - USE HTTP (not HTTPS) for local IP addresses
-            _baseUrl = "https://192.168.43.232:7023/api/ai/feed-chat";
+            _baseUrl = "https://192.168.188.112/api/ai/feed-chat";
 
             // Alternative options based on your setup:
             // _baseUrl = "http://10.0.2.2:7023/api/ai/feed-chat"; // Android Emulator -> localhost on host PC

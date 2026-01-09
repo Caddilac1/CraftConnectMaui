@@ -9,7 +9,7 @@ namespace CraftConnect_Mobile_App.Services
     public class UserFeedService : IUserFeedService
     {
         private readonly HttpClient _httpClient;
-        private const string BaseUrl = "https://192.168.43.232:7023"; // Match your API URL
+        private const string BaseUrl = "https://192.168.188.112:7023"; // Match your API URL
         private readonly JsonSerializerOptions _jsonOptions;
 
         public UserFeedService()

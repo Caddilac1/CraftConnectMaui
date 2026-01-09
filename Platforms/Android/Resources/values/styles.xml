@@ -7,8 +7,11 @@
 
 		<!-- CRITICAL: Navigation bar settings -->
 		<item name="android:navigationBarColor">@android:color/transparent</item>
-		<item name="android:windowTranslucentNavigation">false</item>
+		<item name="android:windowTranslucentNavigation">true</item>
 		<item name="android:enforceNavigationBarContrast">false</item>
+
+		<!-- Make status bar transparent as well -->
+		<item name="android:statusBarColor">@android:color/transparent</item>
 
 		<!-- Enable edge-to-edge -->
 		<item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>

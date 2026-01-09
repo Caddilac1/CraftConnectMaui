@@ -3,6 +3,7 @@ using Android.Content.PM;
 using Android.OS;
 using Android.Views;
 using Microsoft.Maui;
+using AndroidX.Core.View;
 
 namespace CraftConnect_Mobile_App
 {
@@ -28,12 +29,18 @@ namespace CraftConnect_Mobile_App
                 // Make navigation bar completely transparent
                 Window.SetNavigationBarColor(Android.Graphics.Color.Transparent);
 
+                // Also make status bar transparent so content can draw behind it
+                Window.SetStatusBarColor(Android.Graphics.Color.Transparent);
+
                 if (Build.VERSION.SdkInt >= BuildVersionCodes.R)
                 {
-                    // Android 11+ (API 30+) - Most modern approach
-                    Window.SetDecorFitsSystemWindows(false);
+                    // Android 11+ (API 30+) - prefer AndroidX WindowCompat
+                    WindowCompat.SetDecorFitsSystemWindows(Window, false);
 
-                    // Disable the gray scrim/contrast
+                    // Ensure the decor view itself does not apply fitsSystemWindows
+                    Window.DecorView?.SetFitsSystemWindows(false);
+
+                    // Disable the gray scrim/contrast on supported versions
                     if (Build.VERSION.SdkInt >= BuildVersionCodes.Q)
                     {
                         Window.NavigationBarContrastEnforced = false;
@@ -41,12 +48,14 @@ namespace CraftConnect_Mobile_App
                 }
                 else if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
                 {
-                    // Android 8-10 (API 26-29)
+                    // Android 8-10 (API 26-29) - request layout behind system bars
                     var uiOptions = (int)Window.DecorView.SystemUiVisibility;
                     uiOptions |= (int)SystemUiFlags.LayoutStable;
                     uiOptions |= (int)SystemUiFlags.LayoutHideNavigation;
-                    uiOptions |= (int)SystemUiFlags.LightNavigationBar;
+                    uiOptions |= (int)SystemUiFlags.LayoutFullscreen;
                     Window.DecorView.SystemUiVisibility = (StatusBarVisibility)uiOptions;
+
+                    Window.DecorView?.SetFitsSystemWindows(false);
                 }
 
                 System.Diagnostics.Debug.WriteLine("[MainActivity] ✅ Navigation bar transparency applied");

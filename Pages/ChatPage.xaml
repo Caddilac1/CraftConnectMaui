@@ -8,21 +8,23 @@
              Shell.NavBarIsVisible="False"
              BackgroundColor="#E8EAF6">
 
-    <!-- Remove safe area padding -->
     <Shell.TitleView>
         <Grid/>
     </Shell.TitleView>
 
     <ContentPage.Resources>
         <ResourceDictionary>
-            <!-- Message bubble shadows -->
+            <!-- Converters -->
+            <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+            <converters:UrlToImageConverter x:Key="UrlToImageConverter" />
+
+            <!-- Shadows -->
             <Shadow x:Key="MessageShadow"
                     Brush="#000000"
                     Opacity="0.08"
                     Radius="8"
                     Offset="0,2"/>
 
-            <!-- Header shadow -->
             <Shadow x:Key="HeaderShadow"
                     Brush="#000000"
                     Opacity="0.12"
@@ -31,380 +33,596 @@
         </ResourceDictionary>
     </ContentPage.Resources>
 
-    <!-- Main Grid with 3 rows: Header, Messages, Input -->
-    <Grid RowDefinitions="Auto,*,Auto"
-          RowSpacing="0">
+    <Grid RowDefinitions="Auto,*,Auto" RowSpacing="0">
 
-        <!-- ========================================
-             FIXED HEADER (Row 0)
-             ======================================== -->
+        <!-- HEADER -->
         <Border Grid.Row="0"
                 BackgroundColor="#5E35B1"
                 StrokeThickness="0"
                 Shadow="{StaticResource HeaderShadow}"
                 ZIndex="100">
-            <Grid Padding="8"
-                  ColumnDefinitions="Auto,Auto,*,Auto"
-                  HeightRequest="60">
-
-                <!-- Back Button -->
-                <Border Grid.Column="0"
-                        WidthRequest="36"
-                        HeightRequest="36"
-                        BackgroundColor="Transparent"
-                        Stroke="Transparent"
-                        StrokeThickness="0"
+            <Grid Padding="8" ColumnDefinitions="Auto,Auto,*,Auto" HeightRequest="60">
+                <Border Grid.Column="0" WidthRequest="36" HeightRequest="36" 
+                        BackgroundColor="Transparent" Stroke="Transparent" StrokeThickness="0" 
                         VerticalOptions="Center">
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Tapped="OnBackButtonTapped"/>
                     </Border.GestureRecognizers>
-                    <Label Text="&#xe5c4;"
-                           FontFamily="MaterialIcons"
-                           FontSize="24"
-                           TextColor="White"
-                           VerticalOptions="Center"
-                           HorizontalOptions="Center"/>
+                    <Label Text="&#xe5c4;" FontFamily="MaterialIcons" FontSize="24" 
+                           TextColor="White" VerticalOptions="Center" HorizontalOptions="Center"/>
                 </Border>
 
-                <!-- Group Avatar -->
-                <Border Grid.Column="1"
-                        WidthRequest="40"
-                        HeightRequest="40"
-                        BackgroundColor="#B39DDB"
-                        StrokeThickness="0"
-                        VerticalOptions="Center"
+                <Border Grid.Column="1" WidthRequest="40" HeightRequest="40"
+                        BackgroundColor="#B39DDB" StrokeThickness="0" VerticalOptions="Center"
                         Margin="4,0,10,0">
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="20"/>
                     </Border.StrokeShape>
                     <Label Text="{Binding GroupName, Converter={StaticResource FirstLetterConverter}}"
-                           FontSize="18"
-                           FontAttributes="Bold"
-                           TextColor="White"
-                           VerticalOptions="Center"
-                           HorizontalOptions="Center"/>
+                           FontSize="18" FontAttributes="Bold" TextColor="White"
+                           VerticalOptions="Center" HorizontalOptions="Center"/>
                 </Border>
 
-                <!-- Group Name & Status -->
-                <VerticalStackLayout Grid.Column="2"
-                                     VerticalOptions="Center"
-                                     Spacing="1">
-                    <Label Text="{Binding GroupName}"
-                           FontSize="16"
-                           FontAttributes="Bold"
-                           TextColor="White"
-                           LineBreakMode="TailTruncation"/>
-                    <Label Text="Active now"
-                           FontSize="12"
-                           TextColor="#E1BEE7"
+                <VerticalStackLayout Grid.Column="2" VerticalOptions="Center" Spacing="1">
+                    <Label Text="{Binding GroupName}" FontSize="16" FontAttributes="Bold"
+                           TextColor="White" LineBreakMode="TailTruncation"/>
+                    <Label Text="Active now" FontSize="12" TextColor="#E1BEE7" 
                            LineBreakMode="TailTruncation"/>
                 </VerticalStackLayout>
 
-                <!-- Menu Icon -->
-                <Label Grid.Column="3"
-                       Text="&#xe5d4;"
-                       FontFamily="MaterialIcons"
-                       FontSize="24"
-                       TextColor="White"
-                       VerticalOptions="Center"
-                       Margin="0,0,4,0"/>
+                <Label Grid.Column="3" Text="&#xe5d4;" FontFamily="MaterialIcons"
+                       FontSize="24" TextColor="White" VerticalOptions="Center" Margin="0,0,4,0"/>
             </Grid>
         </Border>
 
-        <!-- ========================================
-             MESSAGES AREA (Row 1)
-             ======================================== -->
-        <RefreshView Grid.Row="1"
-                     Command="{Binding RefreshCommand}"
-                     IsRefreshing="{Binding IsBusy}"
-                     RefreshColor="#5E35B1"
-                     BackgroundColor="#E8EAF6">
-            <CollectionView x:Name="MessagesCollectionView"
-                            ItemsSource="{Binding Messages}"
-                            SelectionMode="None"
-                            VerticalOptions="FillAndExpand"
-                            Margin="0,8,0,8">
+        <!-- MESSAGES AREA -->
+        <CollectionView x:Name="MessagesCollectionView"
+                        Grid.Row="1"
+                        ItemsSource="{Binding Messages}"
+                        SelectionMode="None"
+                        VerticalOptions="FillAndExpand"
+                        BackgroundColor="#E8EAF6"
+                        Margin="0,8,0,8">
 
-                <CollectionView.EmptyView>
-                    <VerticalStackLayout Padding="40"
-                                         VerticalOptions="Center"
-                                         HorizontalOptions="Center"
-                                         Spacing="16">
-                        <Border WidthRequest="80"
-                                HeightRequest="80"
-                                BackgroundColor="White"
-                                StrokeThickness="0"
-                                HorizontalOptions="Center"
-                                Shadow="{StaticResource MessageShadow}">
-                            <Border.StrokeShape>
-                                <RoundRectangle CornerRadius="40"/>
-                            </Border.StrokeShape>
-                            <Label Text="&#xe0c9;"
-                                   FontFamily="MaterialIcons"
-                                   FontSize="40"
-                                   TextColor="#9E9E9E"
-                                   HorizontalOptions="Center"
-                                   VerticalOptions="Center"/>
-                        </Border>
-                        <Label Text="No messages yet"
-                               FontSize="18"
-                               TextColor="#424242"
-                               HorizontalTextAlignment="Center"/>
-                        <Label Text="Send a message to start chatting"
-                               FontSize="14"
-                               TextColor="#757575"
-                               HorizontalTextAlignment="Center"
-                               Margin="0,-8,0,0"/>
-                    </VerticalStackLayout>
-                </CollectionView.EmptyView>
+            <CollectionView.EmptyView>
+                <VerticalStackLayout Padding="40" VerticalOptions="Center" 
+                                     HorizontalOptions="Center" Spacing="16">
+                    <Border WidthRequest="80" HeightRequest="80" BackgroundColor="White"
+                            StrokeThickness="0" HorizontalOptions="Center"
+                            Shadow="{StaticResource MessageShadow}">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="40"/>
+                        </Border.StrokeShape>
+                        <Label Text="&#xe0c9;" FontFamily="MaterialIcons" FontSize="40"
+                               TextColor="#9E9E9E" HorizontalOptions="Center" VerticalOptions="Center"/>
+                    </Border>
+                    <Label Text="No messages yet" FontSize="18" TextColor="#424242"
+                           HorizontalTextAlignment="Center"/>
+                    <Label Text="Send a message to start chatting" FontSize="14"
+                           TextColor="#757575" HorizontalTextAlignment="Center" Margin="0,-8,0,0"/>
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
 
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="pagemodels:GroupMessageItemViewModel">
-                        <Grid Padding="8,3">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="pagemodels:GroupMessageItemViewModel">
+                    <Grid Padding="8,3">
 
-                            <!-- Messages from others (LEFT) -->
-                            <VerticalStackLayout IsVisible="{Binding IsFromCurrentUser, Converter={StaticResource InvertedBoolConverter}}"
-                                                 HorizontalOptions="Start"
-                                                 MaximumWidthRequest="300"
-                                                 Spacing="4">
+                        <!-- Messages from others (LEFT) -->
+                        <VerticalStackLayout IsVisible="{Binding IsFromCurrentUser, Converter={StaticResource InvertedBoolConverter}}"
+                                             HorizontalOptions="Start"
+                                             MaximumWidthRequest="300"
+                                             Spacing="4">
 
-                                <!-- Sender name -->
-                                <Label Text="{Binding DisplayName}"
-                                       FontSize="12"
-                                       FontAttributes="Bold"
-                                       TextColor="#7E57C2"
-                                       Margin="10,0,0,0"/>
+                            <Label Text="{Binding DisplayName}" FontSize="12" FontAttributes="Bold"
+                                   TextColor="#7E57C2" Margin="10,0,0,0"/>
 
-                                <!-- Message bubble (white background) -->
-                                <Border BackgroundColor="White"
-                                        StrokeThickness="0"
-                                        Padding="10,8,10,8"
-                                        Shadow="{StaticResource MessageShadow}">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="16,16,16,4"/>
-                                    </Border.StrokeShape>
+                            <Border BackgroundColor="White" StrokeThickness="0" Padding="10,8,10,8"
+                                    Shadow="{StaticResource MessageShadow}">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="16,16,16,4"/>
+                                </Border.StrokeShape>
 
-                                    <VerticalStackLayout Spacing="4">
-                                        <Label Text="{Binding Message}"
-                                               FontSize="14.5"
-                                               TextColor="#212121"
-                                               LineBreakMode="WordWrap"/>
+                                <VerticalStackLayout Spacing="4">
+                                    <!-- Text message -->
+                                    <Label Text="{Binding Message}" FontSize="14.5" TextColor="#212121"
+                                           LineBreakMode="WordWrap" IsVisible="{Binding HasMessageText}"/>
 
-                                        <!-- Display attachment if present -->
-                                        <Border IsVisible="{Binding HasAttachment}"
-                                                BackgroundColor="#F5F5F5"
-                                                StrokeThickness="1"
-                                                Stroke="#E0E0E0"
-                                                Padding="8"
-                                                Margin="0,4,0,0">
-                                            <Border.StrokeShape>
-                                                <RoundRectangle CornerRadius="8"/>
-                                            </Border.StrokeShape>
-                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                                <Label Grid.Column="0"
-                                                       Text="{Binding AttachmentIcon}"
-                                                       FontFamily="MaterialIcons"
-                                                       FontSize="24"
-                                                       TextColor="#7E57C2"
-                                                       VerticalOptions="Center"/>
-                                                <VerticalStackLayout Grid.Column="1" Spacing="2">
-                                                    <Label Text="{Binding AttachmentName}"
-                                                           FontSize="12"
-                                                           FontAttributes="Bold"
-                                                           TextColor="#212121"
-                                                           LineBreakMode="TailTruncation"/>
-                                                    <Label Text="{Binding AttachmentSize}"
-                                                           FontSize="11"
-                                                           TextColor="#757575"/>
-                                                </VerticalStackLayout>
-                                            </Grid>
-                                        </Border>
+                                    <!-- ══════════════════════════════════════════ -->
+                                    <!-- IMAGE ATTACHMENT (WhatsApp style with blur/download) -->
+                                    <!-- ══════════════════════════════════════════ -->
+                                    <Border IsVisible="{Binding IsImageAttachment}"
+                                            StrokeThickness="0" Padding="0" Margin="0,4,0,0"
+                                            MaximumWidthRequest="250"
+                                            MaximumHeightRequest="350">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="8"/>
+                                        </Border.StrokeShape>
 
-                                        <Label Text="{Binding DisplayTime}"
-                                               FontSize="11"
-                                               TextColor="#9E9E9E"
-                                               HorizontalOptions="End"/>
-                                    </VerticalStackLayout>
-                                </Border>
-                            </VerticalStackLayout>
+                                        <Grid>
+                                            <!-- Blurred Background Image (shown before download) -->
+                                            <Image Source="{Binding AttachmentUrl, Converter={StaticResource UrlToImageConverter}}"
+                                                   Aspect="AspectFill"
+                                                   HeightRequest="200"
+                                                   WidthRequest="250"
+                                                   Opacity="0.5"
+                                                   IsVisible="{Binding IsDownloaded, Converter={StaticResource InvertedBoolConverter}}"/>
 
-                            <!-- Messages from you (RIGHT - purple background) -->
-                            <VerticalStackLayout IsVisible="{Binding IsFromCurrentUser}"
-                                                 HorizontalOptions="End"
-                                                 MaximumWidthRequest="300"
-                                                 Spacing="4">
+                                            <!-- Downloaded Clear Image (shown after download) -->
+                                            <Image Source="{Binding LocalFilePath}"
+                                                   Aspect="AspectFill"
+                                                   HeightRequest="200"
+                                                   WidthRequest="250"
+                                                   IsVisible="{Binding IsDownloaded}">
+                                                <Image.GestureRecognizers>
+                                                    <TapGestureRecognizer Tapped="OnImageTapped" />
+                                                </Image.GestureRecognizers>
+                                            </Image>
 
-                                <!-- Message bubble (purple/indigo) -->
-                                <Border BackgroundColor="#B39DDB"
-                                        StrokeThickness="0"
-                                        Padding="10,8,10,8"
-                                        Shadow="{StaticResource MessageShadow}">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="16,16,4,16"/>
-                                    </Border.StrokeShape>
+                                            <!-- Download/Cancel Button (single button that changes state) -->
+                                            <Grid IsVisible="{Binding IsDownloaded, Converter={StaticResource InvertedBoolConverter}}"
+                                                  BackgroundColor="#80000000">
 
-                                    <VerticalStackLayout Spacing="4">
-                                        <Label Text="{Binding Message}"
-                                               FontSize="14.5"
-                                               TextColor="White"
-                                               LineBreakMode="WordWrap"/>
+                                                <!-- WhatsApp-style Button (changes color and icon based on state) -->
+                                                <Border WidthRequest="56" HeightRequest="56"
+                                                        HorizontalOptions="Center"
+                                                        VerticalOptions="Center"
+                                                        StrokeThickness="0">
+                                                    <Border.BackgroundColor>
+                                                        <Binding Path="IsDownloading">
+                                                            <Binding.Converter>
+                                                                <converters:DownloadButtonColorConverter/>
+                                                            </Binding.Converter>
+                                                        </Binding>
+                                                    </Border.BackgroundColor>
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="28"/>
+                                                    </Border.StrokeShape>
+                                                    <Border.GestureRecognizers>
+                                                        <TapGestureRecognizer Tapped="OnDownloadAttachment"/>
+                                                    </Border.GestureRecognizers>
 
-                                        <!-- Display attachment if present -->
-                                        <Border IsVisible="{Binding HasAttachment}"
-                                                BackgroundColor="#9575CD"
-                                                StrokeThickness="0"
-                                                Padding="8"
-                                                Margin="0,4,0,0">
-                                            <Border.StrokeShape>
-                                                <RoundRectangle CornerRadius="8"/>
-                                            </Border.StrokeShape>
-                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                                <Label Grid.Column="0"
-                                                       Text="{Binding AttachmentIcon}"
-                                                       FontFamily="MaterialIcons"
-                                                       FontSize="24"
+                                                    <Grid>
+                                                        <!-- Spinning progress indicator (only when downloading) -->
+                                                        <ActivityIndicator IsRunning="{Binding IsDownloading}"
+                                                                         IsVisible="{Binding IsDownloading}"
+                                                                         Color="White"
+                                                                         WidthRequest="40"
+                                                                         HeightRequest="40"/>
+
+                                                        <!-- Icon (arrow or X) -->
+                                                        <Label Text="{Binding DownloadIcon}"
+                                                               FontSize="28"
+                                                               TextColor="White"
+                                                               HorizontalOptions="Center"
+                                                               VerticalOptions="Center"/>
+                                                    </Grid>
+                                                </Border>
+
+                                                <!-- Status text (file size or downloading) -->
+                                                <Label Text="{Binding DownloadStatusText}"
                                                        TextColor="White"
-                                                       VerticalOptions="Center"/>
-                                                <VerticalStackLayout Grid.Column="1" Spacing="2">
-                                                    <Label Text="{Binding AttachmentName}"
-                                                           FontSize="12"
-                                                           FontAttributes="Bold"
-                                                           TextColor="White"
-                                                           LineBreakMode="TailTruncation"/>
-                                                    <Label Text="{Binding AttachmentSize}"
-                                                           FontSize="11"
-                                                           TextColor="#EDE7F6"/>
-                                                </VerticalStackLayout>
+                                                       FontSize="12"
+                                                       HorizontalOptions="Center"
+                                                       VerticalOptions="End"
+                                                       Margin="0,0,0,20"
+                                                       BackgroundColor="#80000000"
+                                                       Padding="8,4"/>
                                             </Grid>
-                                        </Border>
 
-                                        <HorizontalStackLayout HorizontalOptions="End"
-                                                               Spacing="4">
-                                            <Label Text="{Binding DisplayTime}"
-                                                   FontSize="11"
-                                                   TextColor="#EDE7F6"
-                                                   VerticalOptions="Center"/>
-                                            <Label Text="&#xe877;"
-                                                   FontFamily="MaterialIcons"
+                                            <!-- Downloaded Indicator (shown after download) -->
+                                            <Label Text="✓"
+                                                   TextColor="#25D366"
                                                    FontSize="16"
-                                                   TextColor="#EDE7F6"
-                                                   VerticalOptions="Center"/>
-                                        </HorizontalStackLayout>
-                                    </VerticalStackLayout>
-                                </Border>
-                            </VerticalStackLayout>
-                        </Grid>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
-        </RefreshView>
+                                                   BackgroundColor="#80FFFFFF"
+                                                   Padding="5"
+                                                   WidthRequest="24"
+                                                   HeightRequest="24"
+                                                   HorizontalOptions="End"
+                                                   VerticalOptions="Start"
+                                                   Margin="5"
+                                                   HorizontalTextAlignment="Center"
+                                                   VerticalTextAlignment="Center"
+                                                   IsVisible="{Binding IsDownloaded}" />
+                                        </Grid>
+                                    </Border>
 
-        <!-- ========================================
-             MESSAGE INPUT AREA (Row 2) - No bottom padding
-             ======================================== -->
-        <Grid Grid.Row="2"
-              BackgroundColor="White"
-              Padding="12,8,12,8"
-              ColumnDefinitions="*,Auto"
-              ColumnSpacing="8">
+                                    <!-- ══════════════════════════════════════════ -->
+                                    <!-- DOCUMENT ATTACHMENT (WhatsApp style with corner button) -->
+                                    <!-- ══════════════════════════════════════════ -->
+                                    <Border IsVisible="{Binding IsDocumentAttachment}"
+                                            BackgroundColor="#F5F5F5" StrokeThickness="1"
+                                            Stroke="#E0E0E0" Padding="10" Margin="0,4,0,0"
+                                            MaximumWidthRequest="250">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="8"/>
+                                        </Border.StrokeShape>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnDownloadAttachment"
+                                                                 CommandParameter="{Binding .}"/>
+                                        </Border.GestureRecognizers>
 
-            <!-- Input Container with Emoji & Attachment -->
-            <Border Grid.Column="0"
-                    BackgroundColor="#F5F5F5"
-                    StrokeThickness="0"
-                    Padding="0"
-                    VerticalOptions="Center"
-                    MinimumHeightRequest="46"
-                    MaximumHeightRequest="120"
-                    StrokeShape="RoundRectangle 23">
+                                        <Grid>
+                                            <!-- Main document card content -->
+                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                                <!-- File icon -->
+                                                <Border Grid.Column="0" WidthRequest="48" HeightRequest="48"
+                                                        BackgroundColor="#7E57C2" StrokeThickness="0">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="8"/>
+                                                    </Border.StrokeShape>
+                                                    <Label Text="{Binding AttachmentIcon}"
+                                                           FontFamily="MaterialIcons" FontSize="28"
+                                                           TextColor="White" HorizontalOptions="Center"
+                                                           VerticalOptions="Center"/>
+                                                </Border>
 
-                <Grid ColumnDefinitions="Auto,*,Auto"
-                      ColumnSpacing="4"
-                      Padding="4,0">
+                                                <!-- File info -->
+                                                <VerticalStackLayout Grid.Column="1" Spacing="2"
+                                                                    VerticalOptions="Center">
+                                                    <Label Text="{Binding AttachmentName}"
+                                                           FontSize="13" FontAttributes="Bold"
+                                                           TextColor="#212121" LineBreakMode="TailTruncation"/>
+                                                    <Label Text="{Binding AttachmentSize}"
+                                                           FontSize="12" TextColor="#757575"/>
+                                                </VerticalStackLayout>
 
-                    <!-- Emoji Button -->
-                    <Border Grid.Column="0"
-                            BackgroundColor="Transparent"
-                            StrokeThickness="0"
-                            WidthRequest="40"
-                            HeightRequest="40"
-                            VerticalOptions="Center">
+                                                <!-- Empty column for spacing -->
+                                                <BoxView Grid.Column="2" WidthRequest="40" IsVisible="False"/>
+                                            </Grid>
+
+                                            <!-- Download/Cancel Button (small circle in bottom-right corner) -->
+                                            <Border IsVisible="{Binding IsDownloaded, Converter={StaticResource InvertedBoolConverter}}"
+                                                    WidthRequest="36" HeightRequest="36"
+                                                    HorizontalOptions="End"
+                                                    VerticalOptions="End"
+                                                    Margin="0,0,-5,-5"
+                                                    StrokeThickness="0">
+                                                <Border.BackgroundColor>
+                                                    <Binding Path="IsDownloading">
+                                                        <Binding.Converter>
+                                                            <converters:DownloadButtonColorConverter/>
+                                                        </Binding.Converter>
+                                                    </Binding>
+                                                </Border.BackgroundColor>
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="18"/>
+                                                </Border.StrokeShape>
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer Tapped="OnDownloadAttachment"
+                                                                         CommandParameter="{Binding .}"/>
+                                                </Border.GestureRecognizers>
+
+                                                <Grid>
+                                                    <!-- Spinning progress indicator (only when downloading) -->
+                                                    <ActivityIndicator IsRunning="{Binding IsDownloading}"
+                                                                     IsVisible="{Binding IsDownloading}"
+                                                                     Color="White"
+                                                                     WidthRequest="24"
+                                                                     HeightRequest="24"/>
+
+                                                    <!-- Icon (arrow or X) - smaller size -->
+                                                    <Label Text="{Binding DownloadIcon}"
+                                                           FontSize="18"
+                                                           TextColor="White"
+                                                           HorizontalOptions="Center"
+                                                           VerticalOptions="Center"
+                                                           IsVisible="{Binding IsDownloading, Converter={StaticResource InvertedBoolConverter}}"/>
+                                                </Grid>
+                                            </Border>
+
+                                            <!-- Downloaded Indicator (checkmark in top-right corner) -->
+                                            <Border IsVisible="{Binding IsDownloaded}"
+                                                    WidthRequest="24" HeightRequest="24"
+                                                    BackgroundColor="#25D366"
+                                                    StrokeThickness="0"
+                                                    HorizontalOptions="End"
+                                                    VerticalOptions="Start"
+                                                    Margin="0,-5,-5,0">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="12"/>
+                                                </Border.StrokeShape>
+                                                <Label Text="✓"
+                                                       TextColor="White"
+                                                       FontSize="14"
+                                                       HorizontalOptions="Center"
+                                                       VerticalOptions="Center"/>
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+
+                                    <Label Text="{Binding DisplayTime}" FontSize="11"
+                                           TextColor="#9E9E9E" HorizontalOptions="End"/>
+                                </VerticalStackLayout>
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Messages from you (RIGHT) -->
+                        <VerticalStackLayout IsVisible="{Binding IsFromCurrentUser}"
+                                             HorizontalOptions="End"
+                                             MaximumWidthRequest="300"
+                                             Spacing="4">
+
+                            <Border BackgroundColor="#B39DDB" StrokeThickness="0" Padding="10,8,10,8"
+                                    Shadow="{StaticResource MessageShadow}">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="16,16,4,16"/>
+                                </Border.StrokeShape>
+
+                                <VerticalStackLayout Spacing="4">
+                                    <!-- Text message -->
+                                    <Label Text="{Binding Message}" FontSize="14.5" TextColor="White"
+                                           LineBreakMode="WordWrap" IsVisible="{Binding HasMessageText}"/>
+
+                                    <!-- ══════════════════════════════════════════ -->
+                                    <!-- IMAGE ATTACHMENT (WhatsApp style with blur/download) -->
+                                    <!-- ══════════════════════════════════════════ -->
+                                    <Border IsVisible="{Binding IsImageAttachment}"
+                                            StrokeThickness="0" Padding="0" Margin="0,4,0,0"
+                                            MaximumWidthRequest="250"
+                                            MaximumHeightRequest="350">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="8"/>
+                                        </Border.StrokeShape>
+
+                                        <Grid>
+                                            <!-- Blurred Background Image (shown before download) -->
+                                            <Image Source="{Binding AttachmentUrl, Converter={StaticResource UrlToImageConverter}}"
+                                                   Aspect="AspectFill"
+                                                   HeightRequest="200"
+                                                   WidthRequest="250"
+                                                   Opacity="0.5"
+                                                   IsVisible="{Binding IsDownloaded, Converter={StaticResource InvertedBoolConverter}}"/>
+
+                                            <!-- Downloaded Clear Image (shown after download) -->
+                                            <Image Source="{Binding LocalFilePath}"
+                                                   Aspect="AspectFill"
+                                                   HeightRequest="200"
+                                                   WidthRequest="250"
+                                                   IsVisible="{Binding IsDownloaded}">
+                                                <Image.GestureRecognizers>
+                                                    <TapGestureRecognizer Tapped="OnImageTapped" />
+                                                </Image.GestureRecognizers>
+                                            </Image>
+
+                                            <!-- Download/Cancel Button (single button that changes state) -->
+                                            <Grid IsVisible="{Binding IsDownloaded, Converter={StaticResource InvertedBoolConverter}}"
+                                                  BackgroundColor="#80000000">
+
+                                                <!-- WhatsApp-style Button (changes color and icon based on state) -->
+                                                <Border WidthRequest="56" HeightRequest="56"
+                                                        HorizontalOptions="Center"
+                                                        VerticalOptions="Center"
+                                                        StrokeThickness="0">
+                                                    <Border.BackgroundColor>
+                                                        <Binding Path="IsDownloading">
+                                                            <Binding.Converter>
+                                                                <converters:DownloadButtonColorConverter/>
+                                                            </Binding.Converter>
+                                                        </Binding>
+                                                    </Border.BackgroundColor>
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="28"/>
+                                                    </Border.StrokeShape>
+                                                    <Border.GestureRecognizers>
+                                                        <TapGestureRecognizer Tapped="OnDownloadAttachment"/>
+                                                    </Border.GestureRecognizers>
+
+                                                    <Grid>
+                                                        <!-- Spinning progress indicator (only when downloading) -->
+                                                        <ActivityIndicator IsRunning="{Binding IsDownloading}"
+                                                                         IsVisible="{Binding IsDownloading}"
+                                                                         Color="White"
+                                                                         WidthRequest="40"
+                                                                         HeightRequest="40"/>
+
+                                                        <!-- Icon (arrow or X) -->
+                                                        <Label Text="{Binding DownloadIcon}"
+                                                               FontSize="28"
+                                                               TextColor="White"
+                                                               HorizontalOptions="Center"
+                                                               VerticalOptions="Center"/>
+                                                    </Grid>
+                                                </Border>
+
+                                                <!-- Status text (file size or downloading) -->
+                                                <Label Text="{Binding DownloadStatusText}"
+                                                       TextColor="White"
+                                                       FontSize="12"
+                                                       HorizontalOptions="Center"
+                                                       VerticalOptions="End"
+                                                       Margin="0,0,0,20"
+                                                       BackgroundColor="#80000000"
+                                                       Padding="8,4"/>
+                                            </Grid>
+
+                                            <!-- Downloaded Indicator (shown after download) -->
+                                            <Label Text="✓"
+                                                   TextColor="#25D366"
+                                                   FontSize="16"
+                                                   BackgroundColor="#80FFFFFF"
+                                                   Padding="5"
+                                                   WidthRequest="24"
+                                                   HeightRequest="24"
+                                                   HorizontalOptions="End"
+                                                   VerticalOptions="Start"
+                                                   Margin="5"
+                                                   HorizontalTextAlignment="Center"
+                                                   VerticalTextAlignment="Center"
+                                                   IsVisible="{Binding IsDownloaded}" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- ══════════════════════════════════════════ -->
+                                    <!-- DOCUMENT ATTACHMENT (WhatsApp style with corner button) -->
+                                    <!-- ══════════════════════════════════════════ -->
+                                    <Border IsVisible="{Binding IsDocumentAttachment}"
+                                            BackgroundColor="#9575CD" StrokeThickness="0"
+                                            Padding="10" Margin="0,4,0,0"
+                                            MaximumWidthRequest="250">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="8"/>
+                                        </Border.StrokeShape>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnDownloadAttachment"
+                                                                 CommandParameter="{Binding .}"/>
+                                        </Border.GestureRecognizers>
+
+                                        <Grid>
+                                            <!-- Main document card content -->
+                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                                <Border Grid.Column="0" WidthRequest="48" HeightRequest="48"
+                                                        BackgroundColor="#7E57C2" StrokeThickness="0">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="8"/>
+                                                    </Border.StrokeShape>
+                                                    <Label Text="{Binding AttachmentIcon}"
+                                                           FontFamily="MaterialIcons" FontSize="28"
+                                                           TextColor="White" HorizontalOptions="Center"
+                                                           VerticalOptions="Center"/>
+                                                </Border>
+
+                                                <VerticalStackLayout Grid.Column="1" Spacing="2"
+                                                                    VerticalOptions="Center">
+                                                    <Label Text="{Binding AttachmentName}"
+                                                           FontSize="13" FontAttributes="Bold"
+                                                           TextColor="White" LineBreakMode="TailTruncation"/>
+                                                    <Label Text="{Binding AttachmentSize}"
+                                                           FontSize="12" TextColor="#EDE7F6"/>
+                                                </VerticalStackLayout>
+
+                                                <!-- Empty column for spacing -->
+                                                <BoxView Grid.Column="2" WidthRequest="40" IsVisible="False"/>
+                                            </Grid>
+
+                                            <!-- Download/Cancel Button (small circle in bottom-right corner) -->
+                                            <Border IsVisible="{Binding IsDownloaded, Converter={StaticResource InvertedBoolConverter}}"
+                                                    WidthRequest="36" HeightRequest="36"
+                                                    HorizontalOptions="End"
+                                                    VerticalOptions="End"
+                                                    Margin="0,0,-5,-5"
+                                                    StrokeThickness="0">
+                                                <Border.BackgroundColor>
+                                                    <Binding Path="IsDownloading">
+                                                        <Binding.Converter>
+                                                            <converters:DownloadButtonColorConverter/>
+                                                        </Binding.Converter>
+                                                    </Binding>
+                                                </Border.BackgroundColor>
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="18"/>
+                                                </Border.StrokeShape>
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer Tapped="OnDownloadAttachment"
+                                                                         CommandParameter="{Binding .}"/>
+                                                </Border.GestureRecognizers>
+
+                                                <Grid>
+                                                    <!-- Spinning progress indicator (only when downloading) -->
+                                                    <ActivityIndicator IsRunning="{Binding IsDownloading}"
+                                                                     IsVisible="{Binding IsDownloading}"
+                                                                     Color="White"
+                                                                     WidthRequest="24"
+                                                                     HeightRequest="24"/>
+
+                                                    <!-- Icon (arrow or X) - smaller size -->
+                                                    <Label Text="{Binding DownloadIcon}"
+                                                           FontSize="18"
+                                                           TextColor="White"
+                                                           HorizontalOptions="Center"
+                                                           VerticalOptions="Center"
+                                                           IsVisible="{Binding IsDownloading, Converter={StaticResource InvertedBoolConverter}}"/>
+                                                </Grid>
+                                            </Border>
+
+                                            <!-- Downloaded Indicator (checkmark in top-right corner) -->
+                                            <Border IsVisible="{Binding IsDownloaded}"
+                                                    WidthRequest="24" HeightRequest="24"
+                                                    BackgroundColor="#25D366"
+                                                    StrokeThickness="0"
+                                                    HorizontalOptions="End"
+                                                    VerticalOptions="Start"
+                                                    Margin="0,-5,-5,0">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="12"/>
+                                                </Border.StrokeShape>
+                                                <Label Text="✓"
+                                                       TextColor="White"
+                                                       FontSize="14"
+                                                       HorizontalOptions="Center"
+                                                       VerticalOptions="Center"/>
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+
+                                    <HorizontalStackLayout HorizontalOptions="End" Spacing="4">
+                                        <Label Text="{Binding DisplayTime}" FontSize="11"
+                                               TextColor="#EDE7F6" VerticalOptions="Center"/>
+                                        <Label Text="{Binding StatusIcon}" FontSize="14"
+                                               TextColor="#EDE7F6" VerticalOptions="Center"
+                                               IsVisible="{Binding IsFromCurrentUser}"/>
+                                    </HorizontalStackLayout>
+                                </VerticalStackLayout>
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- MESSAGE INPUT AREA -->
+        <Grid Grid.Row="2" BackgroundColor="White" Padding="12,8,12,8"
+              ColumnDefinitions="*,Auto" ColumnSpacing="8">
+
+            <Border Grid.Column="0" BackgroundColor="#F5F5F5" StrokeThickness="0"
+                    Padding="0" VerticalOptions="Center" MinimumHeightRequest="46"
+                    MaximumHeightRequest="120" StrokeShape="RoundRectangle 23">
+
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="4" Padding="4,0">
+                    <Border Grid.Column="0" BackgroundColor="Transparent" StrokeThickness="0"
+                            WidthRequest="40" HeightRequest="40" VerticalOptions="Center">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Tapped="OnEmojiButtonTapped"/>
                         </Border.GestureRecognizers>
-                        <Label Text="&#xe24e;"
-                               FontFamily="MaterialIcons"
-                               FontSize="24"
-                               TextColor="#9E9E9E"
-                               VerticalOptions="Center"
-                               HorizontalOptions="Center"/>
+                        <Label Text="&#xe24e;" FontFamily="MaterialIcons" FontSize="24"
+                               TextColor="#9E9E9E" VerticalOptions="Center" HorizontalOptions="Center"/>
                     </Border>
 
-                    <!-- Text Input -->
-                    <Editor Grid.Column="1"
-                            x:Name="MessageEditor"
-                            Text="{Binding MessageText}"
-                            Placeholder="Type a message..."
-                            AutoSize="TextChanges"
-                            FontSize="16"
-                            TextColor="#212121"
-                            PlaceholderColor="#BDBDBD"
-                            BackgroundColor="Transparent"
-                            VerticalOptions="Center"
-                            MinimumHeightRequest="28"
+                    <Editor Grid.Column="1" x:Name="MessageEditor"
+                            Text="{Binding MessageText}" Placeholder="Type a message..."
+                            AutoSize="TextChanges" FontSize="16" TextColor="#212121"
+                            PlaceholderColor="#BDBDBD" BackgroundColor="Transparent"
+                            VerticalOptions="Center" MinimumHeightRequest="28"
                             MaximumHeightRequest="100"
                             Focused="OnMessageEditorFocused"
                             Unfocused="OnMessageEditorUnfocused"/>
 
-                    <!-- Attachment & Camera Buttons (only when empty) -->
-                    <HorizontalStackLayout Grid.Column="2"
-                                           Spacing="4"
-                                           VerticalOptions="Center"
+                    <HorizontalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Center"
                                            Margin="0,0,8,0"
                                            IsVisible="{Binding MessageText, Converter={StaticResource StringIsEmptyConverter}}">
-                        <Border BackgroundColor="Transparent"
-                                StrokeThickness="0"
-                                WidthRequest="36"
-                                HeightRequest="36"
-                                VerticalOptions="Center">
+                        <Border BackgroundColor="Transparent" StrokeThickness="0"
+                                WidthRequest="36" HeightRequest="36" VerticalOptions="Center">
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnAttachmentButtonTapped"/>
                             </Border.GestureRecognizers>
-                            <Label Text="&#xe226;"
-                                   FontFamily="MaterialIcons"
-                                   FontSize="24"
-                                   TextColor="#9E9E9E"
-                                   Rotation="-45"
-                                   VerticalOptions="Center"
-                                   HorizontalOptions="Center"/>
+                            <Label Text="&#xe226;" FontFamily="MaterialIcons" FontSize="24"
+                                   TextColor="#9E9E9E" Rotation="-45"
+                                   VerticalOptions="Center" HorizontalOptions="Center"/>
                         </Border>
 
-                        <Border BackgroundColor="Transparent"
-                                StrokeThickness="0"
-                                WidthRequest="36"
-                                HeightRequest="36"
-                                VerticalOptions="Center">
+                        <Border BackgroundColor="Transparent" StrokeThickness="0"
+                                WidthRequest="36" HeightRequest="36" VerticalOptions="Center">
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnCameraButtonTapped"/>
                             </Border.GestureRecognizers>
-                            <Label Text="&#xe3b0;"
-                                   FontFamily="MaterialIcons"
-                                   FontSize="24"
-                                   TextColor="#9E9E9E"
-                                   VerticalOptions="Center"
-                                   HorizontalOptions="Center"/>
+                            <Label Text="&#xe3b0;" FontFamily="MaterialIcons" FontSize="24"
+                                   TextColor="#9E9E9E" VerticalOptions="Center" HorizontalOptions="Center"/>
                         </Border>
                     </HorizontalStackLayout>
                 </Grid>
             </Border>
 
-            <!-- Send Button (only when text exists) OR Microphone (when empty) -->
-            <Border Grid.Column="1"
-                    WidthRequest="48"
-                    HeightRequest="48"
-                    BackgroundColor="#7E57C2"
-                    StrokeThickness="0"
-                    VerticalOptions="Center">
+            <Border Grid.Column="1" WidthRequest="48" HeightRequest="48"
+                    BackgroundColor="#7E57C2" StrokeThickness="0" VerticalOptions="Center">
                 <Border.StrokeShape>
                     <RoundRectangle CornerRadius="24"/>
                 </Border.StrokeShape>
@@ -412,26 +630,16 @@
                     <TapGestureRecognizer Command="{Binding SendMessageCommand}"/>
                 </Border.GestureRecognizers>
 
-                <!-- Only show ONE icon at a time -->
-                <Label Text="{Binding MessageButtonIcon}"
-                       FontFamily="MaterialIcons"
-                       FontSize="24"
-                       TextColor="White"
-                       VerticalOptions="Center"
+                <Label Text="{Binding MessageButtonIcon}" FontFamily="MaterialIcons"
+                       FontSize="24" TextColor="White" VerticalOptions="Center"
                        HorizontalOptions="Center"/>
             </Border>
         </Grid>
 
-        <!-- Loading Indicator -->
-        <ActivityIndicator Grid.Row="1"
-                          IsRunning="{Binding IsBusy}"
-                          IsVisible="{Binding IsBusy}"
-                          Color="#7E57C2"
-                          WidthRequest="32"
-                          HeightRequest="32"
-                          VerticalOptions="Start"
-                          HorizontalOptions="Center"
-                          Margin="0,16,0,0"
-                          ZIndex="99"/>
+        <ActivityIndicator Grid.Row="1" IsRunning="{Binding IsBusy}"
+                          IsVisible="{Binding IsBusy}" Color="#7E57C2"
+                          WidthRequest="32" HeightRequest="32"
+                          VerticalOptions="Start" HorizontalOptions="Center"
+                          Margin="0,16,0,0" ZIndex="99"/>
     </Grid>
 </ContentPage>

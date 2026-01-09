@@ -18,7 +18,7 @@
 
         <ScrollView Grid.RowSpan="2">
             <VerticalStackLayout 
-                Padding="30"
+                Padding="{OnPlatform Android='30,20,30,80', Default='30'}"
                 Spacing="20"
                 VerticalOptions="Center">
 

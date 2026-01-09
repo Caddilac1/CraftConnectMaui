@@ -5,11 +5,15 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Diagnostics;
-using CraftConnect_Mobile_App.Models; // Add this to use existing GroupChatItem
+using System.Linq;
+using CraftConnect_Mobile_App.Models;
 
 namespace CraftConnect_Mobile_App.Services
 {
-    // Response models - defined outside class to match interface
+    // ═══════════════════════════════════════════════════════════════
+    // API RESPONSE MODELS (matches backend structure)
+    // ═══════════════════════════════════════════════════════════════
+
     public class GroupsResponse
     {
         public bool Success { get; set; }
@@ -20,25 +24,47 @@ namespace CraftConnect_Mobile_App.Services
     public class MessagesResponse
     {
         public bool Success { get; set; }
-        public List<GroupMessageItem> Messages { get; set; }
+        public List<MessageDto> Messages { get; set; } // ✅ Changed from GroupMessageItem to MessageDto
         public int TotalMessages { get; set; }
     }
 
+    // ✅ NEW: DTO that matches the API response structure
+    public class MessageDto
+    {
+        public Guid Id { get; set; }
+        public string Message { get; set; }
+        public DateTime SentAt { get; set; }
+        public Guid SenderId { get; set; }
+        public string SenderName { get; set; }
+        public string SenderFullName { get; set; }
 
+        // Attachment properties from API
+        public bool HasAttachment { get; set; }
+        public string AttachmentUrl { get; set; }
+        public string MediaType { get; set; }
+        public FileInfoDto FileInfo { get; set; }
+    }
+
+    // ✅ NEW: Matches the FileInfo object from API
+    public class FileInfoDto
+    {
+        public string Name { get; set; }
+        public string Extension { get; set; }
+        public string Type { get; set; }
+        public string DisplayIcon { get; set; }
+    }
 
     public class ChatService : IChatService
     {
         private readonly HttpClient _httpClient;
-        private const string BaseUrl = "https://192.168.43.232:7023"; // Match your AuthService URL
+        private const string BaseUrl = "https://192.168.188.112:7023";
 
         public ChatService()
         {
             var handler = new HttpClientHandler();
 
 #if DEBUG
-            // Allow self-signed certificates in development
-            handler.ServerCertificateCustomValidationCallback =
-                (message, cert, chain, errors) => true;
+            handler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true;
 #endif
 
             _httpClient = new HttpClient(handler)
@@ -50,9 +76,6 @@ namespace CraftConnect_Mobile_App.Services
             Debug.WriteLine($"[CHAT SERVICE] Initialized with BaseUrl: {BaseUrl}");
         }
 
-        /// <summary>
-        /// Get token from SecureStorage and set it in the HTTP client
-        /// </summary>
         private async Task<bool> SetAuthHeaderAsync()
         {
             try
@@ -65,8 +88,7 @@ namespace CraftConnect_Mobile_App.Services
                     return false;
                 }
 
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", token);
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
                 Debug.WriteLine($"[CHAT SERVICE] ✅ Auth header set. Token length: {token.Length}");
                 Debug.WriteLine($"[CHAT SERVICE] Token preview: {token.Substring(0, Math.Min(30, token.Length))}...");
@@ -79,16 +101,12 @@ namespace CraftConnect_Mobile_App.Services
             }
         }
 
-        /// <summary>
-        /// Get all groups the current user is a member of
-        /// </summary>
         public async Task<List<GroupChatItem>> GetMyGroupsAsync()
         {
             try
             {
                 Debug.WriteLine("[CHAT SERVICE] 📡 Fetching user groups...");
 
-                // Set auth header from SecureStorage
                 if (!await SetAuthHeaderAsync())
                 {
                     throw new UnauthorizedAccessException("Not authenticated. Please login first.");
@@ -96,12 +114,10 @@ namespace CraftConnect_Mobile_App.Services
 
                 Debug.WriteLine($"[CHAT SERVICE] Making request to: {BaseUrl}/api/chat/my-groups");
 
-                // Make the request
                 var response = await _httpClient.GetAsync("/api/chat/my-groups");
 
                 Debug.WriteLine($"[CHAT SERVICE] 📥 Response status: {response.StatusCode}");
 
-                // Check if request was successful
                 if (!response.IsSuccessStatusCode)
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
@@ -110,7 +126,6 @@ namespace CraftConnect_Mobile_App.Services
 
                     if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                     {
-                        // Clear token and throw
                         SecureStorage.Remove("auth_token");
                         throw new UnauthorizedAccessException("Token expired or invalid. Please login again.");
                     }
@@ -120,9 +135,7 @@ namespace CraftConnect_Mobile_App.Services
 
                 var json = await response.Content.ReadAsStringAsync();
                 Debug.WriteLine($"[CHAT SERVICE] 📄 Response JSON length: {json.Length} chars");
-                Debug.WriteLine($"[CHAT SERVICE] Response preview: {json.Substring(0, Math.Min(200, json.Length))}...");
 
-                // Parse the response - matches your API structure
                 var result = JsonSerializer.Deserialize<GroupsResponse>(json, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
@@ -135,37 +148,21 @@ namespace CraftConnect_Mobile_App.Services
                 }
                 else
                 {
-                    Debug.WriteLine($"[CHAT SERVICE] ⚠️ API returned success=false: {result?.Success}");
+                    Debug.WriteLine($"[CHAT SERVICE] ⚠️ API returned success=false");
                     return new List<GroupChatItem>();
                 }
             }
-            catch (UnauthorizedAccessException ex)
+            catch (UnauthorizedAccessException)
             {
-                Debug.WriteLine($"[CHAT SERVICE] 🔒 Unauthorized: {ex.Message}");
                 throw;
-            }
-            catch (HttpRequestException ex)
-            {
-                Debug.WriteLine($"[CHAT SERVICE] 🌐 Network error: {ex.Message}");
-                throw new Exception($"Network error: {ex.Message}", ex);
-            }
-            catch (JsonException ex)
-            {
-                Debug.WriteLine($"[CHAT SERVICE] 📋 JSON parsing error: {ex.Message}");
-                throw new Exception($"Failed to parse response: {ex.Message}", ex);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[CHAT SERVICE] ❌ Unexpected error: {ex.Message}");
-                Debug.WriteLine($"[CHAT SERVICE] Exception type: {ex.GetType().Name}");
-                Debug.WriteLine($"[CHAT SERVICE] StackTrace: {ex.StackTrace}");
+                Debug.WriteLine($"[CHAT SERVICE] ❌ Error getting groups: {ex.Message}");
                 throw new Exception($"Error getting groups: {ex.Message}", ex);
             }
         }
 
-        /// <summary>
-        /// Get messages for a specific group
-        /// </summary>
         public async Task<List<GroupMessageItem>> GetGroupMessagesAsync(Guid groupId)
         {
             try
@@ -196,13 +193,60 @@ namespace CraftConnect_Mobile_App.Services
                 }
 
                 var json = await response.Content.ReadAsStringAsync();
+                Debug.WriteLine($"[CHAT SERVICE] 📄 Response JSON length: {json.Length} chars");
+
                 var result = JsonSerializer.Deserialize<MessagesResponse>(json, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
                 });
 
-                Debug.WriteLine($"[CHAT SERVICE] ✅ Fetched {result?.TotalMessages ?? 0} messages");
-                return result?.Messages ?? new List<GroupMessageItem>();
+                if (result?.Success != true || result.Messages == null)
+                {
+                    Debug.WriteLine($"[CHAT SERVICE] ⚠️ No messages or invalid response");
+                    return new List<GroupMessageItem>();
+                }
+
+                // ✅ MAP API DTOs to GroupMessageItem with ALL attachment fields
+                var messages = result.Messages.Select(m => new GroupMessageItem
+                {
+                    Id = m.Id,
+                    GroupChatId = groupId,
+                    SenderId = m.SenderId,
+                    SenderName = m.SenderName,
+                    SenderFullName = m.SenderFullName,
+                    Message = m.Message,
+                    SentAt = m.SentAt,
+
+                    // ✅ Map attachment/media fields from API
+                    HasAttachment = m.HasAttachment,
+                    AttachmentUrl = m.AttachmentUrl,
+                    AttachmentName = m.FileInfo?.Name ?? ExtractFileNameFromUrl(m.AttachmentUrl),
+                    AttachmentSize = m.FileInfo?.Type ?? "File", // Use Type as size display
+                    AttachmentType = m.FileInfo?.Extension ?? GetFileExtension(m.AttachmentUrl),
+                    MediaType = m.MediaType ?? "none",
+
+                    // Status fields
+                    IsPending = false,
+                    IsSent = true,
+                    IsDelivered = true,
+                    IsRead = false
+                }).ToList();
+
+                Debug.WriteLine($"[CHAT SERVICE] ✅ Parsed {messages.Count} messages");
+                Debug.WriteLine($"[CHAT SERVICE] Messages with attachments: {messages.Count(msg => msg.HasAttachment)}");
+
+                // Debug: Log first attachment details if any
+                var firstAttachment = messages.FirstOrDefault(m => m.HasAttachment);
+                if (firstAttachment != null)
+                {
+                    Debug.WriteLine($"[CHAT SERVICE] 📎 First attachment:");
+                    Debug.WriteLine($"   Name: {firstAttachment.AttachmentName}");
+                    Debug.WriteLine($"   Type: {firstAttachment.AttachmentType}");
+                    Debug.WriteLine($"   URL: {firstAttachment.AttachmentUrl}");
+                    Debug.WriteLine($"   MediaType: {firstAttachment.MediaType}");
+                }
+
+                return messages;
             }
             catch (Exception ex)
             {
@@ -211,9 +255,6 @@ namespace CraftConnect_Mobile_App.Services
             }
         }
 
-        /// <summary>
-        /// Send a message to a group
-        /// </summary>
         public async Task<bool> SendMessageAsync(Guid groupId, string message)
         {
             try
@@ -225,7 +266,7 @@ namespace CraftConnect_Mobile_App.Services
                     throw new UnauthorizedAccessException("Not authenticated. Please login first.");
                 }
 
-                var payload = new { Message = message };
+                var payload = new { Message = message, AttachmentUrl = (string)null };
                 var json = JsonSerializer.Serialize(payload);
                 var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
@@ -255,9 +296,57 @@ namespace CraftConnect_Mobile_App.Services
             }
         }
 
-        /// <summary>
-        /// Test endpoint to verify chat API is working
-        /// </summary>
+        // ═══════════════════════════════════════════════════════════════
+        // HELPER METHODS
+        // ═══════════════════════════════════════════════════════════════
+
+        private static string ExtractFileNameFromUrl(string url)
+        {
+            if (string.IsNullOrEmpty(url)) return null;
+
+            try
+            {
+                var lastSlash = url.LastIndexOf('/');
+                var fileName = lastSlash >= 0 ? url.Substring(lastSlash + 1) : url;
+
+                var queryIndex = fileName.IndexOf('?');
+                if (queryIndex >= 0)
+                {
+                    fileName = fileName.Substring(0, queryIndex);
+                }
+
+                return Uri.UnescapeDataString(fileName);
+            }
+            catch
+            {
+                return "File";
+            }
+        }
+
+        private static string GetFileExtension(string url)
+        {
+            if (string.IsNullOrEmpty(url)) return "";
+
+            try
+            {
+                var extension = System.IO.Path.GetExtension(url);
+                var queryIndex = extension.IndexOf('?');
+                if (queryIndex >= 0)
+                {
+                    extension = extension.Substring(0, queryIndex);
+                }
+                return extension.ToLowerInvariant();
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // TEST METHODS
+        // ═══════════════════════════════════════════════════════════════
+
         public async Task<bool> TestChatApiAsync()
         {
             try
@@ -288,9 +377,6 @@ namespace CraftConnect_Mobile_App.Services
             }
         }
 
-        /// <summary>
-        /// Test authenticated endpoint
-        /// </summary>
         public async Task<bool> TestAuthAsync()
         {
             try
