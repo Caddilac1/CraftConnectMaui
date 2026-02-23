@@ -8,7 +8,7 @@ namespace CraftConnect_Mobile_App.Services
     public class AuthService
     {
         private readonly HttpClient _httpClient;
-        private const string BaseUrl = "https://192.168.188.112:7023";
+        private const string BaseUrl = "https://192.168.8.181:7023";
 
         public AuthService()
         {

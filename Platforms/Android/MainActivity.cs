@@ -16,7 +16,17 @@ namespace CraftConnect_Mobile_App
         {
             base.OnCreate(savedInstanceState);
 
-            // CRITICAL: Remove gray navigation bar
+            // Ensure the window resizes when the soft keyboard appears so only the bottom area is pushed up
+            try
+            {
+                Window?.SetSoftInputMode(SoftInput.AdjustResize | SoftInput.StateHidden);
+            }
+            catch (System.Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainActivity] ❌ Error setting SoftInputMode: {ex.Message}");
+            }
+
+            // CRITICAL: Remove gray navigation bar or make it blend with app background
             RemoveGrayNavigationBar();
         }
 
@@ -26,19 +36,20 @@ namespace CraftConnect_Mobile_App
 
             try
             {
-                // Make navigation bar completely transparent
-                Window.SetNavigationBarColor(Android.Graphics.Color.Transparent);
+                // Make navigation bar match app background so the gray strip is not visible
+                // ChatPage background is #E8EAF6 - use the same color so the bar blends in
+                Window.SetNavigationBarColor(Android.Graphics.Color.ParseColor("#E8EAF6"));
 
                 // Also make status bar transparent so content can draw behind it
                 Window.SetStatusBarColor(Android.Graphics.Color.Transparent);
 
                 if (Build.VERSION.SdkInt >= BuildVersionCodes.R)
                 {
-                    // Android 11+ (API 30+) - prefer AndroidX WindowCompat
-                    WindowCompat.SetDecorFitsSystemWindows(Window, false);
+                    // Use system to fit system windows (do not draw behind bars)
+                    WindowCompat.SetDecorFitsSystemWindows(Window, true);
 
-                    // Ensure the decor view itself does not apply fitsSystemWindows
-                    Window.DecorView?.SetFitsSystemWindows(false);
+                    // Ensure the decor view itself uses fitsSystemWindows to avoid extra inset drawing
+                    Window.DecorView?.SetFitsSystemWindows(true);
 
                     // Disable the gray scrim/contrast on supported versions
                     if (Build.VERSION.SdkInt >= BuildVersionCodes.Q)
@@ -48,17 +59,18 @@ namespace CraftConnect_Mobile_App
                 }
                 else if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
                 {
-                    // Android 8-10 (API 26-29) - request layout behind system bars
+                    // For older versions, avoid immersive layout flags so nav bar stays normal
                     var uiOptions = (int)Window.DecorView.SystemUiVisibility;
+                    // Clear LayoutFullscreen/LayoutHideNavigation if previously set
+                    uiOptions &= ~(int)SystemUiFlags.LayoutHideNavigation;
+                    uiOptions &= ~(int)SystemUiFlags.LayoutFullscreen;
                     uiOptions |= (int)SystemUiFlags.LayoutStable;
-                    uiOptions |= (int)SystemUiFlags.LayoutHideNavigation;
-                    uiOptions |= (int)SystemUiFlags.LayoutFullscreen;
                     Window.DecorView.SystemUiVisibility = (StatusBarVisibility)uiOptions;
 
-                    Window.DecorView?.SetFitsSystemWindows(false);
+                    Window.DecorView?.SetFitsSystemWindows(true);
                 }
 
-                System.Diagnostics.Debug.WriteLine("[MainActivity] ✅ Navigation bar transparency applied");
+                System.Diagnostics.Debug.WriteLine("[MainActivity] ✅ Navigation bar color/fits applied");
             }
             catch (System.Exception ex)
             {

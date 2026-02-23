@@ -570,7 +570,7 @@
         </CollectionView>
 
         <!-- MESSAGE INPUT AREA -->
-        <Grid Grid.Row="2" BackgroundColor="White" Padding="12,8,12,8"
+        <Grid x:Name="MessageInputArea" Grid.Row="2" BackgroundColor="White" Padding="12,8,12,8"
               ColumnDefinitions="*,Auto" ColumnSpacing="8">
 
             <Border Grid.Column="0" BackgroundColor="#F5F5F5" StrokeThickness="0"

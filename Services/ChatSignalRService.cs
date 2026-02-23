@@ -49,7 +49,7 @@ namespace CraftConnect_Mobile_App.Services
     {
         private HubConnection _hubConnection;
         private string _hubUrl;
-        private const string BaseUrl = "https://192.168.188.112:7023"; // Match ChatService URL
+        private const string BaseUrl = "https://192.168.8.181:7023"; // Match ChatService URL
 
         public event EventHandler<MessageReceivedEventArgs> MessageReceived;
         public event EventHandler<TypingEventArgs> UserTyping;

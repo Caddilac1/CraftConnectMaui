@@ -1,11 +1,17 @@
 ﻿using CraftConnect_Mobile_App.PageModels;
+using CraftConnect_Mobile_App.Services;
 using System.Diagnostics;
+using Microsoft.Maui.Controls;
 
 namespace CraftConnect_Mobile_App.Pages
 {
     public partial class ChatPage : ContentPage
     {
         private ChatPageModel _viewModel;
+
+#if ANDROID
+        private bool _insetsApplied;
+#endif
 
         public ChatPage(ChatPageModel viewModel)
         {
@@ -38,6 +44,10 @@ namespace CraftConnect_Mobile_App.Pages
                     "Failed to initialize chat. Please try again.",
                     "OK");
             }
+
+#if ANDROID
+            ApplyAndroidInsets();
+#endif
         }
 
         protected override async void OnDisappearing()
@@ -53,6 +63,53 @@ namespace CraftConnect_Mobile_App.Pages
             {
                 Debug.WriteLine($"[CHAT PAGE] ❌ Error in OnDisappearing: {ex.Message}");
             }
+
+#if ANDROID
+            // Restore element padding
+            if (_insetsApplied)
+            {
+                var inputAreaVe = this.FindByName<VisualElement>("MessageInputArea");
+                if (inputAreaVe is Layout inputAreaLayout)
+                {
+                    PageInsetManager.RestoreElementPadding(inputAreaLayout);
+                }
+
+                // Also restore page padding if we applied nav bar padding previously
+                PageInsetManager.RestorePagePadding(this);
+                _insetsApplied = false;
+            }
+#endif
+        }
+
+        private void ApplyAndroidInsets()
+        {
+#if ANDROID
+            try
+            {
+                // Use fully-qualified name to avoid requiring Android namespace at compile for other platforms
+                var insets = CraftConnect_Mobile_App.Platforms.Android.AndroidInsetService.GetInsets();
+
+                // If IME visible, apply IME inset to the input area; otherwise ensure nav bar padding is preserved
+                var inputAreaVe = this.FindByName<VisualElement>("MessageInputArea");
+
+                if (inputAreaVe is Layout inputAreaLayout && insets.IsImeVisible && insets.ImeHeight > 0)
+                {
+                    // Apply IME inset to the input container only
+                    PageInsetManager.ApplyInsetToElement(inputAreaLayout, insets.ImeHeight);
+                    _insetsApplied = true;
+                }
+                else if (insets.NavigationBarHeight > 0)
+                {
+                    // Apply navigation bar as bottom padding to the whole page so content isn't hidden behind nav bar
+                    PageInsetManager.ApplyInsetToPage(this, insets.NavigationBarHeight);
+                    _insetsApplied = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CHAT PAGE] Insets error: {ex.Message}");
+            }
+#endif
         }
 
         // ═══════════════════════════════════════════════════════════════
