@@ -1,13 +1,22 @@
 {
   "profiles": {
-    "ArtisanMarketplace API": {
-      "commandName": "Project",
-      "dotnetRunMessages": true,
-      "launchBrowser": false,
-      "applicationUrl": "http://0.0.0.0:5023;https://0.0.0.0:7023",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      }
+    "Profile 2": {
+      "commandName": "Project"
+    },
+    "Profile 3": {
+      "commandName": "Project"
+    },
+    "Profile 4": {
+      "commandName": "Project"
+    },
+    "Profile 5": {
+      "commandName": "Executable"
+    },
+    "Profile 1": {
+      "commandName": "Project"
+    },
+    "Profile 6": {
+      "commandName": "Executable"
     }
   }
 }

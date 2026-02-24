@@ -17,8 +17,13 @@ namespace CraftConnect_Mobile_App.PageModels
         private bool _isPasswordVisible = false;
         private bool _rememberMe = false;
 
-        // OTP-first mode fields
-        private bool _isPasswordMode = false; // false = OTP mode, true = Password mode
+        // Captcha
+        private int _captchaId = 0;
+        private string _captchaQuestion = string.Empty;
+        private string _captchaAnswer = string.Empty;
+
+        // Mode
+        private bool _isPasswordMode = false;
         private string _mainButtonText = "Send OTP";
         private string _toggleButtonText = "🔑 Use Password Instead";
         private string _authModeBadge = "🔐 OTP Authentication";
@@ -32,38 +37,36 @@ namespace CraftConnect_Mobile_App.PageModels
         {
             _authService = authService;
 
-            // Commands
             MainActionCommand = new Command(async () => await MainActionAsync(), () => !IsBusy);
             ToggleAuthModeCommand = new Command(ToggleAuthMode);
             TogglePasswordVisibilityCommand = new Command(TogglePasswordVisibility);
-            //TestConnectionCommand = new Command(async () => await TestConnectionAsync());
-            NavigateToSignUpCommand = new Command(async () => await NavigateToSignUpAsync());
-            ForgotPasswordCommand = new Command(async () => await ForgotPasswordAsync());
+            NavigateToSignUpCommand = new Command(async () => await Shell.Current.GoToAsync("RegisterPage"));
+            ForgotPasswordCommand = new Command(async () => await Shell.Current.GoToAsync("ForgotPasswordPage"));
+            RefreshCaptchaCommand = new Command(async () => await LoadCaptchaAsync());
 
-            Debug.WriteLine($"[VIEWMODEL] LoginPageModel initialized in OTP mode");
+            // Load captcha on startup
+            _ = LoadCaptchaAsync();
+
+            Debug.WriteLine("[LOGIN PAGE MODEL] Initialized");
         }
 
-        // Properties
+        // ── Properties ────────────────────────────────────────────────
+
+        /// <summary>
+        /// Unified email-or-phone field (used by both OTP and Password modes).
+        /// In OTP mode the value is treated as a phone number;
+        /// in Password mode it is treated as an email address.
+        /// </summary>
         public string EmailOrPhone
         {
             get => _emailOrPhone;
-            set
-            {
-                _emailOrPhone = value;
-                OnPropertyChanged();
-                ClearMessages();
-            }
+            set { _emailOrPhone = value; OnPropertyChanged(); ClearMessages(); }
         }
 
         public string Password
         {
             get => _password;
-            set
-            {
-                _password = value;
-                OnPropertyChanged();
-                ClearMessages();
-            }
+            set { _password = value; OnPropertyChanged(); ClearMessages(); }
         }
 
         public bool IsBusy
@@ -80,115 +83,110 @@ namespace CraftConnect_Mobile_App.PageModels
         public bool IsPasswordVisible
         {
             get => _isPasswordVisible;
-            set
-            {
-                _isPasswordVisible = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public bool RememberMe
-        {
-            get => _rememberMe;
-            set
-            {
-                _rememberMe = value;
-                OnPropertyChanged();
-            }
+            set { _isPasswordVisible = value; OnPropertyChanged(); }
         }
 
         public bool IsPasswordMode
         {
             get => _isPasswordMode;
-            set
-            {
-                _isPasswordMode = value;
-                OnPropertyChanged();
-            }
+            set { _isPasswordMode = value; OnPropertyChanged(); }
+        }
+
+        public bool RememberMe
+        {
+            get => _rememberMe;
+            set { _rememberMe = value; OnPropertyChanged(); }
+        }
+
+        public string CaptchaQuestion
+        {
+            get => _captchaQuestion;
+            set { _captchaQuestion = value; OnPropertyChanged(); }
+        }
+
+        public string CaptchaAnswer
+        {
+            get => _captchaAnswer;
+            set { _captchaAnswer = value; OnPropertyChanged(); ClearMessages(); }
         }
 
         public string MainButtonText
         {
             get => _mainButtonText;
-            set
-            {
-                _mainButtonText = value;
-                OnPropertyChanged();
-            }
+            set { _mainButtonText = value; OnPropertyChanged(); }
         }
 
         public string ToggleButtonText
         {
             get => _toggleButtonText;
-            set
-            {
-                _toggleButtonText = value;
-                OnPropertyChanged();
-            }
+            set { _toggleButtonText = value; OnPropertyChanged(); }
         }
 
         public string AuthModeBadge
         {
             get => _authModeBadge;
-            set
-            {
-                _authModeBadge = value;
-                OnPropertyChanged();
-            }
+            set { _authModeBadge = value; OnPropertyChanged(); }
         }
 
         public string ErrorMessage
         {
             get => _errorMessage;
-            set
-            {
-                _errorMessage = value;
-                OnPropertyChanged();
-            }
+            set { _errorMessage = value; OnPropertyChanged(); }
         }
 
         public string SuccessMessage
         {
             get => _successMessage;
-            set
-            {
-                _successMessage = value;
-                OnPropertyChanged();
-            }
+            set { _successMessage = value; OnPropertyChanged(); }
         }
 
         public string InfoMessage
         {
             get => _infoMessage;
-            set
-            {
-                _infoMessage = value;
-                OnPropertyChanged();
-            }
+            set { _infoMessage = value; OnPropertyChanged(); }
         }
 
-        // Commands
+        // ── Commands ──────────────────────────────────────────────────
+
         public ICommand MainActionCommand { get; }
         public ICommand ToggleAuthModeCommand { get; }
         public ICommand TogglePasswordVisibilityCommand { get; }
-        public ICommand TestConnectionCommand { get; }
         public ICommand NavigateToSignUpCommand { get; }
         public ICommand ForgotPasswordCommand { get; }
+        public ICommand RefreshCaptchaCommand { get; }
 
-        // ============================================================
-        // MAIN ACTION - Either Send OTP or Login with Password
-        // ============================================================
+        // ── Load Captcha ──────────────────────────────────────────────
+
+        private async Task LoadCaptchaAsync()
+        {
+            try
+            {
+                var result = await _authService.GetCaptchaAsync();
+                _captchaId = result.Id;
+                CaptchaQuestion = result.Question;
+                CaptchaAnswer = string.Empty;
+                Debug.WriteLine($"[CAPTCHA] Loaded: {CaptchaQuestion}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CAPTCHA] Failed to load: {ex.Message}");
+                // Fallback
+                _captchaId = 0;
+                CaptchaQuestion = "What is 5 + 3?";
+            }
+        }
+
+        // ── Main Action ───────────────────────────────────────────────
+
         private async Task MainActionAsync()
         {
             if (IsBusy) return;
 
-            Debug.WriteLine($"[MAIN ACTION] Starting - Mode: {(IsPasswordMode ? "Password" : "OTP")}");
             ClearMessages();
 
-            // Validate email/phone
-            if (string.IsNullOrWhiteSpace(EmailOrPhone))
+            if (string.IsNullOrWhiteSpace(CaptchaAnswer))
             {
-                ErrorMessage = "Please enter your email or phone number";
+                ErrorMessage = "Please answer the captcha question";
                 return;
             }
 
@@ -197,15 +195,9 @@ namespace CraftConnect_Mobile_App.PageModels
             try
             {
                 if (IsPasswordMode)
-                {
-                    // Password Mode - Login with password
                     await LoginWithPasswordAsync();
-                }
                 else
-                {
-                    // OTP Mode - Send OTP
                     await SendOtpAsync();
-                }
             }
             catch (Exception ex)
             {
@@ -218,245 +210,119 @@ namespace CraftConnect_Mobile_App.PageModels
             }
         }
 
-        // ============================================================
-        // SEND OTP
-        // ============================================================
+        // ── Send OTP  →  POST /api/auth/login/otp/send ───────────────
+
         private async Task SendOtpAsync()
         {
-            Debug.WriteLine($"[SEND OTP] Sending OTP to: {EmailOrPhone}");
-
-            try
+            if (string.IsNullOrWhiteSpace(EmailOrPhone))
             {
-                var request = new LoginRequest
-                {
-                    EmailOrPhone = EmailOrPhone.Trim(),
-                    UsePassword = false
-                };
-
-                var response = await _authService.LoginAsync(request);
-
-                Debug.WriteLine($"[SEND OTP] Response - Success: {response.Success}, RequiresOtp: {response.RequiresOtp}");
-
-                if (response.Success && response.RequiresOtp)
-                {
-                    // OTP sent successfully - navigate to OTP verification page
-                    SuccessMessage = "OTP sent to your email!";
-                    Debug.WriteLine($"[SEND OTP] Navigating to OTP verification page");
-
-                    await Task.Delay(1000); // Brief delay to show message
-
-                    // Navigate to OTP verification page
-                    var navigationParameter = new Dictionary<string, object>
-                    {
-                        { "email", response.Email },
-                        { "otpToken", response.OtpToken },
-                        { "hasPassword", response.HasPassword }
-                    };
-
-                    await Shell.Current.GoToAsync("OtpVerificationPage", navigationParameter);
-                }
-                else if (!response.Success && response.RequiresOtp)
-                {
-                    // Account exists but no password - OTP sent
-                    InfoMessage = response.Message;
-
-                    await Task.Delay(1500);
-
-                    var navigationParameter = new Dictionary<string, object>
-                    {
-                        { "email", response.Email },
-                        { "otpToken", response.OtpToken },
-                        { "hasPassword", response.HasPassword }
-                    };
-
-                    await Shell.Current.GoToAsync("OtpVerificationPage", navigationParameter);
-                }
-                else
-                {
-                    ErrorMessage = response.Message ?? "Failed to send OTP";
-                }
+                ErrorMessage = "Please enter your phone number";
+                return;
             }
-            catch (Exception ex)
+
+            Debug.WriteLine($"[SEND OTP] Phone: {EmailOrPhone}");
+
+            var request = new OtpSendRequest
             {
-                Debug.WriteLine($"[SEND OTP] Exception: {ex.Message}");
-                ErrorMessage = "Failed to send OTP. Please try again.";
+                Phone = EmailOrPhone.Trim(),
+                CaptchaId = _captchaId,
+                CaptchaAnswer = CaptchaAnswer.Trim()
+            };
+
+            var result = await _authService.SendOtpAsync(request);
+
+            Debug.WriteLine($"[SEND OTP] Success: {result.Success}");
+
+            if (result.Success)
+            {
+                SuccessMessage = "OTP sent! Check your phone.";
+                await Task.Delay(800);
+
+                await Shell.Current.GoToAsync("OtpVerificationPage",
+                    new Dictionary<string, object> { { "phone", EmailOrPhone.Trim() } });
+            }
+            else
+            {
+                ErrorMessage = result.Error ?? "Failed to send OTP. Please try again.";
+                await LoadCaptchaAsync(); // Refresh captcha on failure
             }
         }
 
-        // ============================================================
-        // LOGIN WITH PASSWORD
-        // ============================================================
+        // ── Login with Password  →  POST /api/auth/login/password ────
+
         private async Task LoginWithPasswordAsync()
         {
-            Debug.WriteLine($"[LOGIN PASSWORD] Logging in with password");
+            if (string.IsNullOrWhiteSpace(EmailOrPhone))
+            {
+                ErrorMessage = "Please enter your email";
+                return;
+            }
 
-            // Validate password
             if (string.IsNullOrWhiteSpace(Password))
             {
                 ErrorMessage = "Please enter your password";
                 return;
             }
 
-            try
+            Debug.WriteLine($"[LOGIN PASSWORD] Email: {EmailOrPhone}");
+
+            var request = new PasswordLoginRequest
             {
-                var request = new LoginRequest
-                {
-                    EmailOrPhone = EmailOrPhone.Trim(),
-                    Password = Password,
-                    UsePassword = true
-                };
+                Email = EmailOrPhone.Trim(),
+                Password = Password,
+                CaptchaId = _captchaId,
+                CaptchaAnswer = CaptchaAnswer.Trim()
+            };
 
-                var response = await _authService.LoginAsync(request);
+            var result = await _authService.LoginWithPasswordAsync(request);
 
-                Debug.WriteLine($"[LOGIN PASSWORD] Response - Success: {response.Success}");
+            Debug.WriteLine($"[LOGIN PASSWORD] Success: {result.Success}");
 
-                if (response.Success && !string.IsNullOrEmpty(response.Token))
-                {
-                    // Login successful
-                    SuccessMessage = "Login successful!";
-
-                    // Verify token was saved
-                    var savedToken = await SecureStorage.GetAsync("auth_token");
-                    Debug.WriteLine($"[LOGIN PASSWORD] Token verified: {!string.IsNullOrEmpty(savedToken)}");
-
-                    if (!string.IsNullOrEmpty(savedToken))
-                    {
-                        await Task.Delay(200); // Small delay for SecureStorage
-                        Debug.WriteLine($"[LOGIN PASSWORD] Navigating to main page");
-                        await Shell.Current.GoToAsync("//main/GroupChatListPage");
-                    }
-                    else
-                    {
-                        ErrorMessage = "Login succeeded but token storage failed. Please try again.";
-                    }
-                }
-                else if (!response.Success && response.RequiresOtp)
-                {
-                    // No password set - need to use OTP
-                    ErrorMessage = response.Message ?? "No password set. Please use OTP login.";
-
-                    // Optionally auto-switch to OTP mode
-                    await Task.Delay(2000);
-                    ToggleAuthMode();
-                }
-                else
-                {
-                    ErrorMessage = response.Message ?? "Invalid credentials";
-                }
+            if (result.Success)
+            {
+                SuccessMessage = "Login successful!";
+                await Task.Delay(200);
+                await Shell.Current.GoToAsync("//main/GroupChatListPage");
             }
-            catch (Exception ex)
+            else
             {
-                Debug.WriteLine($"[LOGIN PASSWORD] Exception: {ex.Message}");
-                ErrorMessage = $"Login failed: {ex.Message}";
+                ErrorMessage = result.Error ?? "Invalid credentials. Please try again.";
+                await LoadCaptchaAsync(); // Refresh captcha on failure
             }
         }
 
-        // ============================================================
-        // TOGGLE AUTH MODE
-        // ============================================================
+        // ── Toggle Auth Mode ──────────────────────────────────────────
+
         private void ToggleAuthMode()
         {
             IsPasswordMode = !IsPasswordMode;
-            Password = string.Empty; // Clear password when switching
+            Password = string.Empty;
             ClearMessages();
-
-            Debug.WriteLine($"[TOGGLE MODE] Switched to: {(IsPasswordMode ? "Password" : "OTP")} mode");
 
             if (IsPasswordMode)
             {
-                // Switched to Password Mode
                 MainButtonText = "Sign In";
-                ToggleButtonText = "📧 Use OTP Instead";
+                ToggleButtonText = "📱 Use OTP Instead";
                 AuthModeBadge = "🔑 Password Authentication";
             }
             else
             {
-                // Switched to OTP Mode
                 MainButtonText = "Send OTP";
                 ToggleButtonText = "🔑 Use Password Instead";
                 AuthModeBadge = "🔐 OTP Authentication";
             }
+
+            // Refresh captcha when switching modes
+            _ = LoadCaptchaAsync();
+
+            Debug.WriteLine($"[TOGGLE MODE] Switched to: {(IsPasswordMode ? "Password" : "OTP")} mode");
         }
 
-        // ============================================================
-        // TOGGLE PASSWORD VISIBILITY
-        // ============================================================
         private void TogglePasswordVisibility()
         {
             IsPasswordVisible = !IsPasswordVisible;
-            Debug.WriteLine($"[PASSWORD] Visibility toggled to: {IsPasswordVisible}");
         }
 
-        // ============================================================
-        // NAVIGATE TO SIGN UP
-        // ============================================================
-        private async Task NavigateToSignUpAsync()
-        {
-            Debug.WriteLine($"[NAVIGATION] Navigating to sign up page");
-            await Shell.Current.GoToAsync("RegisterPage");
-        }
-
-        // ============================================================
-        // FORGOT PASSWORD
-        // ============================================================
-        private async Task ForgotPasswordAsync()
-        {
-            Debug.WriteLine($"[NAVIGATION] Navigating to forgot password page");
-            await Shell.Current.GoToAsync("ForgotPasswordPage");
-        }
-
-        // ============================================================
-        // TEST CONNECTION
-        // ============================================================
-        /*private async Task TestConnectionAsync()
-        {
-            if (IsBusy) return;
-
-            Debug.WriteLine($"[TEST CONNECTION] Starting connection test");
-            IsBusy = true;
-            InfoMessage = "Testing connection...";
-
-            try
-            {
-                var basicHttpResult = await _authService.TestBasicHttp();
-                Debug.WriteLine($"[TEST CONNECTION] Basic HTTP result: {basicHttpResult}");
-
-                var dnsResult = await _authService.TestDnsResolution();
-                Debug.WriteLine($"[TEST CONNECTION] DNS result: {dnsResult}");
-
-                var isConnected = await _authService.TestConnectionAsync();
-                Debug.WriteLine($"[TEST CONNECTION] API connection result: {isConnected}");
-
-                if (isConnected)
-                {
-                    Debug.WriteLine($"[TEST CONNECTION] All tests passed");
-                    await Application.Current.MainPage.DisplayAlert(
-                        "Success",
-                        $"Successfully connected to API!\n\nDebug Info:\n{basicHttpResult}\n{dnsResult}",
-                        "OK");
-                    InfoMessage = string.Empty;
-                }
-                else
-                {
-                    Debug.WriteLine($"[TEST CONNECTION] API connection failed");
-                    ErrorMessage = $"Connection failed.\nDebug Info:\n{basicHttpResult}\n{dnsResult}";
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[TEST CONNECTION] Exception: {ex.Message}");
-                ErrorMessage = $"Connection test failed: {ex.Message}";
-            }
-            finally
-            {
-                Debug.WriteLine($"[TEST CONNECTION] Connection test completed");
-                IsBusy = false;
-            }
-        }*/
-
-        // ============================================================
-        // CLEAR MESSAGES
-        // ============================================================
         private void ClearMessages()
         {
             ErrorMessage = string.Empty;
@@ -464,14 +330,11 @@ namespace CraftConnect_Mobile_App.PageModels
             InfoMessage = string.Empty;
         }
 
-        // ============================================================
-        // PROPERTY CHANGED
-        // ============================================================
+        // ── INotifyPropertyChanged ────────────────────────────────────
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

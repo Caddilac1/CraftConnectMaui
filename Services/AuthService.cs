@@ -8,530 +8,344 @@ namespace CraftConnect_Mobile_App.Services
     public class AuthService
     {
         private readonly HttpClient _httpClient;
-        private const string BaseUrl = "https://192.168.8.181:7023";
+        private readonly string _baseUrl;
 
-        public AuthService()
+        public AuthService(ApiConfig config)
         {
-            var handler = new HttpClientHandler();
+            _baseUrl = config.BaseUrl.TrimEnd('/');
 
-#if DEBUG
-            handler.ServerCertificateCustomValidationCallback =
-                (message, cert, chain, errors) =>
+            Debug.WriteLine($"[AUTH SERVICE] Config null: {config == null}");
+            Debug.WriteLine($"[AUTH SERVICE] BaseUrl from config: '{config.BaseUrl}'");
+            Debug.WriteLine($"[AUTH SERVICE] BaseUrl after trim: '{_baseUrl}'");
+
+#if ANDROID
+            Debug.WriteLine($"[AUTH SERVICE] Platform: ANDROID — using AndroidMessageHandler");
+            var handler = new Xamarin.Android.Net.AndroidMessageHandler
+            {
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
                 {
-                    Debug.WriteLine($"[SSL VALIDATION] Host: {message.RequestUri.Host}");
-                    Debug.WriteLine($"[SSL VALIDATION] Certificate Subject: {cert?.Subject}");
-                    Debug.WriteLine($"[SSL VALIDATION] SSL Errors: {errors}");
+                    Debug.WriteLine($"[SSL CALLBACK] ✅ Called! Host: {message.RequestUri.Host}");
+                    Debug.WriteLine($"[SSL CALLBACK] Cert subject: {cert?.Subject}");
+                    Debug.WriteLine($"[SSL CALLBACK] Errors: {errors}");
+                    Debug.WriteLine($"[SSL CALLBACK] Returning true (accepting cert)");
                     return true;
-                };
+                }
+            };
+#else
+            Debug.WriteLine($"[AUTH SERVICE] Platform: OTHER — using HttpClientHandler");
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
+                {
+                    Debug.WriteLine($"[SSL CALLBACK] ✅ Called! Host: {message.RequestUri.Host}, Errors: {errors}");
+                    return true;
+                }
+            };
 #endif
 
             _httpClient = new HttpClient(handler)
             {
-                BaseAddress = new Uri(BaseUrl),
+                BaseAddress = new Uri(_baseUrl),
                 Timeout = TimeSpan.FromSeconds(30)
             };
 
-            Debug.WriteLine($"[AUTH SERVICE] Initialized with BaseUrl: {BaseUrl}");
+            Debug.WriteLine($"[AUTH SERVICE] HttpClient created. BaseAddress: {_httpClient.BaseAddress}");
+            Debug.WriteLine($"[AUTH SERVICE] Timeout: {_httpClient.Timeout.TotalSeconds}s");
+            Debug.WriteLine($"[AUTH SERVICE] Initialized with BaseUrl: {_baseUrl}");
         }
 
         // ============================================================
-        // UNIFIED LOGIN METHOD (Supports both OTP and Password)
+        // PASSWORD LOGIN  →  POST /api/auth/login/password
         // ============================================================
-        public async Task<LoginResponse> LoginAsync(LoginRequest request)
+        public async Task<AuthResult> LoginWithPasswordAsync(PasswordLoginRequest request)
         {
-            Debug.WriteLine($"\n[LOGIN START] =========================================");
-            Debug.WriteLine($"[LOGIN] Mode: {(request.UsePassword ? "PASSWORD" : "OTP")}");
-            Debug.WriteLine($"[LOGIN] EmailOrPhone: {request.EmailOrPhone}");
-            Debug.WriteLine($"[LOGIN] UsePassword: {request.UsePassword}");
-            Debug.WriteLine($"[LOGIN] Password Length: {(request.UsePassword ? request.Password?.Length.ToString() : "N/A (OTP Mode)")}");
-            Debug.WriteLine($"[LOGIN] RememberMe: {request.RememberMe}");
+            Debug.WriteLine($"\n[LOGIN/PASSWORD START] Email: {request.Email}");
 
             try
             {
-                // Clear and set headers properly for API requests
-                _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Accept.Clear();
-                _httpClient.DefaultRequestHeaders.Accept.Add(
-                    new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
-                _httpClient.DefaultRequestHeaders.Add("X-Requested-With", "Mobile");
+                SetJsonHeaders();
 
-                Debug.WriteLine($"[LOGIN HEADERS] Accept: application/json");
-                Debug.WriteLine($"[LOGIN HEADERS] X-Requested-With: Mobile");
+                var json = Serialize(request);
+                Debug.WriteLine($"[LOGIN/PASSWORD] Serialized JSON: {json}");
 
-                // Serialize request with camelCase naming
-                var jsonOptions = new JsonSerializerOptions
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var endpoint = "/api/auth/login/password";
+                var fullUrl = $"{_baseUrl}{endpoint}";
+                Debug.WriteLine($"[LOGIN/PASSWORD] Full URL: {fullUrl}");
+                Debug.WriteLine($"[LOGIN/PASSWORD] HttpClient BaseAddress: {_httpClient.BaseAddress}");
+                Debug.WriteLine($"[LOGIN/PASSWORD] Sending request...");
+
+                var sw = Stopwatch.StartNew();
+
+                HttpResponseMessage response;
+                try
                 {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true,
-                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-                };
-
-                var jsonRequest = JsonSerializer.Serialize(request, jsonOptions);
-
-                Debug.WriteLine($"[LOGIN REQUEST JSON]:");
-                Debug.WriteLine(jsonRequest);
-                Debug.WriteLine($"[LOGIN REQUEST END]");
-
-                // Create content with explicit Content-Type
-                var content = new StringContent(
-                    jsonRequest,
-                    Encoding.UTF8,
-                    "application/json"
-                );
-
-                // IMPORTANT: Use the API endpoint, not /Account/Login
-                var endpoint = "/api/Auth/login";  // ✅ CORRECT ENDPOINT FOR MOBILE
-                var fullUrl = $"{BaseUrl}{endpoint}";
-                Debug.WriteLine($"[LOGIN] Endpoint: {fullUrl}");
-
-                var stopwatch = Stopwatch.StartNew();
-                Debug.WriteLine($"[LOGIN] Sending request...");
-
-                var response = await _httpClient.PostAsync(endpoint, content);
-                stopwatch.Stop();
-
-                Debug.WriteLine($"[LOGIN] Request completed in {stopwatch.ElapsedMilliseconds}ms");
-                Debug.WriteLine($"[LOGIN] Response Status Code: {(int)response.StatusCode} ({response.StatusCode})");
-
-                // Log response headers
-                Debug.WriteLine($"[LOGIN RESPONSE HEADERS]:");
-                foreach (var header in response.Headers)
+                    response = await _httpClient.PostAsync(endpoint, content);
+                }
+                catch (HttpRequestException httpEx)
                 {
-                    Debug.WriteLine($"  {header.Key}: {string.Join(", ", header.Value)}");
+                    sw.Stop();
+                    Debug.WriteLine($"[LOGIN/PASSWORD] ❌ HttpRequestException after {sw.ElapsedMilliseconds}ms");
+                    Debug.WriteLine($"[LOGIN/PASSWORD] Message: {httpEx.Message}");
+                    Debug.WriteLine($"[LOGIN/PASSWORD] StatusCode: {httpEx.StatusCode}");
+                    Debug.WriteLine($"[LOGIN/PASSWORD] InnerException type: {httpEx.InnerException?.GetType().FullName}");
+                    Debug.WriteLine($"[LOGIN/PASSWORD] InnerException message: {httpEx.InnerException?.Message}");
+                    Debug.WriteLine($"[LOGIN/PASSWORD] InnerException inner: {httpEx.InnerException?.InnerException?.Message}");
+                    return AuthResult.Fail("Network error. Check your connection.");
+                }
+                catch (TaskCanceledException tcEx)
+                {
+                    sw.Stop();
+                    Debug.WriteLine($"[LOGIN/PASSWORD] ❌ TaskCanceledException after {sw.ElapsedMilliseconds}ms");
+                    Debug.WriteLine($"[LOGIN/PASSWORD] Message: {tcEx.Message}");
+                    Debug.WriteLine($"[LOGIN/PASSWORD] CancellationToken cancelled: {tcEx.CancellationToken.IsCancellationRequested}");
+                    Debug.WriteLine($"[LOGIN/PASSWORD] InnerException: {tcEx.InnerException?.Message}");
+                    return AuthResult.Fail("Request timed out. Check your network connection.");
                 }
 
-                var responseContent = await response.Content.ReadAsStringAsync();
-                Debug.WriteLine($"[LOGIN RESPONSE BODY]:");
-                Debug.WriteLine(responseContent);
-                Debug.WriteLine($"[LOGIN RESPONSE END]");
+                sw.Stop();
+                Debug.WriteLine($"[LOGIN/PASSWORD] ✅ Got response in {sw.ElapsedMilliseconds}ms");
+                Debug.WriteLine($"[LOGIN/PASSWORD] Status: {(int)response.StatusCode} {response.StatusCode}");
+                Debug.WriteLine($"[LOGIN/PASSWORD] ReasonPhrase: {response.ReasonPhrase}");
+
+                var body = await response.Content.ReadAsStringAsync();
+                Debug.WriteLine($"[LOGIN/PASSWORD] Response body: {body}");
 
                 if (response.IsSuccessStatusCode)
                 {
-                    try
+                    var tokenResponse = Deserialize<TokenResponse>(body);
+                    Debug.WriteLine($"[LOGIN/PASSWORD] Token parsed: {!string.IsNullOrEmpty(tokenResponse?.Token)}");
+                    if (!string.IsNullOrEmpty(tokenResponse?.Token))
                     {
-                        var loginResponse = JsonSerializer.Deserialize<LoginResponse>(
-                            responseContent,
-                            new JsonSerializerOptions
-                            {
-                                PropertyNameCaseInsensitive = true
-                            }
-                        );
-
-                        Debug.WriteLine($"[LOGIN PARSE SUCCESS] Success: {loginResponse?.Success}");
-                        Debug.WriteLine($"[LOGIN PARSE SUCCESS] Message: {loginResponse?.Message}");
-                        Debug.WriteLine($"[LOGIN PARSE SUCCESS] RequiresOtp: {loginResponse?.RequiresOtp}");
-                        Debug.WriteLine($"[LOGIN PARSE SUCCESS] HasPassword: {loginResponse?.HasPassword}");
-
-                        if (loginResponse?.RequiresOtp == true)
-                        {
-                            Debug.WriteLine($"[LOGIN] OTP required for: {loginResponse.Email}");
-                            Debug.WriteLine($"[LOGIN] OTP Token present: {!string.IsNullOrEmpty(loginResponse.OtpToken)}");
-                        }
-
-                        // Password authentication successful
-                        if (loginResponse?.Success == true && !string.IsNullOrEmpty(loginResponse.Token))
-                        {
-                            Debug.WriteLine($"[LOGIN] Login successful! Token received.");
-                            Debug.WriteLine($"[LOGIN] Token Length: {loginResponse.Token.Length}");
-                            await SaveAuthDataAsync(loginResponse);
-                        }
-
-                        Debug.WriteLine($"[LOGIN END] ===========================================\n");
-                        return loginResponse ?? new LoginResponse
-                        {
-                            Success = false,
-                            Message = "Failed to parse response"
-                        };
-                    }
-                    catch (JsonException jsonEx)
-                    {
-                        Debug.WriteLine($"[LOGIN JSON PARSE ERROR]: {jsonEx.Message}");
-                        Debug.WriteLine($"[LOGIN JSON PARSE STACK]: {jsonEx.StackTrace}");
-
-                        Debug.WriteLine($"[LOGIN END] ===========================================\n");
-                        return new LoginResponse
-                        {
-                            Success = false,
-                            Message = $"Invalid response format: {jsonEx.Message}"
-                        };
+                        await SaveTokenAsync(tokenResponse.Token);
+                        return AuthResult.Ok(tokenResponse.Token);
                     }
                 }
-                else
-                {
-                    Debug.WriteLine($"[LOGIN HTTP ERROR] Status: {response.StatusCode}");
 
-                    // Try to parse error response
-                    try
-                    {
-                        if (!string.IsNullOrEmpty(responseContent))
-                        {
-                            var errorResponse = JsonSerializer.Deserialize<LoginResponse>(
-                                responseContent,
-                                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                            );
-
-                            Debug.WriteLine($"[LOGIN ERROR] Message: {errorResponse?.Message}");
-                            Debug.WriteLine($"[LOGIN END] ===========================================\n");
-
-                            return errorResponse ?? new LoginResponse
-                            {
-                                Success = false,
-                                Message = $"Login failed: {response.StatusCode}"
-                            };
-                        }
-                    }
-                    catch (Exception parseEx)
-                    {
-                        Debug.WriteLine($"[LOGIN ERROR PARSE FAILED]: {parseEx.Message}");
-                    }
-
-                    Debug.WriteLine($"[LOGIN END] ===========================================\n");
-                    return new LoginResponse
-                    {
-                        Success = false,
-                        Message = $"Login failed: {response.StatusCode}"
-                    };
-                }
-            }
-            catch (HttpRequestException httpEx)
-            {
-                Debug.WriteLine($"[LOGIN HTTP REQUEST EXCEPTION]: {httpEx.Message}");
-                Debug.WriteLine($"[LOGIN HTTP REQUEST EXCEPTION INNER]: {httpEx.InnerException?.Message}");
-                Debug.WriteLine($"[LOGIN HTTP REQUEST EXCEPTION STATUS]: {httpEx.StatusCode}");
-
-                Debug.WriteLine($"[LOGIN END] ===========================================\n");
-                return new LoginResponse
-                {
-                    Success = false,
-                    Message = httpEx.StatusCode == null ?
-                        "Network error. Check your connection." :
-                        $"Network error: {httpEx.StatusCode}"
-                };
-            }
-            catch (TaskCanceledException timeoutEx)
-            {
-                Debug.WriteLine($"[LOGIN TIMEOUT EXCEPTION]: {timeoutEx.Message}");
-                Debug.WriteLine($"[LOGIN END] ===========================================\n");
-                return new LoginResponse
-                {
-                    Success = false,
-                    Message = "Request timeout. Please check your network connection."
-                };
+                var error = TryParseErrors(body);
+                Debug.WriteLine($"[LOGIN/PASSWORD] Error parsed: {error}");
+                return AuthResult.Fail(error ?? $"Login failed ({(int)response.StatusCode})");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[LOGIN GENERAL EXCEPTION]: {ex.Message}");
-                Debug.WriteLine($"[LOGIN EXCEPTION TYPE]: {ex.GetType().FullName}");
-                Debug.WriteLine($"[LOGIN EXCEPTION STACK]: {ex.StackTrace}");
-
-                Debug.WriteLine($"[LOGIN END] ===========================================\n");
-                return new LoginResponse
-                {
-                    Success = false,
-                    Message = $"Error during login: {ex.Message}"
-                };
+                Debug.WriteLine($"[LOGIN/PASSWORD] ❌ Unexpected exception: {ex.GetType().FullName}");
+                Debug.WriteLine($"[LOGIN/PASSWORD] Message: {ex.Message}");
+                Debug.WriteLine($"[LOGIN/PASSWORD] StackTrace: {ex.StackTrace}");
+                return AuthResult.Fail($"Unexpected error: {ex.Message}");
             }
         }
 
         // ============================================================
-        // VERIFY OTP
+        // SEND OTP  →  POST /api/auth/login/otp/send
         // ============================================================
-        public async Task<LoginResponse> VerifyOtpAsync(VerifyOtpRequest request)
+        public async Task<AuthResult> SendOtpAsync(OtpSendRequest request)
         {
-            Debug.WriteLine($"\n[VERIFY OTP START] =========================================");
-            Debug.WriteLine($"[VERIFY OTP] Email: {request.Email}");
-            Debug.WriteLine($"[VERIFY OTP] OTP: {request.Otp}");
-            Debug.WriteLine($"[VERIFY OTP] Token Length: {request.Token?.Length ?? 0}");
+            Debug.WriteLine($"\n[OTP/SEND START] Phone: {request.Phone}");
 
             try
             {
-                _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Accept.Clear();
-                _httpClient.DefaultRequestHeaders.Accept.Add(
-                    new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
-                _httpClient.DefaultRequestHeaders.Add("X-Requested-With", "Mobile");
+                SetJsonHeaders();
 
-                var jsonOptions = new JsonSerializerOptions
+                var json = Serialize(request);
+                Debug.WriteLine($"[OTP/SEND] Serialized JSON: {json}");
+
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var endpoint = "/api/auth/login/otp/send";
+                Debug.WriteLine($"[OTP/SEND] Full URL: {_baseUrl}{endpoint}");
+                Debug.WriteLine($"[OTP/SEND] Sending request...");
+
+                var sw = Stopwatch.StartNew();
+
+                HttpResponseMessage response;
+                try
                 {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true
-                };
+                    response = await _httpClient.PostAsync(endpoint, content);
+                }
+                catch (HttpRequestException httpEx)
+                {
+                    sw.Stop();
+                    Debug.WriteLine($"[OTP/SEND] ❌ HttpRequestException after {sw.ElapsedMilliseconds}ms");
+                    Debug.WriteLine($"[OTP/SEND] Message: {httpEx.Message}");
+                    Debug.WriteLine($"[OTP/SEND] InnerException type: {httpEx.InnerException?.GetType().FullName}");
+                    Debug.WriteLine($"[OTP/SEND] InnerException message: {httpEx.InnerException?.Message}");
+                    Debug.WriteLine($"[OTP/SEND] InnerException inner: {httpEx.InnerException?.InnerException?.Message}");
+                    return AuthResult.Fail("Network error. Check your connection.");
+                }
+                catch (TaskCanceledException tcEx)
+                {
+                    sw.Stop();
+                    Debug.WriteLine($"[OTP/SEND] ❌ TaskCanceledException after {sw.ElapsedMilliseconds}ms");
+                    Debug.WriteLine($"[OTP/SEND] Message: {tcEx.Message}");
+                    Debug.WriteLine($"[OTP/SEND] InnerException: {tcEx.InnerException?.Message}");
+                    return AuthResult.Fail("Request timed out.");
+                }
 
-                var jsonRequest = JsonSerializer.Serialize(request, jsonOptions);
+                sw.Stop();
+                Debug.WriteLine($"[OTP/SEND] ✅ Got response in {sw.ElapsedMilliseconds}ms");
+                Debug.WriteLine($"[OTP/SEND] Status: {(int)response.StatusCode} {response.StatusCode}");
 
-                Debug.WriteLine($"[VERIFY OTP REQUEST JSON]:");
-                Debug.WriteLine(jsonRequest);
+                if (response.StatusCode == System.Net.HttpStatusCode.NoContent ||
+                    response.IsSuccessStatusCode)
+                {
+                    return AuthResult.Ok();
+                }
 
-                var content = new StringContent(jsonRequest, Encoding.UTF8, "application/json");
+                var body = await response.Content.ReadAsStringAsync();
+                Debug.WriteLine($"[OTP/SEND] Error body: {body}");
 
-                // Use API endpoint
-                var endpoint = "/api/Auth/verify-otp";  // ✅ CORRECT API ENDPOINT
-                var fullUrl = $"{BaseUrl}{endpoint}";
-                Debug.WriteLine($"[VERIFY OTP] Endpoint: {fullUrl}");
+                var error = TryParseErrors(body);
 
-                var stopwatch = Stopwatch.StartNew();
-                Debug.WriteLine($"[VERIFY OTP] Sending request...");
+                if ((int)response.StatusCode == 429)
+                    return AuthResult.Fail(error ?? "Too many OTP requests. Please wait a few minutes.");
 
-                var response = await _httpClient.PostAsync(endpoint, content);
-                stopwatch.Stop();
+                return AuthResult.Fail(error ?? $"Failed to send OTP ({(int)response.StatusCode})");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[OTP/SEND] ❌ Unexpected exception: {ex.GetType().FullName}");
+                Debug.WriteLine($"[OTP/SEND] Message: {ex.Message}");
+                return AuthResult.Fail($"Unexpected error: {ex.Message}");
+            }
+        }
 
-                Debug.WriteLine($"[VERIFY OTP] Request completed in {stopwatch.ElapsedMilliseconds}ms");
-                Debug.WriteLine($"[VERIFY OTP] Response Status: {response.StatusCode}");
+        // ============================================================
+        // VERIFY OTP  →  POST /api/auth/login/otp/verify
+        // ============================================================
+        public async Task<AuthResult> VerifyOtpAsync(OtpVerifyRequest request)
+        {
+            Debug.WriteLine($"\n[OTP/VERIFY START] Phone: {request.Phone}");
 
-                var responseContent = await response.Content.ReadAsStringAsync();
-                Debug.WriteLine($"[VERIFY OTP RESPONSE CONTENT]:");
-                Debug.WriteLine(responseContent);
+            try
+            {
+                SetJsonHeaders();
+
+                var json = Serialize(request);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var endpoint = "/api/auth/login/otp/verify";
+                Debug.WriteLine($"[OTP/VERIFY] Full URL: {_baseUrl}{endpoint}");
+
+                var sw = Stopwatch.StartNew();
+
+                HttpResponseMessage response;
+                try
+                {
+                    response = await _httpClient.PostAsync(endpoint, content);
+                }
+                catch (HttpRequestException httpEx)
+                {
+                    sw.Stop();
+                    Debug.WriteLine($"[OTP/VERIFY] ❌ HttpRequestException after {sw.ElapsedMilliseconds}ms");
+                    Debug.WriteLine($"[OTP/VERIFY] Message: {httpEx.Message}");
+                    Debug.WriteLine($"[OTP/VERIFY] InnerException: {httpEx.InnerException?.Message}");
+                    return AuthResult.Fail("Network error. Check your connection.");
+                }
+                catch (TaskCanceledException tcEx)
+                {
+                    sw.Stop();
+                    Debug.WriteLine($"[OTP/VERIFY] ❌ Timeout after {sw.ElapsedMilliseconds}ms: {tcEx.Message}");
+                    return AuthResult.Fail("Request timed out.");
+                }
+
+                sw.Stop();
+                Debug.WriteLine($"[OTP/VERIFY] ✅ Got response in {sw.ElapsedMilliseconds}ms");
+                Debug.WriteLine($"[OTP/VERIFY] Status: {(int)response.StatusCode} {response.StatusCode}");
+
+                var body = await response.Content.ReadAsStringAsync();
+                Debug.WriteLine($"[OTP/VERIFY] Response: {body}");
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var loginResponse = JsonSerializer.Deserialize<LoginResponse>(
-                        responseContent,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    if (loginResponse?.Success == true && !string.IsNullOrEmpty(loginResponse.Token))
+                    var tokenResponse = Deserialize<TokenResponse>(body);
+                    if (!string.IsNullOrEmpty(tokenResponse?.Token))
                     {
-                        Debug.WriteLine($"[VERIFY OTP] OTP verified! Token received.");
-                        Debug.WriteLine($"[VERIFY OTP] Token Length: {loginResponse.Token.Length}");
-                        await SaveAuthDataAsync(loginResponse);
-                    }
-                    else
-                    {
-                        Debug.WriteLine($"[VERIFY OTP] Verification failed in response");
-                    }
-
-                    Debug.WriteLine($"[VERIFY OTP END] =========================================\n");
-                    return loginResponse ?? new LoginResponse
-                    {
-                        Success = false,
-                        Message = "Failed to parse response"
-                    };
-                }
-                else
-                {
-                    Debug.WriteLine($"[VERIFY OTP] Failed with status: {response.StatusCode}");
-
-                    try
-                    {
-                        var errorResponse = JsonSerializer.Deserialize<LoginResponse>(
-                            responseContent,
-                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                        );
-
-                        Debug.WriteLine($"[VERIFY OTP END] =========================================\n");
-                        return errorResponse ?? new LoginResponse
-                        {
-                            Success = false,
-                            Message = "Invalid or expired OTP"
-                        };
-                    }
-                    catch
-                    {
-                        Debug.WriteLine($"[VERIFY OTP END] =========================================\n");
-                        return new LoginResponse
-                        {
-                            Success = false,
-                            Message = "Invalid or expired OTP"
-                        };
+                        await SaveTokenAsync(tokenResponse.Token);
+                        return AuthResult.Ok(tokenResponse.Token);
                     }
                 }
+
+                var error = TryParseErrors(body);
+                return AuthResult.Fail(error ?? "Invalid or expired OTP.");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[VERIFY OTP EXCEPTION]: {ex.Message}");
-                Debug.WriteLine($"[VERIFY OTP END] =========================================\n");
-                return new LoginResponse
-                {
-                    Success = false,
-                    Message = $"Error verifying OTP: {ex.Message}"
-                };
+                Debug.WriteLine($"[OTP/VERIFY] ❌ Unexpected exception: {ex.GetType().FullName}: {ex.Message}");
+                return AuthResult.Fail($"Unexpected error: {ex.Message}");
             }
         }
 
         // ============================================================
-        // RESEND OTP
+        // GET CAPTCHA  →  GET /api/auth/captcha
         // ============================================================
-        public async Task<ResendOtpResponse> ResendOtpAsync(string email)
+        public async Task<CaptchaResult> GetCaptchaAsync()
         {
-            Debug.WriteLine($"\n[RESEND OTP START] =========================================");
-            Debug.WriteLine($"[RESEND OTP] Email: {email}");
+            Debug.WriteLine($"\n[CAPTCHA] GET {_baseUrl}/api/auth/captcha");
 
             try
             {
-                _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Accept.Clear();
-                _httpClient.DefaultRequestHeaders.Accept.Add(
-                    new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
-                _httpClient.DefaultRequestHeaders.Add("X-Requested-With", "Mobile");
+                SetJsonHeaders();
 
-                var request = new { email = email };
+                Debug.WriteLine($"[CAPTCHA] Sending GET request...");
+                var sw = Stopwatch.StartNew();
 
-                var jsonRequest = JsonSerializer.Serialize(request, new JsonSerializerOptions
+                HttpResponseMessage response;
+                try
                 {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true
-                });
+                    response = await _httpClient.GetAsync("/api/auth/captcha");
+                }
+                catch (HttpRequestException httpEx)
+                {
+                    sw.Stop();
+                    Debug.WriteLine($"[CAPTCHA] ❌ HttpRequestException after {sw.ElapsedMilliseconds}ms");
+                    Debug.WriteLine($"[CAPTCHA] Message: {httpEx.Message}");
+                    Debug.WriteLine($"[CAPTCHA] InnerException type: {httpEx.InnerException?.GetType().FullName}");
+                    Debug.WriteLine($"[CAPTCHA] InnerException message: {httpEx.InnerException?.Message}");
+                    Debug.WriteLine($"[CAPTCHA] InnerException inner: {httpEx.InnerException?.InnerException?.Message}");
+                    return new CaptchaResult { Success = false, Question = "What is 5 + 3?", Id = 0 };
+                }
+                catch (TaskCanceledException tcEx)
+                {
+                    sw.Stop();
+                    Debug.WriteLine($"[CAPTCHA] ❌ Timeout after {sw.ElapsedMilliseconds}ms");
+                    Debug.WriteLine($"[CAPTCHA] Message: {tcEx.Message}");
+                    Debug.WriteLine($"[CAPTCHA] InnerException: {tcEx.InnerException?.Message}");
+                    return new CaptchaResult { Success = false, Question = "What is 5 + 3?", Id = 0 };
+                }
 
-                Debug.WriteLine($"[RESEND OTP REQUEST JSON]:");
-                Debug.WriteLine(jsonRequest);
+                sw.Stop();
+                Debug.WriteLine($"[CAPTCHA] ✅ Got response in {sw.ElapsedMilliseconds}ms");
 
-                var content = new StringContent(jsonRequest, Encoding.UTF8, "application/json");
-
-                // Use API endpoint
-                var endpoint = "/api/Auth/resend-otp";  // ✅ CORRECT API ENDPOINT
-                var fullUrl = $"{BaseUrl}{endpoint}";
-                Debug.WriteLine($"[RESEND OTP] Endpoint: {fullUrl}");
-
-                var stopwatch = Stopwatch.StartNew();
-                Debug.WriteLine($"[RESEND OTP] Sending request...");
-
-                var response = await _httpClient.PostAsync(endpoint, content);
-                stopwatch.Stop();
-
-                Debug.WriteLine($"[RESEND OTP] Request completed in {stopwatch.ElapsedMilliseconds}ms");
-                Debug.WriteLine($"[RESEND OTP] Response Status: {response.StatusCode}");
-
-                var responseContent = await response.Content.ReadAsStringAsync();
-                Debug.WriteLine($"[RESEND OTP RESPONSE CONTENT]:");
-                Debug.WriteLine(responseContent);
+                var body = await response.Content.ReadAsStringAsync();
+                Debug.WriteLine($"[CAPTCHA] Status: {(int)response.StatusCode}, Body: {body}");
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var resendResponse = JsonSerializer.Deserialize<ResendOtpResponse>(
-                        responseContent,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    Debug.WriteLine($"[RESEND OTP] Success: {resendResponse?.Success}");
-                    Debug.WriteLine($"[RESEND OTP] OTP Token present: {!string.IsNullOrEmpty(resendResponse?.OtpToken)}");
-                    Debug.WriteLine($"[RESEND OTP END] =========================================\n");
-
-                    return resendResponse ?? new ResendOtpResponse
-                    {
-                        Success = false,
-                        Message = "Failed to parse response"
-                    };
+                    var captcha = Deserialize<CaptchaResponse>(body);
+                    if (captcha != null)
+                        return new CaptchaResult { Success = true, Id = captcha.Id, Question = captcha.Question };
                 }
-                else
-                {
-                    Debug.WriteLine($"[RESEND OTP] Failed with status: {response.StatusCode}");
-                    Debug.WriteLine($"[RESEND OTP END] =========================================\n");
-                    return new ResendOtpResponse
-                    {
-                        Success = false,
-                        Message = "Failed to resend OTP"
-                    };
-                }
+
+                return new CaptchaResult { Success = false, Question = "What is 5 + 3?", Id = 0 };
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[RESEND OTP EXCEPTION]: {ex.Message}");
-                Debug.WriteLine($"[RESEND OTP END] =========================================\n");
-                return new ResendOtpResponse
-                {
-                    Success = false,
-                    Message = $"Error resending OTP: {ex.Message}"
-                };
+                Debug.WriteLine($"[CAPTCHA] ❌ Unexpected exception: {ex.GetType().FullName}: {ex.Message}");
+                return new CaptchaResult { Success = false, Question = "What is 5 + 3?", Id = 0 };
             }
         }
 
         // ============================================================
-        // SAVE AUTH DATA
+        // AUTHENTICATED HELPERS
         // ============================================================
-        private async Task SaveAuthDataAsync(LoginResponse response)
-        {
-            try
-            {
-                Debug.WriteLine($"[SAVE AUTH DATA] Saving auth data...");
-                Debug.WriteLine($"[SAVE AUTH DATA] UserId: {response.UserId}");
-                Debug.WriteLine($"[SAVE AUTH DATA] Email: {response.Email}");
-                Debug.WriteLine($"[SAVE AUTH DATA] Token Length: {response.Token.Length}");
-
-                await SecureStorage.SetAsync("auth_token", response.Token);
-                await SecureStorage.SetAsync("user_id", response.UserId);
-                await SecureStorage.SetAsync("user_email", response.Email);
-                await SecureStorage.SetAsync("user_name", response.FullName ?? "");
-
-                if (response.Roles != null && response.Roles.Any())
-                {
-                    await SecureStorage.SetAsync("user_roles", string.Join(",", response.Roles));
-                    Debug.WriteLine($"[SAVE AUTH DATA] Roles: {string.Join(", ", response.Roles)}");
-                }
-
-                Debug.WriteLine("✅ Auth data saved successfully");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"❌ SaveAuthData error: {ex.Message}");
-            }
-        }
-
-        // ============================================================
-        // REST OF YOUR EXISTING METHODS (IsAuthenticated, GetToken, etc.)
-        // ============================================================
-
-        public async Task<bool> IsAuthenticatedAsync()
-        {
-            try
-            {
-                var token = await SecureStorage.GetAsync("auth_token");
-                return !string.IsNullOrEmpty(token);
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        public async Task<string> GetTokenAsync()
-        {
-            try
-            {
-                return await SecureStorage.GetAsync("auth_token") ?? string.Empty;
-            }
-            catch
-            {
-                return string.Empty;
-            }
-        }
-
-        public async Task<UserInfo> GetCurrentUserAsync()
-        {
-            try
-            {
-                return new UserInfo
-                {
-                    UserId = await SecureStorage.GetAsync("user_id") ?? string.Empty,
-                    Email = await SecureStorage.GetAsync("user_email") ?? string.Empty,
-                    FullName = await SecureStorage.GetAsync("user_name") ?? string.Empty,
-                    Roles = (await SecureStorage.GetAsync("user_roles"))?.Split(',').ToList() ?? new List<string>()
-                };
-            }
-            catch
-            {
-                return new UserInfo();
-            }
-        }
-
-        public async Task LogoutAsync()
-        {
-            SecureStorage.Remove("auth_token");
-            SecureStorage.Remove("user_id");
-            SecureStorage.Remove("user_email");
-            SecureStorage.Remove("user_name");
-            SecureStorage.Remove("user_roles");
-            Debug.WriteLine("✅ Logged out successfully");
-        }
-
-        public async Task<T> GetAuthenticatedAsync<T>(string endpoint)
+        public async Task<T?> GetAuthenticatedAsync<T>(string endpoint)
         {
             var token = await GetTokenAsync();
-
             if (string.IsNullOrEmpty(token))
-            {
-                throw new UnauthorizedAccessException("No authentication token found");
-            }
+                throw new UnauthorizedAccessException("No authentication token found.");
 
+            SetJsonHeaders();
             _httpClient.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
@@ -547,15 +361,13 @@ namespace CraftConnect_Mobile_App.Services
             return await response.Content.ReadFromJsonAsync<T>();
         }
 
-        public async Task<TResponse> PostAuthenticatedAsync<TRequest, TResponse>(string endpoint, TRequest data)
+        public async Task<TResponse?> PostAuthenticatedAsync<TRequest, TResponse>(string endpoint, TRequest data)
         {
             var token = await GetTokenAsync();
-
             if (string.IsNullOrEmpty(token))
-            {
-                throw new UnauthorizedAccessException("No authentication token found");
-            }
+                throw new UnauthorizedAccessException("No authentication token found.");
 
+            SetJsonHeaders();
             _httpClient.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
@@ -571,78 +383,155 @@ namespace CraftConnect_Mobile_App.Services
             return await response.Content.ReadFromJsonAsync<TResponse>();
         }
 
-        public async Task<bool> TestConnectionAsync()
+        // ============================================================
+        // TOKEN / SESSION MANAGEMENT
+        // ============================================================
+        private async Task SaveTokenAsync(string token)
         {
-            Debug.WriteLine($"[TEST CONNECTION] Testing connection to: {BaseUrl}/api/Auth/test");
-
             try
             {
-                var response = await _httpClient.GetAsync("/api/Auth/test");
-                Debug.WriteLine($"[TEST CONNECTION] Response Status: {response.StatusCode}");
+                await SecureStorage.SetAsync("auth_token", token);
+                Debug.WriteLine("✅ Token saved to SecureStorage.");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"❌ SaveToken error: {ex.Message}");
+            }
+        }
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var content = await response.Content.ReadAsStringAsync();
-                    Debug.WriteLine($"[TEST CONNECTION] Success! Response: {content}");
-                }
+        public async Task<string> GetTokenAsync()
+        {
+            try { return await SecureStorage.GetAsync("auth_token") ?? string.Empty; }
+            catch { return string.Empty; }
+        }
 
+        public async Task<bool> IsAuthenticatedAsync()
+        {
+            var token = await GetTokenAsync();
+            return !string.IsNullOrEmpty(token);
+        }
+
+        public Task LogoutAsync()
+        {
+            SecureStorage.Remove("auth_token");
+            Debug.WriteLine("✅ Logged out — token cleared.");
+            return Task.CompletedTask;
+        }
+
+        // ============================================================
+        // CONNECTION TEST
+        // ============================================================
+        public async Task<bool> TestConnectionAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("/api/auth/captcha");
+                Debug.WriteLine($"[TEST CONNECTION] {(int)response.StatusCode}");
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[TEST CONNECTION] Exception: {ex.Message}");
+                Debug.WriteLine($"[TEST CONNECTION] Failed: {ex.Message}");
                 return false;
             }
+        }
+
+        // ============================================================
+        // PRIVATE HELPERS
+        // ============================================================
+        private void SetJsonHeaders()
+        {
+            _httpClient.DefaultRequestHeaders.Clear();
+            _httpClient.DefaultRequestHeaders.Accept.Clear();
+            _httpClient.DefaultRequestHeaders.Accept.Add(
+                new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+            _httpClient.DefaultRequestHeaders.Add("X-Requested-With", "Mobile");
+        }
+
+        private static string Serialize<T>(T obj) =>
+            JsonSerializer.Serialize(obj, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = false,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+            });
+
+        private static T? Deserialize<T>(string json) =>
+            JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+        private static string? TryParseErrors(string body)
+        {
+            try
+            {
+                var err = JsonSerializer.Deserialize<ErrorResponse>(body,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return err?.Errors?.FirstOrDefault();
+            }
+            catch { return null; }
         }
     }
 
     // ============================================================
-    // MODELS
+    // REQUEST / RESPONSE MODELS
     // ============================================================
-    public class LoginRequest
+
+    public class PasswordLoginRequest
     {
-        public string EmailOrPhone { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
-        public bool UsePassword { get; set; } = false;
-        public bool RememberMe { get; set; } = false;
+        public int CaptchaId { get; set; }
+        public string CaptchaAnswer { get; set; } = string.Empty;
     }
 
-    public class VerifyOtpRequest
+    public class OtpSendRequest
     {
-        public string Email { get; set; } = string.Empty;
-        public string Otp { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public int CaptchaId { get; set; }
+        public string CaptchaAnswer { get; set; } = string.Empty;
+    }
+
+    public class OtpVerifyRequest
+    {
+        public string Phone { get; set; } = string.Empty;
+        public string Code { get; set; } = string.Empty;
+    }
+
+    public class TokenResponse
+    {
         public string Token { get; set; } = string.Empty;
     }
 
-    public class ResendOtpResponse
+    public class CaptchaResponse
     {
-        public bool Success { get; set; }
-        public string Message { get; set; } = string.Empty;
-        public string OtpToken { get; set; } = string.Empty;
+        public int Id { get; set; }
+        public string Question { get; set; } = string.Empty;
     }
 
-    public class LoginResponse
+    public class ErrorResponse
     {
-        public bool Success { get; set; }
-        public string Message { get; set; } = string.Empty;
-        public string Token { get; set; } = string.Empty;
-        public string UserId { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-        public string PhoneNumber { get; set; } = string.Empty;
-        public List<string> Roles { get; set; } = new List<string>();
-
-        // OTP-related fields
-        public bool RequiresOtp { get; set; }
-        public string OtpToken { get; set; } = string.Empty;
-        public bool HasPassword { get; set; }
+        public string[] Errors { get; set; } = [];
     }
 
-    public class UserInfo
+    public class AuthResult
     {
-        public string UserId { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-        public List<string> Roles { get; set; } = new List<string>();
+        public bool Success { get; private set; }
+        public string? Token { get; private set; }
+        public string? Error { get; private set; }
+
+        public static AuthResult Ok(string? token = null) =>
+            new() { Success = true, Token = token };
+
+        public static AuthResult Fail(string error) =>
+            new() { Success = false, Error = error };
+    }
+
+    public class CaptchaResult
+    {
+        public bool Success { get; set; }
+        public int Id { get; set; }
+        public string Question { get; set; } = string.Empty;
     }
 }

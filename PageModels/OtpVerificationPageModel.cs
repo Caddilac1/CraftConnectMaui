@@ -3,23 +3,18 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using System.Diagnostics;
-using System.Timers;
 
 namespace CraftConnect_Mobile_App.PageModels
 {
-    [QueryProperty(nameof(Email), "email")]
-    [QueryProperty(nameof(OtpToken), "otpToken")]
-    [QueryProperty(nameof(HasPasswordOption), "hasPassword")]
+    [QueryProperty(nameof(Phone), "phone")]
     public class OtpVerificationPageModel : INotifyPropertyChanged, IDisposable
     {
         private readonly AuthService _authService;
         private System.Timers.Timer _resendTimer;
         private int _secondsRemaining = 60;
 
-        private string _email = string.Empty;
-        private string _otpToken = string.Empty;
+        private string _phone = string.Empty;
         private string _otpCode = string.Empty;
-        private bool _hasPasswordOption;
         private bool _isBusy;
         private string _errorMessage = string.Empty;
         private string _successMessage = string.Empty;
@@ -31,37 +26,24 @@ namespace CraftConnect_Mobile_App.PageModels
         {
             _authService = authService;
 
-            Debug.WriteLine($"[OTP VM] ============================================");
-            Debug.WriteLine($"[OTP VM] Constructor called");
-            Debug.WriteLine($"[OTP VM] ============================================");
-
             VerifyOtpCommand = new Command(async () => await VerifyOtpAsync(), () => !IsBusy);
             ResendOtpCommand = new Command(async () => await ResendOtpAsync(), () => !IsBusy && CanResend);
-            SwitchToPasswordCommand = new Command(async () => await SwitchToPasswordAsync());
-            BackToLoginCommand = new Command(async () => await BackToLoginAsync());
+            BackToLoginCommand = new Command(async () => await Shell.Current.GoToAsync("//LoginPage"));
 
             StartResendTimer();
+
+            Debug.WriteLine("[OTP VM] Initialized");
         }
 
-        // Properties
-        public string Email
-        {
-            get => _email;
-            set
-            {
-                _email = Uri.UnescapeDataString(value ?? string.Empty);
-                Debug.WriteLine($"[OTP VM] Email set to: {_email}");
-                OnPropertyChanged();
-            }
-        }
+        // ── Properties ────────────────────────────────────────────────
 
-        public string OtpToken
+        public string Phone
         {
-            get => _otpToken;
+            get => _phone;
             set
             {
-                _otpToken = Uri.UnescapeDataString(value ?? string.Empty);
-                Debug.WriteLine($"[OTP VM] OtpToken set to: {_otpToken}");
+                _phone = Uri.UnescapeDataString(value ?? string.Empty);
+                Debug.WriteLine($"[OTP VM] Phone set to: {_phone}");
                 OnPropertyChanged();
             }
         }
@@ -72,20 +54,8 @@ namespace CraftConnect_Mobile_App.PageModels
             set
             {
                 _otpCode = value;
-                Debug.WriteLine($"[OTP VM] OtpCode set to: {_otpCode}");
                 OnPropertyChanged();
                 ClearMessages();
-            }
-        }
-
-        public bool HasPasswordOption
-        {
-            get => _hasPasswordOption;
-            set
-            {
-                _hasPasswordOption = value;
-                Debug.WriteLine($"[OTP VM] HasPasswordOption set to: {_hasPasswordOption}");
-                OnPropertyChanged();
             }
         }
 
@@ -95,7 +65,6 @@ namespace CraftConnect_Mobile_App.PageModels
             set
             {
                 _isBusy = value;
-                Debug.WriteLine($"[OTP VM] IsBusy set to: {_isBusy}");
                 OnPropertyChanged();
                 ((Command)VerifyOtpCommand).ChangeCanExecute();
                 ((Command)ResendOtpCommand).ChangeCanExecute();
@@ -105,31 +74,19 @@ namespace CraftConnect_Mobile_App.PageModels
         public string ErrorMessage
         {
             get => _errorMessage;
-            set
-            {
-                _errorMessage = value;
-                OnPropertyChanged();
-            }
+            set { _errorMessage = value; OnPropertyChanged(); }
         }
 
         public string SuccessMessage
         {
             get => _successMessage;
-            set
-            {
-                _successMessage = value;
-                OnPropertyChanged();
-            }
+            set { _successMessage = value; OnPropertyChanged(); }
         }
 
         public string InfoMessage
         {
             get => _infoMessage;
-            set
-            {
-                _infoMessage = value;
-                OnPropertyChanged();
-            }
+            set { _infoMessage = value; OnPropertyChanged(); }
         }
 
         public bool CanResend
@@ -146,20 +103,17 @@ namespace CraftConnect_Mobile_App.PageModels
         public string TimerText
         {
             get => _timerText;
-            set
-            {
-                _timerText = value;
-                OnPropertyChanged();
-            }
+            set { _timerText = value; OnPropertyChanged(); }
         }
 
-        // Commands
+        // ── Commands ──────────────────────────────────────────────────
+
         public ICommand VerifyOtpCommand { get; }
         public ICommand ResendOtpCommand { get; }
-        public ICommand SwitchToPasswordCommand { get; }
         public ICommand BackToLoginCommand { get; }
 
-        // Timer
+        // ── Timer ─────────────────────────────────────────────────────
+
         private void StartResendTimer()
         {
             _secondsRemaining = 60;
@@ -172,71 +126,47 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 _secondsRemaining--;
 
-                if (_secondsRemaining > 0)
+                MainThread.BeginInvokeOnMainThread(() =>
                 {
-                    MainThread.BeginInvokeOnMainThread(() =>
+                    if (_secondsRemaining > 0)
                     {
                         TimerText = $"Resend OTP in {_secondsRemaining}s";
-                    });
-                }
-                else
-                {
-                    _resendTimer?.Stop();
-                    MainThread.BeginInvokeOnMainThread(() =>
+                    }
+                    else
                     {
+                        _resendTimer?.Stop();
                         CanResend = true;
                         TimerText = string.Empty;
-                    });
-                }
+                    }
+                });
             };
 
             _resendTimer.Start();
         }
 
-        // Verify OTP
+        // ── Verify OTP  →  POST /api/auth/login/otp/verify ───────────
+
         private async Task VerifyOtpAsync()
         {
-            Debug.WriteLine($"\n[OTP VM] ============================================");
-            Debug.WriteLine($"[OTP VM] VerifyOtpAsync called");
-            Debug.WriteLine($"[OTP VM] IsBusy: {IsBusy}");
-            Debug.WriteLine($"[OTP VM] Email: {Email}");
-            Debug.WriteLine($"[OTP VM] OtpCode: {OtpCode}");
-            Debug.WriteLine($"[OTP VM] OtpToken: {OtpToken}");
-            Debug.WriteLine($"[OTP VM] ============================================");
-
-            if (IsBusy)
-            {
-                Debug.WriteLine($"[OTP VM] Already busy, returning");
-                return;
-            }
+            if (IsBusy) return;
 
             ClearMessages();
 
             if (string.IsNullOrWhiteSpace(OtpCode))
             {
                 ErrorMessage = "Please enter the OTP code";
-                Debug.WriteLine($"[OTP VM] ERROR: OTP code is empty");
                 return;
             }
 
             if (OtpCode.Length != 6)
             {
                 ErrorMessage = "OTP code must be 6 digits";
-                Debug.WriteLine($"[OTP VM] ERROR: OTP code length is {OtpCode.Length}, expected 6");
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(Email))
+            if (string.IsNullOrWhiteSpace(Phone))
             {
-                ErrorMessage = "Email is missing. Please restart the login process.";
-                Debug.WriteLine($"[OTP VM] ERROR: Email is empty");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(OtpToken))
-            {
-                ErrorMessage = "OTP token is missing. Please restart the login process.";
-                Debug.WriteLine($"[OTP VM] ERROR: OtpToken is empty");
+                ErrorMessage = "Phone number is missing. Please restart the login process.";
                 return;
             }
 
@@ -244,111 +174,84 @@ namespace CraftConnect_Mobile_App.PageModels
 
             try
             {
-                var request = new VerifyOtpRequest
+                Debug.WriteLine($"[OTP VM] Verifying OTP for phone: {Phone}");
+
+                var request = new OtpVerifyRequest
                 {
-                    Email = Email,
-                    Otp = OtpCode,
-                    Token = OtpToken
+                    Phone = Phone,
+                    Code = OtpCode
                 };
 
-                Debug.WriteLine($"[OTP VM] Calling _authService.VerifyOtpAsync...");
-                var response = await _authService.VerifyOtpAsync(request);
-                Debug.WriteLine($"[OTP VM] Response received: Success={response.Success}, Message={response.Message}");
+                var result = await _authService.VerifyOtpAsync(request);
 
-                if (response.Success && !string.IsNullOrEmpty(response.Token))
+                Debug.WriteLine($"[OTP VM] Verify result: Success={result.Success}");
+
+                if (result.Success)
                 {
                     SuccessMessage = "Verification successful!";
-                    Debug.WriteLine($"[OTP VM] ✅ Verification successful! Token received.");
-                    Debug.WriteLine($"[OTP VM] Navigating to main page...");
-
-                    await Task.Delay(1000);
+                    await Task.Delay(800);
                     await Shell.Current.GoToAsync("//main/GroupChatListPage");
-
-                    Debug.WriteLine($"[OTP VM] Navigation completed");
                 }
                 else
                 {
-                    ErrorMessage = response.Message ?? "Invalid or expired OTP";
-                    Debug.WriteLine($"[OTP VM] ❌ Verification failed: {ErrorMessage}");
+                    ErrorMessage = result.Error ?? "Invalid or expired OTP";
                     OtpCode = string.Empty;
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[OTP VM] ❌ EXCEPTION in VerifyOtp:");
-                Debug.WriteLine($"[OTP VM] Message: {ex.Message}");
-                Debug.WriteLine($"[OTP VM] StackTrace: {ex.StackTrace}");
+                Debug.WriteLine($"[OTP VM] Exception: {ex.Message}");
                 ErrorMessage = "Verification failed. Please try again.";
             }
             finally
             {
                 IsBusy = false;
-                Debug.WriteLine($"[OTP VM] VerifyOtpAsync completed");
-                Debug.WriteLine($"[OTP VM] ============================================\n");
             }
         }
 
-        // Resend OTP
+        // ── Resend OTP  →  POST /api/auth/login/otp/send (no captcha) ─
+
         private async Task ResendOtpAsync()
         {
-            Debug.WriteLine($"[OTP VM] ResendOtpAsync called");
-
-            if (IsBusy || !CanResend)
-            {
-                Debug.WriteLine($"[OTP VM] Cannot resend - IsBusy: {IsBusy}, CanResend: {CanResend}");
-                return;
-            }
+            if (IsBusy || !CanResend) return;
 
             IsBusy = true;
             ClearMessages();
 
             try
             {
-                Debug.WriteLine($"[OTP VM] Calling _authService.ResendOtpAsync for: {Email}");
-                var response = await _authService.ResendOtpAsync(Email);
-                Debug.WriteLine($"[OTP VM] Resend response: Success={response.Success}, Message={response.Message}");
+                Debug.WriteLine($"[OTP VM] Resending OTP to: {Phone}");
 
-                if (response.Success)
+                // Resend uses the same send endpoint
+                // Captcha ID 0 with answer "8" is the fallback the server accepts
+                var request = new OtpSendRequest
                 {
-                    SuccessMessage = "OTP resent successfully!";
+                    Phone = Phone,
+                    CaptchaId = 0,
+                    CaptchaAnswer = "8"
+                };
 
-                    if (!string.IsNullOrEmpty(response.OtpToken))
-                    {
-                        OtpToken = response.OtpToken;
-                        Debug.WriteLine($"[OTP VM] New OTP token received: {response.OtpToken}");
-                    }
+                var result = await _authService.SendOtpAsync(request);
 
+                if (result.Success)
+                {
+                    SuccessMessage = "OTP resent! Check your phone.";
                     StartResendTimer();
                 }
                 else
                 {
-                    ErrorMessage = response.Message ?? "Failed to resend OTP";
-                    Debug.WriteLine($"[OTP VM] Resend failed: {ErrorMessage}");
+                    ErrorMessage = result.Error ?? "Failed to resend OTP. Please try again.";
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[OTP VM] ResendOtp exception: {ex.Message}");
+                Debug.WriteLine($"[OTP VM] Resend exception: {ex.Message}");
                 ErrorMessage = "Failed to resend OTP. Please try again.";
             }
             finally
             {
                 IsBusy = false;
             }
-        }
-
-        // Switch to Password
-        private async Task SwitchToPasswordAsync()
-        {
-            Debug.WriteLine($"[OTP VM] Switching to password login...");
-            await Shell.Current.GoToAsync("//LoginPage");
-        }
-
-        // Back to Login
-        private async Task BackToLoginAsync()
-        {
-            Debug.WriteLine($"[OTP VM] Going back to login...");
-            await Shell.Current.GoToAsync("//LoginPage");
         }
 
         private void ClearMessages()
@@ -360,17 +263,17 @@ namespace CraftConnect_Mobile_App.PageModels
 
         public void Dispose()
         {
-            Debug.WriteLine($"[OTP VM] Disposing...");
             _resendTimer?.Stop();
             _resendTimer?.Dispose();
             _resendTimer = null;
+            Debug.WriteLine("[OTP VM] Disposed");
         }
+
+        // ── INotifyPropertyChanged ────────────────────────────────────
 
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

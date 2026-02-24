@@ -79,14 +79,20 @@ namespace CraftConnect_Mobile_App
             // ========================================
             // SERVICES - All as Singletons
             // ========================================
-            builder.Services.AddSingleton<AuthService>();
-            builder.Services.AddSingleton<IChatService, ChatService>();
-            builder.Services.AddSingleton<IChatSignalRService, ChatSignalRService>(); // ✅ ADD THIS
-            builder.Services.AddSingleton<IUserFeedService, UserFeedService>(); // ✅ Changed to Singleton like ChatService
+            builder.Services.AddSingleton<ApiConfig>();
+            builder.Services.AddSingleton<AuthService>(sp =>
+                new AuthService(sp.GetRequiredService<ApiConfig>()));
+            builder.Services.AddSingleton<IChatService, ChatService>(sp =>
+                new ChatService(sp.GetRequiredService<ApiConfig>()));
+            builder.Services.AddSingleton<IChatSignalRService, ChatSignalRService>(sp =>
+                new ChatSignalRService(sp.GetRequiredService<ApiConfig>()));
+            builder.Services.AddSingleton<IUserFeedService, UserFeedService>();
             builder.Services.AddSingleton<INavigationService, NavigationService>();
             builder.Services.AddSingleton<IDialogService, DialogService>();
             builder.Services.AddSingleton<IUserService, UserService>();
             builder.Services.AddSingleton<AiFeedChatService>();
+
+
 
             // ========================================
             // VIEWMODELS

@@ -109,7 +109,6 @@
                             <!-- Email/Phone Input -->
                             <VerticalStackLayout Spacing="6">
                                 <Label 
-                                    Text="Email or Phone Number"
                                     FontSize="13"
                                     FontAttributes="Bold"
                                     TextColor="{StaticResource OffBlack}">
@@ -152,7 +151,6 @@
                                 <Grid ColumnDefinitions="*,Auto">
                                     <Label 
                                         Grid.Column="0"
-                                        Text="Password"
                                         FontSize="13"
                                         FontAttributes="Bold"
                                         TextColor="{StaticResource OffBlack}">
@@ -221,10 +219,84 @@
                                 <Label 
                                     Text="Remember me"
                                     FontSize="14"
-                                    FontAttributes="None"
                                     TextColor="{StaticResource Gray500}"
                                     VerticalOptions="Center"/>
                             </HorizontalStackLayout>
+
+                            <!-- ═══════════════════════════════════════════════════ -->
+                            <!-- CAPTCHA / HUMAN VERIFICATION — Visible in BOTH modes -->
+                            <!-- ═══════════════════════════════════════════════════ -->
+                            <Frame 
+                                BackgroundColor="#F9FAFB"
+                                BorderColor="{StaticResource Gray200}"
+                                CornerRadius="14"
+                                Padding="16,14"
+                                HasShadow="False">
+                                <VerticalStackLayout Spacing="12">
+
+                                    <!-- Captcha Header Row -->
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                            <Label 
+                                                Text="Human Verification"
+                                                FontSize="13"
+                                                FontAttributes="Bold"
+                                                TextColor="{StaticResource OffBlack}"/>
+                                            <Label 
+                                                Text="Answer to confirm you're human."
+                                                FontSize="11"
+                                                TextColor="{StaticResource Gray500}"/>
+                                        </VerticalStackLayout>
+
+                                        <!-- Refresh Captcha Button -->
+                                        <Label 
+                                            Grid.Column="1"
+                                            Text="🔄"
+                                            FontSize="20"
+                                            VerticalOptions="Center"
+                                            Padding="6,0">
+                                            <Label.GestureRecognizers>
+                                                <TapGestureRecognizer 
+                                                    Command="{Binding RefreshCaptchaCommand}"/>
+                                            </Label.GestureRecognizers>
+                                        </Label>
+                                    </Grid>
+
+                                    <!-- Captcha Question -->
+                                    <Frame 
+                                        BackgroundColor="#FEF3C7"
+                                        BorderColor="#FDE68A"
+                                        CornerRadius="10"
+                                        Padding="14,10"
+                                        HasShadow="False">
+                                        <Label 
+                                            Text="{Binding CaptchaQuestion}"
+                                            FontSize="15"
+                                            FontAttributes="Bold"
+                                            TextColor="#92400E"
+                                            HorizontalOptions="Center"/>
+                                    </Frame>
+
+                                    <!-- Captcha Answer Input -->
+                                    <Frame 
+                                        BackgroundColor="{StaticResource White}"
+                                        BorderColor="{StaticResource Gray200}"
+                                        CornerRadius="10"
+                                        Padding="0"
+                                        HasShadow="False">
+                                        <Entry 
+                                            Placeholder="Your answer"
+                                            Text="{Binding CaptchaAnswer}"
+                                            Keyboard="Numeric"
+                                            TextColor="{StaticResource OffBlack}"
+                                            PlaceholderColor="{StaticResource Gray400}"
+                                            FontSize="15"
+                                            Margin="14,12"/>
+                                    </Frame>
+
+                                </VerticalStackLayout>
+                            </Frame>
+                            <!-- ═══════════════════════════════════════════════════ -->
 
                             <!-- Error Message -->
                             <Frame 
@@ -238,7 +310,6 @@
                                     Text="{Binding ErrorMessage}"
                                     TextColor="#991B1B"
                                     FontSize="13"
-                                    FontAttributes="None"
                                     LineBreakMode="WordWrap"/>
                             </Frame>
 
@@ -254,7 +325,6 @@
                                     Text="{Binding SuccessMessage}"
                                     TextColor="#065F46"
                                     FontSize="13"
-                                    FontAttributes="None"
                                     LineBreakMode="WordWrap"/>
                             </Frame>
 
@@ -270,7 +340,6 @@
                                     Text="{Binding InfoMessage}"
                                     TextColor="#1E40AF"
                                     FontSize="13"
-                                    FontAttributes="None"
                                     LineBreakMode="WordWrap"/>
                             </Frame>
 
@@ -306,8 +375,7 @@
                                 CornerRadius="12"
                                 HeightRequest="48"
                                 FontSize="15"
-                                FontAttributes="Bold"
-                                Margin="0,0,0,0">
+                                FontAttributes="Bold">
                                 <Button.Triggers>
                                     <DataTrigger TargetType="Button" 
                                                  Binding="{Binding IsBusy}" 
@@ -343,12 +411,10 @@
                     <HorizontalStackLayout 
                         HorizontalOptions="Center"
                         Spacing="6">
-
                         <Label 
                             Text="Don't have an account?"
                             FontSize="15"
                             TextColor="{StaticResource Gray500}"/>
-
                         <Label 
                             Text="Create An Account"
                             FontSize="15"

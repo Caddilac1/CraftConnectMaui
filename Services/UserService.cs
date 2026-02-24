@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
@@ -13,7 +14,7 @@ namespace CraftConnect_Mobile_App.Services
         private readonly HttpClient _httpClient;
         private UserProfile _cachedUser;
 
-        public UserService(AuthService authService)
+        public UserService(AuthService authService, ApiConfig config)
         {
             _authService = authService;
 
@@ -23,77 +24,81 @@ namespace CraftConnect_Mobile_App.Services
 #endif
             _httpClient = new HttpClient(handler)
             {
-                BaseAddress = new Uri("https://192.168.8.181:7023"),
+                BaseAddress = new Uri(config.BaseUrl.TrimEnd('/')),
                 Timeout = TimeSpan.FromSeconds(30)
             };
         }
 
-        public UserProfile GetCurrentUser()
-        {
-            return _cachedUser;
-        }
+        // ── Get user info from JWT token ──────────────────────────────
 
-        public async Task<string> GetCurrentUserIdAsync()
+        private async Task<(string userId, string email, string phone)> GetUserClaimsFromTokenAsync()
         {
             try
             {
-                return await SecureStorage.GetAsync("user_id") ?? string.Empty;
+                var token = await _authService.GetTokenAsync();
+                if (string.IsNullOrEmpty(token))
+                    return (string.Empty, string.Empty, string.Empty);
+
+                var handler = new JwtSecurityTokenHandler();
+                var jwt = handler.ReadJwtToken(token);
+
+                var userId = jwt.Claims.FirstOrDefault(c =>
+                    c.Type == JwtRegisteredClaimNames.Sub || c.Type == "sub")?.Value ?? string.Empty;
+
+                var email = jwt.Claims.FirstOrDefault(c =>
+                    c.Type == JwtRegisteredClaimNames.Email || c.Type == "email")?.Value ?? string.Empty;
+
+                var phone = jwt.Claims.FirstOrDefault(c =>
+                    c.Type == "phone")?.Value ?? string.Empty;
+
+                return (userId, email, phone);
             }
-            catch
+            catch (Exception ex)
             {
-                return string.Empty;
+                Debug.WriteLine($"[USER SERVICE] Error reading token claims: {ex.Message}");
+                return (string.Empty, string.Empty, string.Empty);
             }
+        }
+
+        // ── IUserService implementation ───────────────────────────────
+
+        public UserProfile GetCurrentUser() => _cachedUser;
+
+        public async Task<string> GetCurrentUserIdAsync()
+        {
+            var (userId, _, _) = await GetUserClaimsFromTokenAsync();
+            return userId;
         }
 
         public async Task<string> GetCurrentUserNameAsync()
         {
-            try
-            {
-                return await SecureStorage.GetAsync("user_name") ?? string.Empty;
-            }
-            catch
-            {
-                return string.Empty;
-            }
+            var (_, email, phone) = await GetUserClaimsFromTokenAsync();
+            return !string.IsNullOrEmpty(email) ? email : phone;
         }
 
         public async Task<string> GetCurrentUserProfileImageAsync()
-        {
-            // Return cached profile image or fetch from API
-            return _cachedUser?.ProfileImageUrl ?? string.Empty;
-        }
+            => _cachedUser?.ProfileImageUrl ?? string.Empty;
 
-        public async Task<bool> HasUnreadUpdatesAsync()
-        {
-            // TODO: Implement with real API call
-            return false;
-        }
+        public async Task<bool> HasUnreadUpdatesAsync() => false;
 
-        public async Task<bool> HasMissedCallsAsync()
-        {
-            // TODO: Implement with real API call
-            return false;
-        }
+        public async Task<bool> HasMissedCallsAsync() => false;
+
+        // ── API calls ─────────────────────────────────────────────────
 
         public async Task<bool> UpdateEmailAsync(string newEmail)
         {
             try
             {
                 var token = await _authService.GetTokenAsync();
-                if (string.IsNullOrEmpty(token))
-                    return false;
+                if (string.IsNullOrEmpty(token)) return false;
 
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
+                SetBearerToken(token);
                 var response = await _httpClient.PutAsJsonAsync("/api/User/update-email", new { Email = newEmail });
 
                 if (response.IsSuccessStatusCode)
                 {
                     if (_cachedUser != null)
                         _cachedUser.Email = newEmail;
-
-                    await SecureStorage.SetAsync("user_email", newEmail);
                     return true;
                 }
 
@@ -111,19 +116,15 @@ namespace CraftConnect_Mobile_App.Services
             try
             {
                 var token = await _authService.GetTokenAsync();
-                if (string.IsNullOrEmpty(token))
-                    return false;
+                if (string.IsNullOrEmpty(token)) return false;
 
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
+                SetBearerToken(token);
                 var response = await _httpClient.PutAsJsonAsync("/api/User/update-phone", new { PhoneNumber = phoneNumber });
 
                 if (response.IsSuccessStatusCode)
                 {
                     if (_cachedUser != null)
                         _cachedUser.PhoneNumber = phoneNumber;
-
                     return true;
                 }
 
@@ -141,12 +142,9 @@ namespace CraftConnect_Mobile_App.Services
             try
             {
                 var token = await _authService.GetTokenAsync();
-                if (string.IsNullOrEmpty(token))
-                    return false;
+                if (string.IsNullOrEmpty(token)) return false;
 
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
+                SetBearerToken(token);
                 var response = await _httpClient.PutAsJsonAsync("/api/User/update-profile", user);
 
                 if (response.IsSuccessStatusCode)
@@ -169,12 +167,9 @@ namespace CraftConnect_Mobile_App.Services
             try
             {
                 var token = await _authService.GetTokenAsync();
-                if (string.IsNullOrEmpty(token))
-                    return false;
+                if (string.IsNullOrEmpty(token)) return false;
 
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
+                SetBearerToken(token);
                 var response = await _httpClient.PutAsJsonAsync("/api/User/update-notification-preference",
                     new { PushNotifications = enabled });
 
@@ -192,12 +187,9 @@ namespace CraftConnect_Mobile_App.Services
             try
             {
                 var token = await _authService.GetTokenAsync();
-                if (string.IsNullOrEmpty(token))
-                    return false;
+                if (string.IsNullOrEmpty(token)) return false;
 
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
+                SetBearerToken(token);
                 var response = await _httpClient.PutAsJsonAsync("/api/User/update-notification-preference",
                     new { EmailNotifications = enabled });
 
@@ -215,12 +207,9 @@ namespace CraftConnect_Mobile_App.Services
             try
             {
                 var token = await _authService.GetTokenAsync();
-                if (string.IsNullOrEmpty(token))
-                    return false;
+                if (string.IsNullOrEmpty(token)) return false;
 
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
+                SetBearerToken(token);
                 var response = await _httpClient.PostAsJsonAsync("/api/User/delete-account",
                     new { Password = password });
 
@@ -242,37 +231,34 @@ namespace CraftConnect_Mobile_App.Services
         public async Task LogoutAsync()
         {
             _cachedUser = null;
-            // Additional cleanup if needed
+            await _authService.LogoutAsync();
         }
 
-        // Helper method to load user profile from API
         public async Task<UserProfile> LoadUserProfileAsync()
         {
             try
             {
                 var token = await _authService.GetTokenAsync();
-                if (string.IsNullOrEmpty(token))
-                    return null;
+                if (string.IsNullOrEmpty(token)) return null;
 
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
+                SetBearerToken(token);
                 var response = await _httpClient.GetAsync("api/ProfilesApi/me");
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var userInfo = await _authService.GetCurrentUserAsync();
-                    var primaryRole = userInfo?.Roles?.FirstOrDefault() ?? "Customer";
+                    // Determine role from JWT claims
+                    var (_, _, _) = await GetUserClaimsFromTokenAsync();
+                    var jwt = new JwtSecurityTokenHandler()
+                        .ReadJwtToken(token);
 
-                    // Check if user is an artisan and deserialize accordingly
-                    if (primaryRole.Equals("Artisan", StringComparison.OrdinalIgnoreCase))
-                    {
+                    var role = jwt.Claims
+                        .FirstOrDefault(c => c.Type == "role" || c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")
+                        ?.Value ?? "Customer";
+
+                    if (role.Equals("Artisan", StringComparison.OrdinalIgnoreCase))
                         _cachedUser = await response.Content.ReadFromJsonAsync<ArtisanUser>();
-                    }
                     else
-                    {
                         _cachedUser = await response.Content.ReadFromJsonAsync<UserProfile>();
-                    }
 
                     return _cachedUser;
                 }
@@ -284,6 +270,14 @@ namespace CraftConnect_Mobile_App.Services
                 Debug.WriteLine($"[USER SERVICE] Error loading user profile: {ex.Message}");
                 return null;
             }
+        }
+
+        // ── Helper ────────────────────────────────────────────────────
+
+        private void SetBearerToken(string token)
+        {
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
         }
     }
 }

@@ -8,6 +8,7 @@ namespace CraftConnect_Mobile_App.Services
         event EventHandler<MessageReceivedEventArgs> MessageReceived;
         event EventHandler<TypingEventArgs> UserTyping;
         event EventHandler<string> UserStoppedTyping;
+        event EventHandler<string> Reconnected; // ✅ ADDED
 
         Task ConnectAsync();
         Task DisconnectAsync();
@@ -49,115 +50,67 @@ namespace CraftConnect_Mobile_App.Services
     {
         private HubConnection _hubConnection;
         private string _hubUrl;
-        private const string BaseUrl = "https://192.168.8.181:7023"; // Match ChatService URL
 
         public event EventHandler<MessageReceivedEventArgs> MessageReceived;
         public event EventHandler<TypingEventArgs> UserTyping;
         public event EventHandler<string> UserStoppedTyping;
+        public event EventHandler<string> Reconnected; // ✅ ADDED
 
         public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
 
-        public ChatSignalRService()
+        public ChatSignalRService(ApiConfig config)
         {
-            // Use same base URL as ChatService
-            _hubUrl = BaseUrl + "/chathub";
+            _hubUrl = config.BaseUrl.TrimEnd('/') + "/chathub";
             Debug.WriteLine($"[SignalR Service] Initialized with URL: {_hubUrl}");
             InitializeConnection();
         }
 
         public void UpdateHubUrl(string newBaseUrl)
         {
-            // Remove /chathub if user accidentally includes it
             newBaseUrl = newBaseUrl.TrimEnd('/');
             if (newBaseUrl.EndsWith("/chathub", StringComparison.OrdinalIgnoreCase))
-            {
                 newBaseUrl = newBaseUrl.Substring(0, newBaseUrl.Length - 8);
-            }
 
             _hubUrl = newBaseUrl + "/chathub";
             Debug.WriteLine($"[SignalR Service] Hub URL updated to: {_hubUrl}");
 
-            // Reinitialize connection with new URL
             if (_hubConnection != null)
-            {
                 _ = DisconnectAsync();
-            }
+
             InitializeConnection();
         }
-
-        /// <summary>
-        /// Get token from SecureStorage - matches ChatService pattern
-        /// </summary>
-        // Add this method to ChatSignalRService class to decode and inspect the JWT
 
         private void DebugToken(string token)
         {
             try
             {
-                // JWT has 3 parts separated by dots: header.payload.signature
                 var parts = token.Split('.');
-
                 if (parts.Length != 3)
                 {
                     Debug.WriteLine($"[SignalR Service] ⚠️ Invalid JWT format - expected 3 parts, got {parts.Length}");
                     return;
                 }
 
-                Debug.WriteLine($"[SignalR Service] 🔍 JWT Token Analysis:");
-                Debug.WriteLine($"   Header length: {parts[0].Length}");
-                Debug.WriteLine($"   Payload length: {parts[1].Length}");
-                Debug.WriteLine($"   Signature length: {parts[2].Length}");
-
-                // Decode payload (Base64Url)
                 var payload = parts[1];
-
-                // Add padding if needed for Base64 decoding
                 switch (payload.Length % 4)
                 {
                     case 2: payload += "=="; break;
                     case 3: payload += "="; break;
                 }
 
-                // Replace URL-safe characters
                 payload = payload.Replace('-', '+').Replace('_', '/');
-
                 var payloadBytes = Convert.FromBase64String(payload);
                 var payloadJson = System.Text.Encoding.UTF8.GetString(payloadBytes);
 
-                Debug.WriteLine($"   Payload JSON: {payloadJson}");
+                Debug.WriteLine($"[SignalR Service] 🔍 JWT Payload: {payloadJson}");
 
-                // Parse to check expiration
                 var payloadObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(payloadJson);
-
-                if (payloadObj != null)
+                if (payloadObj != null && payloadObj.ContainsKey("exp"))
                 {
-                    if (payloadObj.ContainsKey("exp"))
-                    {
-                        var exp = long.Parse(payloadObj["exp"].ToString());
-                        var expDate = DateTimeOffset.FromUnixTimeSeconds(exp);
-                        var now = DateTimeOffset.UtcNow;
-
-                        Debug.WriteLine($"   Token Expiry: {expDate}");
-                        Debug.WriteLine($"   Current Time: {now}");
-                        Debug.WriteLine($"   Is Expired: {now > expDate}");
-                        Debug.WriteLine($"   Time until expiry: {(expDate - now).TotalMinutes:F2} minutes");
-                    }
-
-                    if (payloadObj.ContainsKey("iss"))
-                    {
-                        Debug.WriteLine($"   Issuer (iss): {payloadObj["iss"]}");
-                    }
-
-                    if (payloadObj.ContainsKey("aud"))
-                    {
-                        Debug.WriteLine($"   Audience (aud): {payloadObj["aud"]}");
-                    }
-
-                    if (payloadObj.ContainsKey("sub") || payloadObj.ContainsKey("nameid"))
-                    {
-                        var userId = payloadObj.ContainsKey("sub") ? payloadObj["sub"] : payloadObj["nameid"];
-                        Debug.WriteLine($"   User ID: {userId}");
-                    }
+                    var exp = long.Parse(payloadObj["exp"].ToString());
+                    var expDate = DateTimeOffset.FromUnixTimeSeconds(exp);
+                    var now = DateTimeOffset.UtcNow;
+                    Debug.WriteLine($"[SignalR Service]    Expires: {expDate}, Is expired: {now > expDate}");
                 }
             }
             catch (Exception ex)
@@ -166,7 +119,6 @@ namespace CraftConnect_Mobile_App.Services
             }
         }
 
-        // Update GetAuthTokenAsync to use the debug method:
         private async Task<string> GetAuthTokenAsync()
         {
             try
@@ -180,11 +132,7 @@ namespace CraftConnect_Mobile_App.Services
                 }
 
                 Debug.WriteLine($"[SignalR Service] ✅ Auth token retrieved. Length: {token.Length}");
-                Debug.WriteLine($"[SignalR Service] Token preview: {token.Substring(0, Math.Min(30, token.Length))}...");
-
-                // Add detailed token analysis
                 DebugToken(token);
-
                 return token;
             }
             catch (Exception ex)
@@ -201,36 +149,38 @@ namespace CraftConnect_Mobile_App.Services
             _hubConnection = new HubConnectionBuilder()
                 .WithUrl(_hubUrl, options =>
                 {
-                    // CRITICAL: Provide token via AccessTokenProvider for SignalR
                     options.AccessTokenProvider = async () =>
                     {
                         var token = await GetAuthTokenAsync();
-
                         if (string.IsNullOrEmpty(token))
-                        {
                             Debug.WriteLine("[SignalR Service] ⚠️ WARNING: No token available for SignalR connection!");
-                        }
                         else
-                        {
                             Debug.WriteLine($"[SignalR Service] 🔐 Providing token for connection (length: {token.Length})");
-                        }
-
                         return token;
                     };
 
-#if DEBUG
-                    // Allow self-signed certificates in development (matches ChatService)
-                    options.HttpMessageHandlerFactory = (handler) =>
+                    options.HttpMessageHandlerFactory = _ =>
                     {
-                        if (handler is HttpClientHandler clientHandler)
+#if ANDROID
+                        return new Xamarin.Android.Net.AndroidMessageHandler
                         {
-                            clientHandler.ServerCertificateCustomValidationCallback =
-                                (message, cert, chain, errors) => true;
-                            Debug.WriteLine("[SignalR Service] 🔓 Certificate validation disabled for DEBUG");
-                        }
-                        return handler;
-                    };
+                            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
+                            {
+                                Debug.WriteLine($"[SignalR SSL] Host: {message.RequestUri.Host}, Errors: {errors}");
+                                return true;
+                            }
+                        };
+#else
+                        return new HttpClientHandler
+                        {
+                            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
+                            {
+                                Debug.WriteLine($"[SignalR SSL] Host: {message.RequestUri.Host}, Errors: {errors}");
+                                return true;
+                            }
+                        };
 #endif
+                    };
                 })
                 .WithAutomaticReconnect(new[]
                 {
@@ -241,12 +191,10 @@ namespace CraftConnect_Mobile_App.Services
                 })
                 .Build();
 
-            // Register event handlers
             _hubConnection.On<object>("ReceiveMessage", OnMessageReceived);
             _hubConnection.On<object>("UserTyping", OnUserTyping);
             _hubConnection.On<string>("UserStoppedTyping", OnUserStoppedTyping);
 
-            // Connection state handlers
             _hubConnection.Closed += OnConnectionClosed;
             _hubConnection.Reconnecting += OnReconnecting;
             _hubConnection.Reconnected += OnReconnected;
@@ -266,12 +214,9 @@ namespace CraftConnect_Mobile_App.Services
             {
                 Debug.WriteLine($"[SignalR Service] 🔌 Connecting to {_hubUrl}...");
 
-                // Verify token exists before connecting
                 var token = await GetAuthTokenAsync();
                 if (string.IsNullOrEmpty(token))
-                {
                     throw new UnauthorizedAccessException("Not authenticated. Please login first.");
-                }
 
                 await _hubConnection.StartAsync();
                 Debug.WriteLine("[SignalR Service] ✅ Connected successfully");
@@ -286,10 +231,8 @@ namespace CraftConnect_Mobile_App.Services
                 Debug.WriteLine($"[SignalR Service] ❌ Connection error (HTTP): {ex.Message}");
                 Debug.WriteLine($"[SignalR Service] Failed URL: {_hubUrl}");
 
-                // Check if it's a 401
                 if (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
                 {
-                    Debug.WriteLine("[SignalR Service] 🔒 Token appears to be invalid or expired");
                     SecureStorage.Remove("auth_token");
                     throw new UnauthorizedAccessException("Token expired or invalid. Please login again.", ex);
                 }
@@ -359,48 +302,28 @@ namespace CraftConnect_Mobile_App.Services
             try
             {
                 Debug.WriteLine($"[SignalR Service] 📤 Sending message to group: {groupId}");
-                Debug.WriteLine($"[SignalR Service] From: {senderFullName} ({senderName})");
-                Debug.WriteLine($"[SignalR Service] Message: {message.Substring(0, Math.Min(50, message.Length))}...");
-
                 await _hubConnection.InvokeAsync("SendMessage", groupId, message, senderName, senderFullName);
-
-                Debug.WriteLine($"[SignalR Service] ✅ Message sent successfully");
+                Debug.WriteLine("[SignalR Service] ✅ Message sent successfully");
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[SignalR Service] ❌ Error sending message: {ex.Message}");
-                Debug.WriteLine($"[SignalR Service] Exception type: {ex.GetType().Name}");
                 throw;
             }
         }
 
         public async Task SendMessageWithAttachmentAsync(
-            string groupId,
-            string message,
-            string senderName,
-            string senderFullName,
-            string attachmentUrl,
-            string attachmentName,
-            string attachmentSize,
-            string attachmentType)
+            string groupId, string message, string senderName, string senderFullName,
+            string attachmentUrl, string attachmentName, string attachmentSize, string attachmentType)
         {
             try
             {
                 Debug.WriteLine($"[SignalR Service] 📤 Sending message with attachment to group: {groupId}");
-                Debug.WriteLine($"[SignalR Service] Attachment: {attachmentName} ({attachmentSize})");
-
                 await _hubConnection.InvokeAsync(
                     "SendMessageWithAttachment",
-                    groupId,
-                    message,
-                    senderName,
-                    senderFullName,
-                    attachmentUrl,
-                    attachmentName,
-                    attachmentSize,
-                    attachmentType);
-
-                Debug.WriteLine($"[SignalR Service] ✅ Message with attachment sent");
+                    groupId, message, senderName, senderFullName,
+                    attachmentUrl, attachmentName, attachmentSize, attachmentType);
+                Debug.WriteLine("[SignalR Service] ✅ Message with attachment sent");
             }
             catch (Exception ex)
             {
@@ -411,62 +334,38 @@ namespace CraftConnect_Mobile_App.Services
 
         public async Task NotifyTypingAsync(string groupId, string userName)
         {
-            try
-            {
-                await _hubConnection.InvokeAsync("NotifyTyping", groupId, userName);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[SignalR Service] ❌ Error notifying typing: {ex.Message}");
-            }
+            try { await _hubConnection.InvokeAsync("NotifyTyping", groupId, userName); }
+            catch (Exception ex) { Debug.WriteLine($"[SignalR Service] ❌ Error notifying typing: {ex.Message}"); }
         }
 
         public async Task NotifyStoppedTypingAsync(string groupId)
         {
-            try
-            {
-                await _hubConnection.InvokeAsync("NotifyStoppedTyping", groupId);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[SignalR Service] ❌ Error notifying stopped typing: {ex.Message}");
-            }
+            try { await _hubConnection.InvokeAsync("NotifyStoppedTyping", groupId); }
+            catch (Exception ex) { Debug.WriteLine($"[SignalR Service] ❌ Error notifying stopped typing: {ex.Message}"); }
         }
+
+        // ═══════════════════════════════════════════════════════════════
+        // PRIVATE EVENT HANDLERS
+        // ═══════════════════════════════════════════════════════════════
 
         private void OnMessageReceived(object messageData)
         {
             try
             {
                 Debug.WriteLine("[SignalR Service] 📨 Message received from hub");
-
-                // Parse the dynamic object
                 var json = System.Text.Json.JsonSerializer.Serialize(messageData);
-                Debug.WriteLine($"[SignalR Service] Message JSON: {json.Substring(0, Math.Min(200, json.Length))}...");
-
                 var data = System.Text.Json.JsonSerializer.Deserialize<MessageReceivedEventArgs>(json,
-                    new System.Text.Json.JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
                 if (data != null)
                 {
-                    Debug.WriteLine($"[SignalR Service] ✅ Message parsed successfully");
-                    Debug.WriteLine($"[SignalR Service]    ID: {data.Id}");
-                    Debug.WriteLine($"[SignalR Service]    Sender: {data.SenderFullName}");
-                    Debug.WriteLine($"[SignalR Service]    Group: {data.GroupChatId}");
-
+                    Debug.WriteLine($"[SignalR Service] ✅ Message from: {data.SenderFullName}, Group: {data.GroupChatId}");
                     MessageReceived?.Invoke(this, data);
-                }
-                else
-                {
-                    Debug.WriteLine($"[SignalR Service] ⚠️ Failed to parse message data");
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[SignalR Service] ❌ Error processing received message: {ex.Message}");
-                Debug.WriteLine($"[SignalR Service] Exception: {ex.GetType().Name}");
             }
         }
 
@@ -476,10 +375,7 @@ namespace CraftConnect_Mobile_App.Services
             {
                 var json = System.Text.Json.JsonSerializer.Serialize(typingData);
                 var data = System.Text.Json.JsonSerializer.Deserialize<TypingEventArgs>(json,
-                    new System.Text.Json.JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
                 if (data != null)
                 {
@@ -502,32 +398,22 @@ namespace CraftConnect_Mobile_App.Services
         private Task OnConnectionClosed(Exception exception)
         {
             if (exception != null)
-            {
                 Debug.WriteLine($"[SignalR Service] ❌ Connection closed with error: {exception.Message}");
-            }
             else
-            {
-                Debug.WriteLine($"[SignalR Service] 👋 Connection closed normally");
-            }
+                Debug.WriteLine("[SignalR Service] 👋 Connection closed normally");
             return Task.CompletedTask;
         }
 
         private Task OnReconnecting(Exception exception)
         {
-            Debug.WriteLine($"[SignalR Service] 🔄 Reconnecting...");
-            if (exception != null)
-            {
-                Debug.WriteLine($"[SignalR Service] Reason: {exception.Message}");
-            }
+            Debug.WriteLine($"[SignalR Service] 🔄 Reconnecting... {exception?.Message}");
             return Task.CompletedTask;
         }
 
-
-
         private Task OnReconnected(string connectionId)
         {
-            Debug.WriteLine($"[SignalR Service] ✅ Reconnected successfully");
-            Debug.WriteLine($"[SignalR Service] New ConnectionId: {connectionId}");
+            Debug.WriteLine($"[SignalR Service] ✅ Reconnected. ConnectionId: {connectionId}");
+            Reconnected?.Invoke(this, connectionId); // ✅ ADDED — fires event so ChatPageModel can re-join the group
             return Task.CompletedTask;
         }
     }
