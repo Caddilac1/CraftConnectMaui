@@ -13,27 +13,29 @@ namespace CraftConnect_Mobile_App.Services
         private readonly HttpClient _httpClient;
         private readonly string _baseUrl;
 
-        public AiFeedChatService()
+        public AiFeedChatService(ApiConfig config)
         {
-            // Create our own HttpClient with custom handler (like ChatService does)
-            var handler = new HttpClientHandler();
-
-#if DEBUG
-            // Allow self-signed certificates and HTTP in development
-            handler.ServerCertificateCustomValidationCallback =
-                (message, cert, chain, errors) => true;
-
-            // For local development - USE HTTP (not HTTPS) for local IP addresses
-            _baseUrl = "https://192.168.8.181/api/ai/feed-chat";
-
-            // Alternative options based on your setup:
-            // _baseUrl = "http://10.0.2.2:7023/api/ai/feed-chat"; // Android Emulator -> localhost on host PC
-            // _baseUrl = "http://localhost:7023/api/ai/feed-chat"; // iOS Simulator
-            // _baseUrl = "http://192.168.1.x:7023/api/ai/feed-chat"; // Replace x with your PC's local IP
+#if ANDROID
+            var handler = new Xamarin.Android.Net.AndroidMessageHandler
+            {
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
+                {
+                    Debug.WriteLine($"[AI FEED SSL] Host: {message.RequestUri.Host}, Errors: {errors}");
+                    return true;
+                }
+            };
 #else
-            // For production - use your actual HTTPS API
-            _baseUrl = "https://your-production-api.com/api/ai/feed-chat";
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
+                {
+                    Debug.WriteLine($"[AI FEED SSL] Host: {message.RequestUri.Host}, Errors: {errors}");
+                    return true;
+                }
+            };
 #endif
+
+            _baseUrl = config.BaseUrl.TrimEnd('/') + "/api/ai/feed-chat";
 
             _httpClient = new HttpClient(handler)
             {
@@ -91,8 +93,9 @@ namespace CraftConnect_Mobile_App.Services
         {
             try
             {
-                Debug.WriteLine($"[AI FEED SERVICE] Testing connection to: {_baseUrl}");
-                var response = await _httpClient.GetAsync(_baseUrl.Replace("/api/ai/feed-chat", "/api/health"));
+                var healthUrl = _baseUrl.Replace("/api/ai/feed-chat", "/api/health");
+                Debug.WriteLine($"[AI FEED SERVICE] Testing connection to: {healthUrl}");
+                var response = await _httpClient.GetAsync(healthUrl);
                 Debug.WriteLine($"[AI FEED SERVICE] Connection test result: {response.StatusCode}");
                 return response.IsSuccessStatusCode;
             }
@@ -110,18 +113,10 @@ namespace CraftConnect_Mobile_App.Services
         {
             try
             {
-                // Set auth header from SecureStorage before making request
                 if (!await SetAuthHeaderAsync())
-                {
                     throw new UnauthorizedAccessException("Not authenticated. Please login first.");
-                }
 
-                var request = new
-                {
-                    sessionId = sessionId,
-                    message = message
-                };
-
+                var request = new { sessionId, message };
                 var json = JsonSerializer.Serialize(request);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
@@ -137,17 +132,12 @@ namespace CraftConnect_Mobile_App.Services
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var result = JsonSerializer.Deserialize<ChatApiResponse>(responseJson,
-                        new JsonSerializerOptions
-                        {
-                            PropertyNameCaseInsensitive = true
-                        });
-
-                    return result;
+                    return JsonSerializer.Deserialize<ChatApiResponse>(responseJson,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 }
                 else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 {
-                    Debug.WriteLine($"[AI FEED SERVICE] ❌ Unauthorized - Token may be expired");
+                    Debug.WriteLine("[AI FEED SERVICE] ❌ Unauthorized - Token may be expired");
                     SecureStorage.Remove("auth_token");
                     throw new UnauthorizedAccessException("Session expired. Please login again.");
                 }
@@ -191,27 +181,18 @@ namespace CraftConnect_Mobile_App.Services
         {
             try
             {
-                // Set auth header before making request
                 if (!await SetAuthHeaderAsync())
-                {
                     throw new UnauthorizedAccessException("Not authenticated. Please login first.");
-                }
 
                 using var content = new MultipartFormDataContent();
-
-                // Add session ID
                 content.Add(new StringContent(sessionId.ToString()), "sessionId");
-
-                // Add file type (invoice or document)
                 content.Add(new StringContent(fileType), "fileType");
 
-                // Add file
                 var fileContent = new StreamContent(fileStream);
                 fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
                 content.Add(fileContent, "file", fileName);
 
-                Debug.WriteLine($"[AI FEED SERVICE] Uploading file: {fileName}");
-                Debug.WriteLine($"[AI FEED SERVICE] File type: {fileType}");
+                Debug.WriteLine($"[AI FEED SERVICE] Uploading file: {fileName}, type: {fileType}");
 
                 var response = await _httpClient.PostAsync($"{_baseUrl}/upload", content);
                 var responseJson = await response.Content.ReadAsStringAsync();
@@ -221,14 +202,11 @@ namespace CraftConnect_Mobile_App.Services
                 if (response.IsSuccessStatusCode)
                 {
                     return JsonSerializer.Deserialize<FileUploadResponse>(responseJson,
-                        new JsonSerializerOptions
-                        {
-                            PropertyNameCaseInsensitive = true
-                        });
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 }
                 else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 {
-                    Debug.WriteLine($"[AI FEED SERVICE] ❌ Upload unauthorized");
+                    Debug.WriteLine("[AI FEED SERVICE] ❌ Upload unauthorized");
                     SecureStorage.Remove("auth_token");
                     throw new UnauthorizedAccessException("Session expired. Please login again.");
                 }
@@ -256,13 +234,10 @@ namespace CraftConnect_Mobile_App.Services
         {
             try
             {
-                // Set auth header before making request
                 if (!await SetAuthHeaderAsync())
-                {
                     throw new UnauthorizedAccessException("Not authenticated. Please login first.");
-                }
 
-                var request = new { sessionId = sessionId };
+                var request = new { sessionId };
                 var json = JsonSerializer.Serialize(request);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
@@ -276,14 +251,11 @@ namespace CraftConnect_Mobile_App.Services
                 if (response.IsSuccessStatusCode)
                 {
                     return JsonSerializer.Deserialize<CreateFeedResponse>(responseJson,
-                        new JsonSerializerOptions
-                        {
-                            PropertyNameCaseInsensitive = true
-                        });
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 }
                 else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 {
-                    Debug.WriteLine($"[AI FEED SERVICE] ❌ Create unauthorized");
+                    Debug.WriteLine("[AI FEED SERVICE] ❌ Create unauthorized");
                     SecureStorage.Remove("auth_token");
                     throw new UnauthorizedAccessException("Session expired. Please login again.");
                 }
