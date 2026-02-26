@@ -11,6 +11,7 @@ namespace CraftConnect_Mobile_App.PageModels
         private readonly AiFeedChatService _aiFeedService;
         private Guid _sessionId;
 
+        // ── Basic chat state ──────────────────────────────────────
         [ObservableProperty]
         private string _messageText = string.Empty;
 
@@ -23,16 +24,48 @@ namespace CraftConnect_Mobile_App.PageModels
         [ObservableProperty]
         private bool _hasAttachedFiles;
 
+        // ── Recording state ───────────────────────────────────────
+
+        /// <summary>True while the microphone is actively recording.</summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ShowMicIcon))]
+        [NotifyPropertyChangedFor(nameof(SendButtonColor))]
+        private bool _isRecording;
+
+        /// <summary>Elapsed time string shown in the recording banner, e.g. "0:12".</summary>
+        [ObservableProperty]
+        private string _recordingDuration = "0:00";
+
+        private IDispatcherTimer? _recordingTimer;
+        private int _recordingSeconds;
+
+        // ── Derived properties for XAML bindings ─────────────────
+
+        /// <summary>Show the mic icon when no text AND not recording.</summary>
+        public bool ShowMicIcon => string.IsNullOrWhiteSpace(MessageText) && !IsRecording;
+
+        /// <summary>Button is red while recording, otherwise WhatsApp teal.</summary>
+        public Color SendButtonColor => IsRecording ? Color.FromArgb("#D32F2F") : Color.FromArgb("#075E54");
+
+        // ── Collections ───────────────────────────────────────────
+
         public ObservableCollection<AiChatMessageViewModel> Messages { get; } = new();
         public ObservableCollection<AttachedFileViewModel> AttachedFiles { get; } = new();
+
+        // ─────────────────────────────────────────────────────────
+        // Constructor
+        // ─────────────────────────────────────────────────────────
 
         public AiFeedChatPageModel(AiFeedChatService aiFeedService)
         {
             _aiFeedService = aiFeedService;
             _sessionId = Guid.NewGuid();
-
             Debug.WriteLine($"[AI CHAT MODEL] Session ID: {_sessionId}");
         }
+
+        // ─────────────────────────────────────────────────────────
+        // Initialization
+        // ─────────────────────────────────────────────────────────
 
         public async Task InitializeAsync()
         {
@@ -41,14 +74,10 @@ namespace CraftConnect_Mobile_App.PageModels
 
             try
             {
-                // Load auth token if available
                 var token = Preferences.Get("auth_token", string.Empty);
                 if (!string.IsNullOrEmpty(token))
-                {
                     _aiFeedService.SetAuthToken(token);
-                }
 
-                // Send initial greeting request (empty message triggers greeting)
                 await SendInitialGreeting();
             }
             catch (Exception ex)
@@ -69,13 +98,9 @@ namespace CraftConnect_Mobile_App.PageModels
                 var response = await _aiFeedService.SendMessageAsync(_sessionId, "");
 
                 if (response != null && !string.IsNullOrEmpty(response.Message))
-                {
                     await AddAiMessage(response.Message, false);
-                }
                 else
-                {
                     await AddAiMessage("Hello! 👋 I'm your AI assistant. I can help you create a professional feed post. Would you like to get started?", false);
-                }
             }
             catch (Exception ex)
             {
@@ -84,8 +109,12 @@ namespace CraftConnect_Mobile_App.PageModels
             }
         }
 
+        // ─────────────────────────────────────────────────────────
+        // Send text message
+        // ─────────────────────────────────────────────────────────
+
         [RelayCommand]
-        private async Task SendMessage()
+        public async Task SendMessage()
         {
             if (string.IsNullOrWhiteSpace(MessageText))
                 return;
@@ -93,10 +122,118 @@ namespace CraftConnect_Mobile_App.PageModels
             var userMessage = MessageText.Trim();
             MessageText = string.Empty;
 
-            // Add user message immediately
             await AddUserMessage(userMessage);
+            await DispatchAiResponse(userMessage);
+        }
 
-            // Show typing indicator
+        // ─────────────────────────────────────────────────────────
+        // Recording state management (called from code-behind)
+        // ─────────────────────────────────────────────────────────
+
+        /// <summary>Called by code-behind when recording starts.</summary>
+        public void StartRecordingState()
+        {
+            _recordingSeconds = 0;
+            RecordingDuration = "0:00";
+            IsRecording = true;
+
+            // Tick every second to update the duration label
+            _recordingTimer = Application.Current!.Dispatcher.CreateTimer();
+            _recordingTimer.Interval = TimeSpan.FromSeconds(1);
+            _recordingTimer.Tick += OnRecordingTimerTick;
+            _recordingTimer.Start();
+
+            StatusText = "🎙 Recording...";
+            Debug.WriteLine("[AI CHAT MODEL] Recording state started");
+        }
+
+        /// <summary>Called by code-behind when recording stops (send or discard).</summary>
+        public void StopRecordingState()
+        {
+            IsRecording = false;
+            StatusText = "Online";
+
+            _recordingTimer?.Stop();
+            _recordingTimer = null;
+
+            RecordingDuration = "0:00";
+            _recordingSeconds = 0;
+            Debug.WriteLine("[AI CHAT MODEL] Recording state stopped");
+        }
+
+        private void OnRecordingTimerTick(object? sender, EventArgs e)
+        {
+            _recordingSeconds++;
+            var minutes = _recordingSeconds / 60;
+            var seconds = _recordingSeconds % 60;
+            RecordingDuration = $"{minutes}:{seconds:D2}";
+        }
+
+        // ─────────────────────────────────────────────────────────
+        // Send voice message
+        // ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Uploads the recorded audio file and sends it to the AI service.
+        /// If your backend supports speech-to-text, pass the transcription back
+        /// through the normal chat flow. Otherwise the audio is attached as a file.
+        /// </summary>
+        public async Task SendVoiceMessageAsync(string filePath)
+        {
+            try
+            {
+                IsBusy = true;
+                StatusText = "Sending voice note...";
+
+                // Show the voice note in the chat bubble
+                var durationLabel = RecordingDuration == "0:00" ? "" : $" ({RecordingDuration})";
+                await AddUserMessage($"🎙 Voice note{durationLabel}");
+
+                var fileName = Path.GetFileName(filePath);
+
+                // --- Option A: upload audio to your backend -------------------------
+                // If AiFeedChatService has an audio/transcription endpoint:
+                using var stream = File.OpenRead(filePath);
+                var response = await _aiFeedService.UploadFileAsync(_sessionId, stream, fileName, "voice");
+
+                if (response?.Success == true && !string.IsNullOrEmpty(response.Message))
+                {
+                    // The backend returned a transcription or an acknowledgement
+                    await DispatchAiResponse(response.Message, alreadyFromServer: true);
+                }
+                else
+                {
+                    // Fallback: tell the AI we sent a voice note
+                    await DispatchAiResponse("[voice note attached]");
+                }
+                // --- Option B: if you only want to transcribe locally and send text --
+                // Replace the block above with local STT (e.g. Microsoft.CognitiveServices.Speech)
+                // and call: await DispatchAiResponse(transcribedText);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[AI CHAT MODEL] ❌ Voice upload error: {ex.Message}");
+                await AddAiMessage("Sorry, I couldn't process your voice note. Please try typing instead.", false);
+                StatusText = "Online";
+            }
+            finally
+            {
+                IsBusy = false;
+
+                // Clean up the temp audio file
+                try { if (File.Exists(filePath)) File.Delete(filePath); }
+                catch { /* non-critical */ }
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────
+        // Shared AI response dispatcher
+        // ─────────────────────────────────────────────────────────
+
+        /// <param name="userInput">Text sent to the AI (or already-received server text).</param>
+        /// <param name="alreadyFromServer">When true, skip the API call and display directly.</param>
+        private async Task DispatchAiResponse(string userInput, bool alreadyFromServer = false)
+        {
             var typingMessage = new AiChatMessageViewModel
             {
                 IsFromAi = true,
@@ -109,82 +246,77 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 StatusText = "AI is thinking...";
 
-                // Send to API via service
-                var response = await _aiFeedService.SendMessageAsync(_sessionId, userMessage);
+                string replyText;
 
-                // Remove typing indicator
-                Messages.Remove(typingMessage);
-
-                if (response != null)
+                if (alreadyFromServer)
                 {
-                    await AddAiMessage(response.Message, false);
-                    StatusText = "Online";
-
-                    // Check if ready to create feed
-                    if (response.ReadyToCreate)
-                    {
-                        await Task.Delay(1000); // Brief pause before creating
-                        await CreateFeed();
-                    }
+                    replyText = userInput;
                 }
                 else
                 {
-                    await AddAiMessage("Sorry, I didn't receive a response. Please try again.", false);
-                    StatusText = "Error";
+                    var response = await _aiFeedService.SendMessageAsync(_sessionId, userInput);
+                    replyText = response?.Message ?? "Sorry, I didn't receive a response. Please try again.";
+                }
+
+                Messages.Remove(typingMessage);
+                await AddAiMessage(replyText, false);
+                StatusText = "Online";
+
+                // Check if AI signalled the feed is ready to create
+                var apiResponse = alreadyFromServer ? null : await _aiFeedService.SendMessageAsync(_sessionId, userInput);
+                if (apiResponse?.ReadyToCreate == true)
+                {
+                    await Task.Delay(1000);
+                    await CreateFeed();
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[AI CHAT MODEL] ❌ Send error: {ex.Message}");
+                Debug.WriteLine($"[AI CHAT MODEL] ❌ DispatchAiResponse error: {ex.Message}");
                 Messages.Remove(typingMessage);
 
-                var errorMessage = ex.Message.Contains("Network")
-                    ? "Network error. Please check your connection."
-                    : ex.Message.Contains("timed out")
-                    ? "Request timed out. Please try again."
-                    : "Sorry, something went wrong. Please try again.";
-
+                var errorMessage = ex.Message.Contains("Network") ? "Network error. Please check your connection."
+                                 : ex.Message.Contains("timed out") ? "Request timed out. Please try again."
+                                                                     : "Sorry, something went wrong. Please try again.";
                 await AddAiMessage(errorMessage, false);
                 StatusText = "Error";
             }
         }
 
+        // ─────────────────────────────────────────────────────────
+        // Message helpers
+        // ─────────────────────────────────────────────────────────
+
         private async Task AddUserMessage(string message)
         {
-            var msg = new AiChatMessageViewModel
+            Messages.Add(new AiChatMessageViewModel
             {
                 Message = message,
                 IsFromUser = true,
                 IsFromAi = false,
                 Timestamp = DateTime.Now
-            };
-
-            Messages.Add(msg);
+            });
             await Task.Delay(100);
         }
 
         private async Task AddAiMessage(string message, bool isTyping)
         {
-            if (isTyping)
-            {
-                await Task.Delay(800);
-            }
+            if (isTyping) await Task.Delay(800);
 
-            var msg = new AiChatMessageViewModel
+            Messages.Add(new AiChatMessageViewModel
             {
                 Message = message,
                 IsFromAi = true,
                 IsFromUser = false,
                 Timestamp = DateTime.Now
-            };
-
-            Messages.Add(msg);
+            });
             await Task.Delay(100);
         }
 
-        /// <summary>
-        /// Handles file attachment from the UI
-        /// </summary>
+        // ─────────────────────────────────────────────────────────
+        // File attachment
+        // ─────────────────────────────────────────────────────────
+
         public async Task AttachFile(FileResult file, string fileType)
         {
             if (file == null) return;
@@ -196,43 +328,27 @@ namespace CraftConnect_Mobile_App.PageModels
 
                 Debug.WriteLine($"[AI CHAT MODEL] Attaching file: {file.FileName}");
 
-                // Open file stream
                 using var stream = await file.OpenReadAsync();
+                var response = await _aiFeedService.UploadFileAsync(_sessionId, stream, file.FileName, fileType);
 
-                // Upload via service
-                var response = await _aiFeedService.UploadFileAsync(
-                    _sessionId,
-                    stream,
-                    file.FileName,
-                    fileType
-                );
-
-                if (response != null && response.Success)
+                if (response?.Success == true)
                 {
-                    // Add to attached files list
-                    var attachedFile = new AttachedFileViewModel
+                    AttachedFiles.Add(new AttachedFileViewModel
                     {
                         FileName = file.FileName,
                         FileType = fileType == "invoice" ? "Invoice" : "Document",
                         FilePath = file.FullPath ?? ""
-                    };
-
-                    AttachedFiles.Add(attachedFile);
+                    });
                     HasAttachedFiles = AttachedFiles.Count > 0;
 
-                    // Show confirmation in chat
                     var fileEmoji = fileType == "invoice" ? "🧾" : "📎";
                     await AddUserMessage($"{fileEmoji} Attached: {file.FileName}");
-
                     await Task.Delay(500);
 
                     var confirmMessage = fileType == "invoice"
                         ? "Great! I've received your invoice. You can attach more documents or type 'done' to continue."
                         : "Perfect! I've got your document. Feel free to attach more or type 'done' when ready.";
-
                     await AddAiMessage(confirmMessage, false);
-
-                    Debug.WriteLine($"[AI CHAT MODEL] ✅ File uploaded successfully");
                 }
                 else
                 {
@@ -244,12 +360,7 @@ namespace CraftConnect_Mobile_App.PageModels
             catch (Exception ex)
             {
                 Debug.WriteLine($"[AI CHAT MODEL] ❌ Upload error: {ex.Message}");
-
-                var errorMessage = ex.Message.Contains("upload")
-                    ? ex.Message
-                    : "Failed to upload file. Please check your connection and try again.";
-
-                await AddAiMessage(errorMessage, false);
+                await AddAiMessage("Failed to upload file. Please check your connection and try again.", false);
                 StatusText = "Online";
             }
             finally
@@ -266,6 +377,10 @@ namespace CraftConnect_Mobile_App.PageModels
             HasAttachedFiles = AttachedFiles.Count > 0;
         }
 
+        // ─────────────────────────────────────────────────────────
+        // Feed creation
+        // ─────────────────────────────────────────────────────────
+
         private async Task CreateFeed()
         {
             try
@@ -273,30 +388,24 @@ namespace CraftConnect_Mobile_App.PageModels
                 StatusText = "Creating your feed...";
                 IsBusy = true;
 
-                Debug.WriteLine("[AI CHAT MODEL] Creating feed...");
-
                 var response = await _aiFeedService.CreateFeedAsync(_sessionId);
 
-                if (response != null && response.Success)
+                if (response?.Success == true)
                 {
-                    await AddAiMessage("🎉 Success! Your feed has been created and is now live. You can view it in your feed list.", false);
-
-                    Debug.WriteLine("[AI CHAT MODEL] ✅ Feed created successfully");
-
-                    // Navigate back after a delay
+                    await AddAiMessage("🎉 Success! Your feed has been created and is now live.", false);
                     await Task.Delay(2500);
                     await Shell.Current.GoToAsync("..");
                 }
                 else
                 {
-                    var errorMsg = response?.Message ?? "Unknown error occurred";
-                    await AddAiMessage($"There was an error creating your feed: {errorMsg}. Please try again or contact support.", false);
+                    var errorMsg = response?.Message ?? "Unknown error";
+                    await AddAiMessage($"There was an error creating your feed: {errorMsg}. Please try again.", false);
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[AI CHAT MODEL] ❌ Create error: {ex.Message}");
-                await AddAiMessage("Failed to create your feed. Please try again or contact support if the problem persists.", false);
+                await AddAiMessage("Failed to create your feed. Please try again or contact support.", false);
             }
             finally
             {
@@ -314,52 +423,29 @@ namespace CraftConnect_Mobile_App.PageModels
         }
     }
 
-    #region View Models
+    // ─────────────────────────────────────────────────────────────
+    // View Models
+    // ─────────────────────────────────────────────────────────────
 
     public partial class AiChatMessageViewModel : ObservableObject
     {
-        [ObservableProperty]
-        private string _message = string.Empty;
-
-        [ObservableProperty]
-        private bool _isFromUser;
-
-        [ObservableProperty]
-        private bool _isFromAi;
-
-        [ObservableProperty]
-        private bool _isTyping;
-
-        [ObservableProperty]
-        private DateTime _timestamp;
-
-        [ObservableProperty]
-        private bool _hasAttachment;
-
-        [ObservableProperty]
-        private string _attachmentName = string.Empty;
-
-        [ObservableProperty]
-        private string _attachmentType = string.Empty;
+        [ObservableProperty] private string _message = string.Empty;
+        [ObservableProperty] private bool _isFromUser;
+        [ObservableProperty] private bool _isFromAi;
+        [ObservableProperty] private bool _isTyping;
+        [ObservableProperty] private DateTime _timestamp;
+        [ObservableProperty] private bool _hasAttachment;
+        [ObservableProperty] private string _attachmentName = string.Empty;
+        [ObservableProperty] private string _attachmentType = string.Empty;
 
         public string DisplayTime => Timestamp.ToString("HH:mm");
-
-        public LayoutOptions AttachmentAlignment => IsFromUser
-            ? LayoutOptions.End
-            : LayoutOptions.Start;
+        public LayoutOptions AttachmentAlignment => IsFromUser ? LayoutOptions.End : LayoutOptions.Start;
     }
 
     public partial class AttachedFileViewModel : ObservableObject
     {
-        [ObservableProperty]
-        private string _fileName = string.Empty;
-
-        [ObservableProperty]
-        private string _fileType = string.Empty;
-
-        [ObservableProperty]
-        private string _filePath = string.Empty;
+        [ObservableProperty] private string _fileName = string.Empty;
+        [ObservableProperty] private string _fileType = string.Empty;
+        [ObservableProperty] private string _filePath = string.Empty;
     }
-
-    #endregion
 }

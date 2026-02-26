@@ -1,50 +1,79 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace CraftConnect_Mobile_App.Models
 {
-    public class GroupChatItem
+    public class GroupChatItem : INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string name = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
         public string Id { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
         public string ImageUrl { get; set; }
         public List<GroupMember> Members { get; set; } = new();
-        public int MemberCount => Members?.Count ?? 0;
+
+        /// <summary>
+        /// Uses the real Members list when populated, otherwise falls back to
+        /// the count value received from the API (set via the setter).
+        /// </summary>
+        private int _memberCount;
+        public int MemberCount
+        {
+            get => Members?.Count > 0 ? Members.Count : _memberCount;
+            set => _memberCount = value;
+        }
+
         public string CreatedBy { get; set; }
         public DateTime CreatedAt { get; set; }
 
-        // Last message properties
+        // ── Last message properties ───────────────────────────────────
         public string LastMessage { get; set; }
         public string LastMessageSender { get; set; }
         public DateTime LastMessageTime { get; set; }
         public bool LastMessageIsRead { get; set; }
         public bool LastMessageIsDelivered { get; set; }
 
-        // Chat status properties
-        public int UnreadCount { get; set; }
+        // ── Chat status properties ────────────────────────────────────
+        // UnreadCount uses INotifyPropertyChanged so the UI badge updates
+        // when RefreshUnreadCountsAsync assigns a new value without full reload.
+        private int _unreadCount;
+        public int UnreadCount
+        {
+            get => _unreadCount;
+            set
+            {
+                if (_unreadCount == value) return;
+                _unreadCount = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasUnreadMessages));
+            }
+        }
+
         public bool IsMuted { get; set; }
         public bool IsPinned { get; set; }
         public bool IsArchived { get; set; }
         public bool IsRead => LastMessageIsRead;
         public bool IsDelivered => LastMessageIsDelivered;
-        public bool HasUnreadMessages => UnreadCount > 0;
+        public bool HasUnreadMessages => _unreadCount > 0;
 
-        // For display in chat list
+        // ── Display helpers ───────────────────────────────────────────
         public string LastMessagePreview => GetLastMessagePreview();
         public string DisplayTime => GetDisplayTime();
         public string Initial => GetInitial();
 
-        // Helper methods
         private string GetLastMessagePreview()
         {
             if (string.IsNullOrEmpty(LastMessage))
                 return "No messages yet";
 
-            if (LastMessage.Length > 40)
-                return LastMessage.Substring(0, 40) + "...";
-
-            return LastMessage;
+            return LastMessage.Length > 40
+                ? LastMessage.Substring(0, 40) + "..."
+                : LastMessage;
         }
 
         private string GetDisplayTime()
@@ -52,25 +81,15 @@ namespace CraftConnect_Mobile_App.Models
             var now = DateTime.Now;
 
             if (LastMessageTime.Date == now.Date)
-            {
-                // Today: show time only
                 return LastMessageTime.ToString("HH:mm");
-            }
-            else if (LastMessageTime.Date == now.Date.AddDays(-1))
-            {
-                // Yesterday
+
+            if (LastMessageTime.Date == now.Date.AddDays(-1))
                 return "Yesterday";
-            }
-            else if (LastMessageTime.Year == now.Year)
-            {
-                // Same year: show day and month
+
+            if (LastMessageTime.Year == now.Year)
                 return LastMessageTime.ToString("dd MMM");
-            }
-            else
-            {
-                // Different year: show full date
-                return LastMessageTime.ToString("dd/MM/yy");
-            }
+
+            return LastMessageTime.ToString("dd/MM/yy");
         }
 
         private string GetInitial()
@@ -82,20 +101,13 @@ namespace CraftConnect_Mobile_App.Models
             var words = namePart.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
             if (words.Length >= 2)
-            {
-                // Two or more words: take first letter of first two words
                 return $"{words[0][0]}{words[1][0]}".ToUpper();
-            }
-            else if (namePart.Length >= 2)
-            {
-                // Single word: take first two letters
+
+            if (namePart.Length >= 2)
                 return namePart.Substring(0, 2).ToUpper();
-            }
-            else if (namePart.Length == 1)
-            {
-                // Single character: just return it
+
+            if (namePart.Length == 1)
                 return namePart.ToUpper();
-            }
 
             return "??";
         }
@@ -129,7 +141,6 @@ namespace CraftConnect_Mobile_App.Models
         public bool IsRead { get; set; }
         public bool IsDelivered { get; set; }
 
-        // Computed properties
         public string LastMessagePreview => GetLastMessagePreview();
         public string DisplayTime => GetDisplayTime();
         public bool HasUnreadMessages => UnreadCount > 0;
@@ -139,10 +150,9 @@ namespace CraftConnect_Mobile_App.Models
             if (string.IsNullOrEmpty(LastMessage))
                 return IsGroupChat ? "No messages yet" : "Start a conversation";
 
-            if (LastMessage.Length > 40)
-                return LastMessage.Substring(0, 40) + "...";
-
-            return LastMessage;
+            return LastMessage.Length > 40
+                ? LastMessage.Substring(0, 40) + "..."
+                : LastMessage;
         }
 
         private string GetDisplayTime()
@@ -150,21 +160,15 @@ namespace CraftConnect_Mobile_App.Models
             var now = DateTime.Now;
 
             if (LastMessageTime.Date == now.Date)
-            {
                 return LastMessageTime.ToString("HH:mm");
-            }
-            else if (LastMessageTime.Date == now.Date.AddDays(-1))
-            {
+
+            if (LastMessageTime.Date == now.Date.AddDays(-1))
                 return "Yesterday";
-            }
-            else if (LastMessageTime.Year == now.Year)
-            {
+
+            if (LastMessageTime.Year == now.Year)
                 return LastMessageTime.ToString("dd MMM");
-            }
-            else
-            {
-                return LastMessageTime.ToString("dd/MM/yy");
-            }
+
+            return LastMessageTime.ToString("dd/MM/yy");
         }
     }
 
@@ -202,7 +206,7 @@ namespace CraftConnect_Mobile_App.Models
         public string MediaUrl { get; set; }
         public string MediaThumbnail { get; set; }
         public long? MediaSize { get; set; }
-        public string MediaDuration { get; set; } // For audio/video
+        public string MediaDuration { get; set; }
         public string MediaCaption { get; set; }
     }
 

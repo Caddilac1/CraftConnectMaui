@@ -1,442 +1,492 @@
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="CraftConnect_Mobile_App.Pages.LoginPage"
              xmlns:pagemodels="clr-namespace:CraftConnect_Mobile_App.PageModels"
+             xmlns:controls="clr-namespace:CraftConnect_Mobile_App.Controls"
              x:DataType="pagemodels:LoginPageModel"
              Shell.NavBarIsVisible="False"
-             BackgroundColor="{StaticResource Primary}">
+             BackgroundColor="#1B2B3A">
 
     <Grid>
-        <!-- Background with gradient effect -->
+        <!-- Background split -->
         <Grid.RowDefinitions>
-            <RowDefinition Height="0.35*" />
-            <RowDefinition Height="0.65*" />
+            <RowDefinition Height="0.36*"/>
+            <RowDefinition Height="0.64*"/>
         </Grid.RowDefinitions>
 
-        <BoxView Grid.Row="0" Color="{StaticResource Primary}" />
-        <BoxView Grid.Row="1" Color="{StaticResource White}" />
+        <BoxView Grid.Row="0" Color="#1B2B3A"/>
 
+        <Border Grid.Row="1" BackgroundColor="White" StrokeThickness="0">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="36,36,0,0"/>
+            </Border.StrokeShape>
+        </Border>
+
+        <!-- Scrollable content -->
         <ScrollView Grid.RowSpan="2">
-            <VerticalStackLayout 
-                Padding="{OnPlatform Android='30,20,30,80', Default='30'}"
-                Spacing="20"
-                VerticalOptions="Center">
+            <VerticalStackLayout Spacing="0"
+                                 Padding="{OnPlatform Android='0,0,0,60', Default='0,0,0,40'}">
 
-                <!-- Logo/App Header -->
-                <VerticalStackLayout 
-                    Spacing="16"
-                    HorizontalOptions="Center"
-                    Margin="0,0,0,20">
+                <!-- ══ HERO ══════════════════════════════════════════ -->
+                <VerticalStackLayout Padding="24,52,24,32"
+                                     Spacing="12"
+                                     HorizontalOptions="Center">
 
-                    <!-- Logo Icon Container -->
-                    <Frame 
-                        BackgroundColor="{StaticResource White}"
-                        CornerRadius="16"
-                        HasShadow="True"
-                        HeightRequest="70"
-                        WidthRequest="70"
-                        Padding="0"
-                        HorizontalOptions="Center">
-                        <Label
-                            Text="🔧"
-                            FontSize="40"
-                            HorizontalOptions="Center"
-                            VerticalOptions="Center"/>
+                    <!-- White rounded icon with wrench -->
+                    <Frame BackgroundColor="White"
+                           CornerRadius="22"
+                           HasShadow="True"
+                           WidthRequest="100"
+                           HeightRequest="100"
+                           Padding="0"
+                           HorizontalOptions="Center"
+                           IsClippedToBounds="True">
+                        <Label Text="🔧"
+                               FontSize="54"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"/>
                     </Frame>
 
-                    <!-- App Title -->
-                    <VerticalStackLayout Spacing="8">
-                        <Label 
-                            Text="CraftConnect"
-                            FontSize="28"
-                            FontAttributes="Bold"
-                            HorizontalOptions="Center"
-                            TextColor="{StaticResource White}"/>
+                    <Label Text="CraftConnect"
+                           FontSize="26"
+                           FontAttributes="Bold"
+                           TextColor="White"
+                           HorizontalOptions="Center"/>
 
-                        <Label 
-                            Text="Connect with skilled artisans"
-                            FontSize="14"
-                            TextColor="{StaticResource White}"
-                            HorizontalOptions="Center"
-                            Opacity="0.9"/>
-                    </VerticalStackLayout>
+                    <HorizontalStackLayout HorizontalOptions="Center" Spacing="5">
+                        <Label Text="◆" FontSize="10" TextColor="#2DC98E" VerticalOptions="Center"/>
+                        <Label Text="Where Craftsmanship Meets Opportunity"
+                               FontSize="12" TextColor="#8AABB8" VerticalOptions="Center"/>
+                    </HorizontalStackLayout>
+
                 </VerticalStackLayout>
 
-                <!-- Login Card -->
-                <Frame 
-                    BackgroundColor="{StaticResource White}"
-                    CornerRadius="20"
-                    HasShadow="True"
-                    Padding="28"
-                    Margin="0,0,0,20">
+                <!-- ══ FORM PANEL ════════════════════════════════════ -->
+                <VerticalStackLayout BackgroundColor="White"
+                                     Padding="28,32,28,28"
+                                     Spacing="0">
 
-                    <VerticalStackLayout Spacing="24">
+                    <Label Text="Welcome Back"
+                           FontSize="23"
+                           FontAttributes="Bold"
+                           TextColor="#1B2B3A"
+                           HorizontalOptions="Center"
+                           Margin="0,0,0,4"/>
 
-                        <!-- Header -->
-                        <VerticalStackLayout Spacing="8">
-                            <Label 
-                                Text="Welcome Back"
-                                FontSize="24"
-                                FontAttributes="Bold"
-                                TextColor="{StaticResource OffBlack}"
-                                HorizontalOptions="Start"/>
+                    <Label Text="{Binding AuthModeSubtitle}"
+                           FontSize="13"
+                           TextColor="#8899A8"
+                           HorizontalOptions="Center"
+                           Margin="0,0,0,20"/>
 
-                            <Label 
-                                Text="Sign in to your CraftConnect account"
-                                FontSize="14"
-                                TextColor="{StaticResource Gray500}"
-                                HorizontalOptions="Start"/>
-                        </VerticalStackLayout>
+                    <!-- Auth badge pill -->
+                    <Border HorizontalOptions="Center"
+                            StrokeThickness="1.5"
+                            Margin="0,0,0,24">
+                        <Border.Stroke>
+                            <SolidColorBrush Color="#D1E8FF"/>
+                        </Border.Stroke>
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="20"/>
+                        </Border.StrokeShape>
+                        <HorizontalStackLayout Padding="16,10" Spacing="8">
+                            <Label Text="{Binding AuthModeBadgeIcon}"
+                                   FontSize="14" VerticalOptions="Center"/>
+                            <Label Text="{Binding AuthModeBadgeText}"
+                                   FontSize="12"
+                                   FontAttributes="Bold"
+                                   TextColor="#1A4DAD"
+                                   VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                    </Border>
 
-                        <!-- Auth Mode Badge -->
-                        <Frame 
-                            BackgroundColor="#FEF3C7"
-                            BorderColor="Transparent"
-                            CornerRadius="20"
-                            Padding="8,6"
-                            HasShadow="False"
-                            HorizontalOptions="Start">
-                            <Label 
-                                Text="{Binding AuthModeBadge}"
-                                FontSize="12"
-                                FontAttributes="Bold"
-                                TextColor="#F59E0B"/>
-                        </Frame>
-
-                        <!-- Form -->
-                        <VerticalStackLayout Spacing="20">
-
-                            <!-- Email/Phone Input -->
-                            <VerticalStackLayout Spacing="6">
-                                <Label 
-                                    FontSize="13"
-                                    FontAttributes="Bold"
-                                    TextColor="{StaticResource OffBlack}">
-                                    <Label.FormattedText>
-                                        <FormattedString>
-                                            <Span Text="Email or Phone Number "/>
-                                            <Span Text="*" TextColor="#EF4444"/>
-                                        </FormattedString>
-                                    </Label.FormattedText>
-                                </Label>
-
-                                <Frame 
-                                    BackgroundColor="#FEFEFE"
-                                    BorderColor="{StaticResource Gray200}"
-                                    CornerRadius="12"
-                                    Padding="0"
-                                    HasShadow="False">
-                                    <Entry 
-                                        Placeholder="Enter your email or phone number"
-                                        Text="{Binding EmailOrPhone}"
-                                        Keyboard="Email"
-                                        TextColor="{StaticResource OffBlack}"
-                                        PlaceholderColor="{StaticResource Gray400}"
-                                        FontSize="15"
-                                        Margin="16,14"/>
-                                </Frame>
-
-                                <Label 
-                                    Text="You can use either your email address or phone number"
-                                    FontSize="12"
-                                    TextColor="{StaticResource Gray500}"
-                                    Margin="4,2,0,0"/>
-                            </VerticalStackLayout>
-
-                            <!-- Password Section (Conditionally Visible) -->
-                            <VerticalStackLayout 
-                                Spacing="6"
-                                IsVisible="{Binding IsPasswordMode}">
-
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <Label 
-                                        Grid.Column="0"
-                                        FontSize="13"
-                                        FontAttributes="Bold"
-                                        TextColor="{StaticResource OffBlack}">
-                                        <Label.FormattedText>
-                                            <FormattedString>
-                                                <Span Text="Password "/>
-                                                <Span Text="*" TextColor="#EF4444"/>
-                                            </FormattedString>
-                                        </Label.FormattedText>
-                                    </Label>
-
-                                    <Label 
-                                        Grid.Column="1"
-                                        Text="Forgot?"
-                                        FontSize="13"
-                                        FontAttributes="Bold"
-                                        TextColor="{StaticResource Primary}"
-                                        HorizontalOptions="End">
-                                        <Label.GestureRecognizers>
-                                            <TapGestureRecognizer 
-                                                Command="{Binding ForgotPasswordCommand}"/>
-                                        </Label.GestureRecognizers>
-                                    </Label>
-                                </Grid>
-
-                                <Frame 
-                                    BackgroundColor="#FEFEFE"
-                                    BorderColor="{StaticResource Gray200}"
-                                    CornerRadius="12"
-                                    Padding="0"
-                                    HasShadow="False">
-                                    <Grid ColumnDefinitions="*,Auto" Margin="16,14">
-                                        <Entry 
-                                            Grid.Column="0"
-                                            Placeholder="Enter your password"
-                                            Text="{Binding Password}"
-                                            IsPassword="{Binding IsPasswordVisible, Converter={StaticResource InvertedBoolConverter}}"
-                                            TextColor="{StaticResource OffBlack}"
-                                            PlaceholderColor="{StaticResource Gray400}"
-                                            FontSize="15"/>
-
-                                        <Label
-                                            Grid.Column="1"
-                                            Text="{Binding IsPasswordVisible, Converter={StaticResource PasswordTextConverter}}"
-                                            FontSize="13"
-                                            FontAttributes="Bold"
-                                            TextColor="{StaticResource Gray500}"
-                                            VerticalOptions="Center"
-                                            Padding="10,6">
-                                            <Label.GestureRecognizers>
-                                                <TapGestureRecognizer 
-                                                    Command="{Binding TogglePasswordVisibilityCommand}"/>
-                                            </Label.GestureRecognizers>
-                                        </Label>
-                                    </Grid>
-                                </Frame>
-                            </VerticalStackLayout>
-
-                            <!-- Remember Me (Only visible in password mode) -->
-                            <HorizontalStackLayout 
-                                Spacing="10"
-                                IsVisible="{Binding IsPasswordMode}">
-                                <CheckBox 
-                                    IsChecked="{Binding RememberMe}"
-                                    Color="{StaticResource Primary}"/>
-                                <Label 
-                                    Text="Remember me"
-                                    FontSize="14"
-                                    TextColor="{StaticResource Gray500}"
-                                    VerticalOptions="Center"/>
-                            </HorizontalStackLayout>
-
-                            <!-- ═══════════════════════════════════════════════════ -->
-                            <!-- CAPTCHA / HUMAN VERIFICATION — Visible in BOTH modes -->
-                            <!-- ═══════════════════════════════════════════════════ -->
-                            <Frame 
-                                BackgroundColor="#F9FAFB"
-                                BorderColor="{StaticResource Gray200}"
-                                CornerRadius="14"
-                                Padding="16,14"
-                                HasShadow="False">
-                                <VerticalStackLayout Spacing="12">
-
-                                    <!-- Captcha Header Row -->
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <VerticalStackLayout Grid.Column="0" Spacing="2">
-                                            <Label 
-                                                Text="Human Verification"
-                                                FontSize="13"
-                                                FontAttributes="Bold"
-                                                TextColor="{StaticResource OffBlack}"/>
-                                            <Label 
-                                                Text="Answer to confirm you're human."
-                                                FontSize="11"
-                                                TextColor="{StaticResource Gray500}"/>
-                                        </VerticalStackLayout>
-
-                                        <!-- Refresh Captcha Button -->
-                                        <Label 
-                                            Grid.Column="1"
-                                            Text="🔄"
-                                            FontSize="20"
-                                            VerticalOptions="Center"
-                                            Padding="6,0">
-                                            <Label.GestureRecognizers>
-                                                <TapGestureRecognizer 
-                                                    Command="{Binding RefreshCaptchaCommand}"/>
-                                            </Label.GestureRecognizers>
-                                        </Label>
-                                    </Grid>
-
-                                    <!-- Captcha Question -->
-                                    <Frame 
-                                        BackgroundColor="#FEF3C7"
-                                        BorderColor="#FDE68A"
-                                        CornerRadius="10"
-                                        Padding="14,10"
-                                        HasShadow="False">
-                                        <Label 
-                                            Text="{Binding CaptchaQuestion}"
-                                            FontSize="15"
-                                            FontAttributes="Bold"
-                                            TextColor="#92400E"
-                                            HorizontalOptions="Center"/>
-                                    </Frame>
-
-                                    <!-- Captcha Answer Input -->
-                                    <Frame 
-                                        BackgroundColor="{StaticResource White}"
-                                        BorderColor="{StaticResource Gray200}"
-                                        CornerRadius="10"
-                                        Padding="0"
-                                        HasShadow="False">
-                                        <Entry 
-                                            Placeholder="Your answer"
-                                            Text="{Binding CaptchaAnswer}"
-                                            Keyboard="Numeric"
-                                            TextColor="{StaticResource OffBlack}"
-                                            PlaceholderColor="{StaticResource Gray400}"
-                                            FontSize="15"
-                                            Margin="14,12"/>
-                                    </Frame>
-
-                                </VerticalStackLayout>
-                            </Frame>
-                            <!-- ═══════════════════════════════════════════════════ -->
-
-                            <!-- Error Message -->
-                            <Frame 
-                                IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyConverter}}"
-                                BackgroundColor="#FEE2E2"
-                                BorderColor="#FCA5A5"
-                                CornerRadius="10"
-                                Padding="14,12"
-                                HasShadow="False">
-                                <Label 
-                                    Text="{Binding ErrorMessage}"
-                                    TextColor="#991B1B"
-                                    FontSize="13"
-                                    LineBreakMode="WordWrap"/>
-                            </Frame>
-
-                            <!-- Success Message -->
-                            <Frame 
-                                IsVisible="{Binding SuccessMessage, Converter={StaticResource StringNotEmptyConverter}}"
-                                BackgroundColor="#D1FAE5"
-                                BorderColor="#6EE7B7"
-                                CornerRadius="10"
-                                Padding="14,12"
-                                HasShadow="False">
-                                <Label 
-                                    Text="{Binding SuccessMessage}"
-                                    TextColor="#065F46"
-                                    FontSize="13"
-                                    LineBreakMode="WordWrap"/>
-                            </Frame>
-
-                            <!-- Info Message -->
-                            <Frame 
-                                IsVisible="{Binding InfoMessage, Converter={StaticResource StringNotEmptyConverter}}"
-                                BackgroundColor="#DBEAFE"
-                                BorderColor="#93C5FD"
-                                CornerRadius="10"
-                                Padding="14,12"
-                                HasShadow="False">
-                                <Label 
-                                    Text="{Binding InfoMessage}"
-                                    TextColor="#1E40AF"
-                                    FontSize="13"
-                                    LineBreakMode="WordWrap"/>
-                            </Frame>
-
-                            <!-- Main Action Button -->
-                            <Button 
-                                Text="{Binding MainButtonText}"
-                                Command="{Binding MainActionCommand}"
-                                BackgroundColor="{StaticResource Primary}"
-                                TextColor="White"
-                                CornerRadius="12"
-                                HeightRequest="56"
-                                FontSize="16"
-                                FontAttributes="Bold"
-                                Margin="0,8,0,0">
-                                <Button.Triggers>
-                                    <DataTrigger TargetType="Button" 
-                                                 Binding="{Binding IsBusy}" 
-                                                 Value="True">
-                                        <Setter Property="IsEnabled" Value="False"/>
-                                        <Setter Property="Opacity" Value="0.6"/>
-                                    </DataTrigger>
-                                </Button.Triggers>
-                            </Button>
-
-                            <!-- Toggle Auth Mode Button -->
-                            <Button 
-                                Text="{Binding ToggleButtonText}"
-                                Command="{Binding ToggleAuthModeCommand}"
-                                BackgroundColor="White"
-                                TextColor="{StaticResource Primary}"
-                                BorderColor="{StaticResource Gray200}"
-                                BorderWidth="2"
-                                CornerRadius="12"
-                                HeightRequest="48"
-                                FontSize="15"
-                                FontAttributes="Bold">
-                                <Button.Triggers>
-                                    <DataTrigger TargetType="Button" 
-                                                 Binding="{Binding IsBusy}" 
-                                                 Value="True">
-                                        <Setter Property="IsEnabled" Value="False"/>
-                                        <Setter Property="Opacity" Value="0.6"/>
-                                    </DataTrigger>
-                                </Button.Triggers>
-                            </Button>
-
-                            <!-- Loading Indicator -->
-                            <ActivityIndicator 
-                                IsRunning="{Binding IsBusy}"
-                                IsVisible="{Binding IsBusy}"
-                                Color="{StaticResource Primary}"
-                                HorizontalOptions="Center"
-                                HeightRequest="24"
-                                WidthRequest="24"
-                                Margin="0,12"/>
-
-                        </VerticalStackLayout>
-
+                    <!-- ── OTP MODE: Phone Number only ─────────────── -->
+                    <VerticalStackLayout IsVisible="{Binding IsOtpMode}" Spacing="0">
+                        <Label Text="Phone Number"
+                               FontSize="13"
+                               FontAttributes="Bold"
+                               TextColor="#1B2B3A"
+                               Margin="0,0,0,8"/>
+                        <Border StrokeThickness="1.5" Margin="0,0,0,22">
+                            <Border.Stroke>
+                                <SolidColorBrush Color="#E4EAF0"/>
+                            </Border.Stroke>
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="14"/>
+                            </Border.StrokeShape>
+                            <Grid ColumnDefinitions="Auto,*" Padding="16,0">
+                                <Label Grid.Column="0"
+                                       Text="📱"
+                                       FontSize="18"
+                                       TextColor="#9BAABB"
+                                       VerticalOptions="Center"
+                                       Margin="0,0,10,0"/>
+                                <Entry Grid.Column="1"
+                                       Placeholder="Enter your phone number"
+                                       Text="{Binding EmailOrPhone}"
+                                       Keyboard="Telephone"
+                                       TextColor="#1B2B3A"
+                                       PlaceholderColor="#B0BEC8"
+                                       FontSize="14"
+                                       HeightRequest="54"
+                                       BackgroundColor="Transparent"/>
+                            </Grid>
+                        </Border>
                     </VerticalStackLayout>
-                </Frame>
 
-                <!-- Sign Up Link -->
-                <Frame 
-                    BackgroundColor="Transparent"
-                    BorderColor="Transparent"
-                    Padding="0"
-                    HasShadow="False"
-                    HorizontalOptions="Center">
-                    <HorizontalStackLayout 
-                        HorizontalOptions="Center"
-                        Spacing="6">
-                        <Label 
-                            Text="Don't have an account?"
-                            FontSize="15"
-                            TextColor="{StaticResource Gray500}"/>
-                        <Label 
-                            Text="Create An Account"
-                            FontSize="15"
-                            FontAttributes="Bold"
-                            TextColor="{StaticResource Primary}">
+                    <!-- ── PASSWORD MODE: Email + Password ─────────── -->
+                    <VerticalStackLayout IsVisible="{Binding IsPasswordMode}" Spacing="0">
+
+                        <Label Text="Email Address"
+                               FontSize="13"
+                               FontAttributes="Bold"
+                               TextColor="#1B2B3A"
+                               Margin="0,0,0,8"/>
+                        <Border StrokeThickness="1.5" Margin="0,0,0,20">
+                            <Border.Stroke>
+                                <SolidColorBrush Color="#E4EAF0"/>
+                            </Border.Stroke>
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="14"/>
+                            </Border.StrokeShape>
+                            <Grid ColumnDefinitions="Auto,*" Padding="16,0">
+                                <Label Grid.Column="0"
+                                       Text="✉"
+                                       FontSize="18"
+                                       TextColor="#9BAABB"
+                                       VerticalOptions="Center"
+                                       Margin="0,0,10,0"/>
+                                <Entry Grid.Column="1"
+                                       Placeholder="Enter your email address"
+                                       Text="{Binding EmailOrPhone}"
+                                       Keyboard="Email"
+                                       TextColor="#1B2B3A"
+                                       PlaceholderColor="#B0BEC8"
+                                       FontSize="14"
+                                       HeightRequest="54"
+                                       BackgroundColor="Transparent"/>
+                            </Grid>
+                        </Border>
+
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                            <Label Grid.Column="0"
+                                   Text="Password"
+                                   FontSize="13"
+                                   FontAttributes="Bold"
+                                   TextColor="#1B2B3A"
+                                   VerticalOptions="Center"/>
+                            <Label Grid.Column="1"
+                                   Text="Forgot Password?"
+                                   FontSize="12"
+                                   TextColor="{StaticResource Primary}"
+                                   VerticalOptions="Center">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding ForgotPasswordCommand}"/>
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </Grid>
+
+                        <Border StrokeThickness="1.5" Margin="0,0,0,16">
+                            <Border.Stroke>
+                                <SolidColorBrush Color="#E4EAF0"/>
+                            </Border.Stroke>
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="14"/>
+                            </Border.StrokeShape>
+                            <Grid ColumnDefinitions="Auto,*,Auto" Padding="16,0">
+                                <Label Grid.Column="0"
+                                       Text="🔒"
+                                       FontSize="16"
+                                       TextColor="#9BAABB"
+                                       VerticalOptions="Center"
+                                       Margin="0,0,10,0"/>
+                                <Entry Grid.Column="1"
+                                       Placeholder="Enter your password"
+                                       Text="{Binding Password}"
+                                       IsPassword="{Binding IsPasswordVisible, Converter={StaticResource InvertedBoolConverter}}"
+                                       TextColor="#1B2B3A"
+                                       PlaceholderColor="#B0BEC8"
+                                       FontSize="14"
+                                       HeightRequest="54"
+                                       BackgroundColor="Transparent"/>
+                                <Label Grid.Column="2"
+                                       Text="{Binding IsPasswordVisible, Converter={StaticResource PasswordTextConverter}}"
+                                       FontSize="20"
+                                       TextColor="#9BAABB"
+                                       VerticalOptions="Center"
+                                       Padding="10,0">
+                                    <Label.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding TogglePasswordVisibilityCommand}"/>
+                                    </Label.GestureRecognizers>
+                                </Label>
+                            </Grid>
+                        </Border>
+
+                        <HorizontalStackLayout Spacing="8" Margin="0,0,0,20">
+                            <CheckBox IsChecked="{Binding RememberMe}"
+                                      Color="{StaticResource Primary}"
+                                      VerticalOptions="Center"/>
+                            <Label Text="Remember me for 30 days"
+                                   FontSize="13"
+                                   TextColor="#7A8E9C"
+                                   VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+
+                    <!-- ── CAPTCHA — question left, answer right, NO icons ── -->
+                    <Label Text="Human Verification"
+                           FontSize="13"
+                           FontAttributes="Bold"
+                           TextColor="#1B2B3A"
+                           Margin="0,0,0,10"/>
+
+                    <Grid ColumnDefinitions="*,110" ColumnSpacing="12" Margin="0,0,0,8">
+
+                        <!-- Question: plain grey pill, text only, no icons -->
+                        <Border Grid.Column="0" StrokeThickness="0">
+                            <Border.Background>
+                                <SolidColorBrush Color="#F0F4F8"/>
+                            </Border.Background>
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="14"/>
+                            </Border.StrokeShape>
+                            <Label Text="{Binding CaptchaQuestion}"
+                                   FontSize="16"
+                                   FontAttributes="Bold"
+                                   TextColor="#1B2B3A"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"
+                                   HeightRequest="54"/>
+                        </Border>
+
+                        <!-- Answer input -->
+                        <Border Grid.Column="1" StrokeThickness="1.5">
+                            <Border.Stroke>
+                                <SolidColorBrush Color="#E4EAF0"/>
+                            </Border.Stroke>
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="14"/>
+                            </Border.StrokeShape>
+                            <Entry Placeholder="Answer"
+                                   Text="{Binding CaptchaAnswer}"
+                                   Keyboard="Numeric"
+                                   TextColor="#1B2B3A"
+                                   PlaceholderColor="#B0BEC8"
+                                   FontSize="14"
+                                   HeightRequest="54"
+                                   HorizontalTextAlignment="Center"
+                                   BackgroundColor="Transparent"/>
+                        </Border>
+                    </Grid>
+
+                    <!-- ── MESSAGES ─────────────────────────────────── -->
+                    <Border IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyConverter}}"
+                            StrokeThickness="1" Margin="0,12,0,0">
+                        <Border.Stroke>
+                            <SolidColorBrush Color="#FCA5A5"/>
+                        </Border.Stroke>
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12"/>
+                        </Border.StrokeShape>
+                        <Label Text="{Binding ErrorMessage}" TextColor="#991B1B"
+                               FontSize="13" Padding="14,12" LineBreakMode="WordWrap"/>
+                    </Border>
+
+                    <Border IsVisible="{Binding SuccessMessage, Converter={StaticResource StringNotEmptyConverter}}"
+                            StrokeThickness="1" Margin="0,12,0,0">
+                        <Border.Stroke>
+                            <SolidColorBrush Color="#6EE7B7"/>
+                        </Border.Stroke>
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12"/>
+                        </Border.StrokeShape>
+                        <Label Text="{Binding SuccessMessage}" TextColor="#065F46"
+                               FontSize="13" Padding="14,12" LineBreakMode="WordWrap"/>
+                    </Border>
+
+                    <Border IsVisible="{Binding InfoMessage, Converter={StaticResource StringNotEmptyConverter}}"
+                            StrokeThickness="1" Margin="0,12,0,0">
+                        <Border.Stroke>
+                            <SolidColorBrush Color="#93C5FD"/>
+                        </Border.Stroke>
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12"/>
+                        </Border.StrokeShape>
+                        <Label Text="{Binding InfoMessage}" TextColor="#1E40AF"
+                               FontSize="13" Padding="14,12" LineBreakMode="WordWrap"/>
+                    </Border>
+
+                    <!-- ── MAIN ACTION BUTTON ──────────────────────── -->
+                    <Border HeightRequest="56" StrokeThickness="0" Margin="0,20,0,16">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="16"/>
+                        </Border.StrokeShape>
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Color="#F5A623" Offset="0"/>
+                                <GradientStop Color="#E08A00" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Button Text="{Binding MainButtonText}"
+                                Command="{Binding MainActionCommand}"
+                                BackgroundColor="Transparent"
+                                TextColor="White"
+                                FontSize="16"
+                                FontAttributes="Bold">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsBusy}" Value="True">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                    <Setter Property="Opacity" Value="0.6"/>
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </Border>
+
+                    <ActivityIndicator IsRunning="{Binding IsBusy}"
+                                       IsVisible="{Binding IsBusy}"
+                                       Color="{StaticResource Primary}"
+                                       HorizontalOptions="Center"
+                                       HeightRequest="22" WidthRequest="22"
+                                       Margin="0,0,0,8"/>
+
+                    <!-- ── DIVIDER ─────────────────────────────────── -->
+                    <Grid ColumnDefinitions="*,Auto,*" Margin="0,8,0,16">
+                        <BoxView Grid.Column="0" Color="#E4EAF0" HeightRequest="1" VerticalOptions="Center"/>
+                        <Label  Grid.Column="1" Text="Or continue with"
+                                FontSize="11" TextColor="#9BAABB" Margin="10,0"/>
+                        <BoxView Grid.Column="2" Color="#E4EAF0" HeightRequest="1" VerticalOptions="Center"/>
+                    </Grid>
+
+                    <!-- ── SOCIAL LOGIN: Google | Facebook | Apple ─── -->
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12" Margin="0,0,0,24">
+
+                        <!-- Google -->
+                        <Border Grid.Column="0" StrokeThickness="1.5" HeightRequest="54">
+                            <Border.Stroke>
+                                <SolidColorBrush Color="#E4EAF0"/>
+                            </Border.Stroke>
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="14"/>
+                            </Border.StrokeShape>
+                            <Grid>
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding LoginWithGoogleCommand}"/>
+                                </Grid.GestureRecognizers>
+                                <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="2">
+                                    <Label Text="G"
+                                           FontSize="22"
+                                           FontAttributes="Bold"
+                                           TextColor="#EA4335"
+                                           HorizontalOptions="Center"/>
+                                    <Label Text="Google"
+                                           FontSize="9"
+                                           TextColor="#9BAABB"
+                                           HorizontalOptions="Center"/>
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+
+                        <!-- Facebook -->
+                        <Border Grid.Column="1" StrokeThickness="1.5" HeightRequest="54">
+                            <Border.Stroke>
+                                <SolidColorBrush Color="#E4EAF0"/>
+                            </Border.Stroke>
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="14"/>
+                            </Border.StrokeShape>
+                            <Grid>
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding LoginWithFacebookCommand}"/>
+                                </Grid.GestureRecognizers>
+                                <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="2">
+                                    <Label Text="f"
+                                           FontSize="24"
+                                           FontAttributes="Bold"
+                                           TextColor="#1877F2"
+                                           HorizontalOptions="Center"/>
+                                    <Label Text="Facebook"
+                                           FontSize="9"
+                                           TextColor="#9BAABB"
+                                           HorizontalOptions="Center"/>
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+
+                        <!-- Apple -->
+                        <Border Grid.Column="2" StrokeThickness="1.5" HeightRequest="54">
+                            <Border.Stroke>
+                                <SolidColorBrush Color="#E4EAF0"/>
+                            </Border.Stroke>
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="14"/>
+                            </Border.StrokeShape>
+                            <Grid>
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding LoginWithAppleCommand}"/>
+                                </Grid.GestureRecognizers>
+                                <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="2">
+                                    <Label Text="🍎"
+                                           FontSize="22"
+                                           HorizontalOptions="Center"/>
+                                    <Label Text="Apple"
+                                           FontSize="9"
+                                           TextColor="#9BAABB"
+                                           HorizontalOptions="Center"/>
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+
+                    </Grid>
+
+                    <!-- ── TOGGLE MODE ──────────────────────────────── -->
+                    <Border HeightRequest="50" StrokeThickness="1.5" Margin="0,0,0,24">
+                        <Border.Stroke>
+                            <SolidColorBrush Color="{StaticResource Primary}"/>
+                        </Border.Stroke>
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="16"/>
+                        </Border.StrokeShape>
+                        <Button Text="{Binding ToggleButtonText}"
+                                Command="{Binding ToggleAuthModeCommand}"
+                                BackgroundColor="Transparent"
+                                TextColor="{StaticResource Primary}"
+                                FontSize="14"
+                                FontAttributes="Bold">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsBusy}" Value="True">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                    <Setter Property="Opacity" Value="0.5"/>
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </Border>
+
+                    <!-- ── SIGN UP LINK ─────────────────────────────── -->
+                    <HorizontalStackLayout HorizontalOptions="Center" Spacing="5">
+                        <Label Text="Don't have an account?" FontSize="13" TextColor="#7A8E9C"/>
+                        <Label Text="Sign Up"
+                               FontSize="13"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource Primary}">
                             <Label.GestureRecognizers>
-                                <TapGestureRecognizer 
-                                    Command="{Binding NavigateToSignUpCommand}"/>
+                                <TapGestureRecognizer Command="{Binding NavigateToSignUpCommand}"/>
                             </Label.GestureRecognizers>
                         </Label>
                     </HorizontalStackLayout>
-                </Frame>
 
-                <!-- Hidden Test Connection Button -->
-                <Button 
-                    Text=""
-                    Command="{Binding TestConnectionCommand}"
-                    BackgroundColor="Transparent"
-                    HeightRequest="1"
-                    IsVisible="False"/>
-
+                </VerticalStackLayout>
             </VerticalStackLayout>
         </ScrollView>
+
+        <!-- Loading overlay -->
+        <controls:LoadingOverlay
+            x:Name="PageLoadingOverlay"
+            Grid.RowSpan="2"
+            ZIndex="999"/>
+
+        <Button Text="" Command="{Binding TestConnectionCommand}"
+                BackgroundColor="Transparent" HeightRequest="1" IsVisible="False"/>
+
     </Grid>
 </ContentPage>

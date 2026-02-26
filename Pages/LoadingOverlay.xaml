@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CraftConnect_Mobile_App.Controls.LoadingOverlay"
+             x:Name="OverlayRoot"
+             IsVisible="False">
+
+    <Grid>
+
+        <!-- Green gradient background -->
+        <BoxView>
+            <BoxView.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0.5,1">
+                    <GradientStop Color="#1A8C6E" Offset="0.0"/>
+                    <GradientStop Color="#20A876" Offset="0.4"/>
+                    <GradientStop Color="#2DC98E" Offset="0.75"/>
+                    <GradientStop Color="#38E098" Offset="1.0"/>
+                </LinearGradientBrush>
+            </BoxView.Background>
+        </BoxView>
+
+        <!-- Radial glow behind icon -->
+        <Ellipse WidthRequest="260" HeightRequest="260"
+                 HorizontalOptions="Center" VerticalOptions="Center"
+                 TranslationY="-50">
+            <Ellipse.Fill>
+                <RadialGradientBrush Center="0.5,0.5" Radius="0.5">
+                    <GradientStop Color="#45FFFFFF" Offset="0"/>
+                    <GradientStop Color="#00FFFFFF" Offset="1"/>
+                </RadialGradientBrush>
+            </Ellipse.Fill>
+        </Ellipse>
+
+        <!-- Centered content -->
+        <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="22">
+
+            <!--
+                White diamond card (Frame rotated 45°).
+                Inner Grid counter-rotated -45° keeps wrench upright.
+                Wrench drawn with standard Feather/Material wrench SVG path
+                (M 14.7 6.3 a1 1 0 0 0 0 1.4 l 1.6 1.6 …) scaled to 56×56.
+            -->
+            <Frame x:Name="IconFrame"
+                   BackgroundColor="White"
+                   CornerRadius="18"
+                   HasShadow="False"
+                   WidthRequest="90"
+                   HeightRequest="90"
+                   Padding="0"
+                   HorizontalOptions="Center"
+                   IsClippedToBounds="False"
+                   Scale="0"
+                   Opacity="0"
+                   Rotation="45">
+
+                <Grid WidthRequest="90" HeightRequest="90"
+                      Rotation="-45"
+                      HorizontalOptions="Center"
+                      VerticalOptions="Center">
+
+                    <!--
+                        Standard wrench/spanner path from Material Design Icons
+                        viewBox="0 0 24 24", scaled via Aspect="Uniform".
+                        Path: wrench outline, teal fill matching app brand.
+                    -->
+                    <Path HorizontalOptions="Center"
+                          VerticalOptions="Center"
+                          WidthRequest="48"
+                          HeightRequest="48"
+                          Aspect="Uniform"
+                          Fill="#2DC98E"
+                          Data="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/>
+
+                </Grid>
+            </Frame>
+
+            <!-- App name -->
+            <Label x:Name="AppNameLabel"
+                   Text="CraftConnect"
+                   TextColor="White"
+                   FontSize="28"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   CharacterSpacing="0.3"
+                   Opacity="0"
+                   TranslationY="10"/>
+
+            <!-- Wave dots -->
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
+                <Ellipse x:Name="Dot1" WidthRequest="10" HeightRequest="10"
+                         Fill="White" Opacity="0.35" TranslationY="0"/>
+                <Ellipse x:Name="Dot2" WidthRequest="10" HeightRequest="10"
+                         Fill="White" Opacity="0.35" TranslationY="0"/>
+                <Ellipse x:Name="Dot3" WidthRequest="10" HeightRequest="10"
+                         Fill="White" Opacity="0.35" TranslationY="0"/>
+            </HorizontalStackLayout>
+
+            <!-- Loading message -->
+            <Label x:Name="LoadingMessageLabel"
+                   Text="Loading..."
+                   TextColor="White"
+                   FontSize="14"
+                   HorizontalOptions="Center"
+                   Opacity="0"/>
+
+        </VerticalStackLayout>
+    </Grid>
+
+</ContentView>

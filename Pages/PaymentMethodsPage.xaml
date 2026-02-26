@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CraftConnect_Mobile_App.Pages.PaymentMethodsPage"
+             Title=""
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#F0F4F8">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Header -->
+        <Grid Grid.Row="0"
+              BackgroundColor="#1B2B3A"
+              Padding="16,52,16,20"
+              ColumnDefinitions="Auto,*,Auto">
+            <ImageButton Grid.Column="0"
+                         Source="chevron_left.svg"
+                         WidthRequest="24"
+                         HeightRequest="24"
+                         VerticalOptions="Center"
+                         BackgroundColor="Transparent"
+                         Clicked="OnBackClicked"/>
+            <Label Grid.Column="1"
+                   Text="Payment Methods"
+                   TextColor="White"
+                   FontSize="18"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"/>
+            <BoxView Grid.Column="2" WidthRequest="24"/>
+        </Grid>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="16" Padding="16,20,16,30">
+
+                <!-- SAVED METHODS -->
+                <VerticalStackLayout Spacing="0">
+                    <Label Text="SAVED PAYMENT METHODS"
+                           TextColor="#8A9BAD"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           Margin="4,0,0,8"
+                           CharacterSpacing="1.2"/>
+
+                    <Frame BackgroundColor="White"
+                           CornerRadius="14"
+                           Padding="0"
+                           HasShadow="False"
+                           BorderColor="#E8EDF2">
+                        <VerticalStackLayout Spacing="0">
+
+                            <!-- Mobile Money -->
+                            <Grid ColumnDefinitions="44,*,Auto"
+                                  Padding="16,14"
+                                  ColumnSpacing="12">
+                                <Frame Grid.Column="0"
+                                       BackgroundColor="#FEF3C7"
+                                       CornerRadius="10"
+                                       Padding="0"
+                                       HasShadow="False"
+                                       WidthRequest="36"
+                                       HeightRequest="36">
+                                    <Label Text="₵"
+                                           TextColor="#D97706"
+                                           FontSize="18"
+                                           FontAttributes="Bold"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"/>
+                                </Frame>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                    <Label Text="Mobile Money"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           FontAttributes="Bold"/>
+                                    <Label x:Name="MomoNumberLabel"
+                                           Text="Not linked"
+                                           TextColor="#8A9BAD"
+                                           FontSize="12"/>
+                                </VerticalStackLayout>
+                                <Frame Grid.Column="2"
+                                       x:Name="MomoStatusBadge"
+                                       BackgroundColor="#F0F4F8"
+                                       CornerRadius="8"
+                                       Padding="8,4"
+                                       HasShadow="False"
+                                       BorderColor="Transparent"
+                                       VerticalOptions="Center">
+                                    <Label x:Name="MomoStatusLabel"
+                                           Text="ADD"
+                                           TextColor="#4DA6E8"
+                                           FontSize="11"
+                                           FontAttributes="Bold"/>
+                                </Frame>
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnMomoClicked"/>
+                                </Grid.GestureRecognizers>
+                            </Grid>
+
+                            <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
+
+                            <!-- Bank Card -->
+                            <Grid ColumnDefinitions="44,*,Auto"
+                                  Padding="16,14"
+                                  ColumnSpacing="12">
+                                <Frame Grid.Column="0"
+                                       BackgroundColor="#EBF3FB"
+                                       CornerRadius="10"
+                                       Padding="0"
+                                       HasShadow="False"
+                                       WidthRequest="36"
+                                       HeightRequest="36">
+                                    <Image Source="card.svg"
+                                           WidthRequest="18"
+                                           HeightRequest="18"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"/>
+                                </Frame>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                    <Label Text="Bank Card"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           FontAttributes="Bold"/>
+                                    <Label x:Name="CardNumberLabel"
+                                           Text="Not linked"
+                                           TextColor="#8A9BAD"
+                                           FontSize="12"/>
+                                </VerticalStackLayout>
+                                <Frame Grid.Column="2"
+                                       BackgroundColor="#F0F4F8"
+                                       CornerRadius="8"
+                                       Padding="8,4"
+                                       HasShadow="False"
+                                       BorderColor="Transparent"
+                                       VerticalOptions="Center">
+                                    <Label Text="ADD"
+                                           TextColor="#4DA6E8"
+                                           FontSize="11"
+                                           FontAttributes="Bold"/>
+                                </Frame>
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnCardClicked"/>
+                                </Grid.GestureRecognizers>
+                            </Grid>
+
+                        </VerticalStackLayout>
+                    </Frame>
+                </VerticalStackLayout>
+
+                <!-- HOW IT WORKS -->
+                <VerticalStackLayout Spacing="0">
+                    <Label Text="HOW PAYMENTS WORK"
+                           TextColor="#8A9BAD"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           Margin="4,0,0,8"
+                           CharacterSpacing="1.2"/>
+
+                    <Frame BackgroundColor="White"
+                           CornerRadius="14"
+                           Padding="16"
+                           HasShadow="False"
+                           BorderColor="#E8EDF2">
+                        <VerticalStackLayout Spacing="14">
+
+                            <!-- Step 1 -->
+                            <Grid ColumnDefinitions="32,*" ColumnSpacing="12">
+                                <Frame Grid.Column="0"
+                                       BackgroundColor="#EBF3FB"
+                                       CornerRadius="16"
+                                       Padding="0"
+                                       HasShadow="False"
+                                       WidthRequest="32"
+                                       HeightRequest="32">
+                                    <Label Text="1"
+                                           TextColor="#4DA6E8"
+                                           FontSize="14"
+                                           FontAttributes="Bold"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"/>
+                                </Frame>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                    <Label Text="Book a Service"
+                                           TextColor="#1B2B3A"
+                                           FontSize="14"
+                                           FontAttributes="Bold"/>
+                                    <Label Text="Choose an artisan and request their service"
+                                           TextColor="#8A9BAD"
+                                           FontSize="12"/>
+                                </VerticalStackLayout>
+                            </Grid>
+
+                            <BoxView HeightRequest="1" Color="#F0F4F8"/>
+
+                            <!-- Step 2 -->
+                            <Grid ColumnDefinitions="32,*" ColumnSpacing="12">
+                                <Frame Grid.Column="0"
+                                       BackgroundColor="#EBF3FB"
+                                       CornerRadius="16"
+                                       Padding="0"
+                                       HasShadow="False"
+                                       WidthRequest="32"
+                                       HeightRequest="32">
+                                    <Label Text="2"
+                                           TextColor="#4DA6E8"
+                                           FontSize="14"
+                                           FontAttributes="Bold"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"/>
+                                </Frame>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                    <Label Text="Confirm &amp; Pay"
+                                           TextColor="#1B2B3A"
+                                           FontSize="14"
+                                           FontAttributes="Bold"/>
+                                    <Label Text="Payment is held securely until job is done"
+                                           TextColor="#8A9BAD"
+                                           FontSize="12"/>
+                                </VerticalStackLayout>
+                            </Grid>
+
+                            <BoxView HeightRequest="1" Color="#F0F4F8"/>
+
+                            <!-- Step 3 -->
+                            <Grid ColumnDefinitions="32,*" ColumnSpacing="12">
+                                <Frame Grid.Column="0"
+                                       BackgroundColor="#D1FAE5"
+                                       CornerRadius="16"
+                                       Padding="0"
+                                       HasShadow="False"
+                                       WidthRequest="32"
+                                       HeightRequest="32">
+                                    <Label Text="3"
+                                           TextColor="#10B981"
+                                           FontSize="14"
+                                           FontAttributes="Bold"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"/>
+                                </Frame>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                    <Label Text="Release Payment"
+                                           TextColor="#1B2B3A"
+                                           FontSize="14"
+                                           FontAttributes="Bold"/>
+                                    <Label Text="Funds released to artisan once you approve"
+                                           TextColor="#8A9BAD"
+                                           FontSize="12"/>
+                                </VerticalStackLayout>
+                            </Grid>
+
+                        </VerticalStackLayout>
+                    </Frame>
+                </VerticalStackLayout>
+
+                <!-- Info note -->
+                <Frame BackgroundColor="#EBF3FB"
+                       CornerRadius="12"
+                       Padding="14"
+                       HasShadow="False"
+                       BorderColor="#BFDBFE">
+                    <HorizontalStackLayout Spacing="10">
+                        <Image Source="info.svg"
+                               WidthRequest="18"
+                               HeightRequest="18"
+                               VerticalOptions="Start"/>
+                        <Label Text="Payment processing is powered by secure third-party providers. CraftConnect does not store your card details."
+                               TextColor="#3B82F6"
+                               FontSize="12"
+                               HorizontalOptions="FillAndExpand"/>
+                    </HorizontalStackLayout>
+                </Frame>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

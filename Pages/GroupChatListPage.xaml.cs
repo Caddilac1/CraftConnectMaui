@@ -39,8 +39,6 @@ namespace CraftConnect_Mobile_App.Pages
             catch (Exception ex)
             {
                 Debug.WriteLine($"[GROUP CHAT LIST PAGE] ❌ Error in OnAppearing: {ex.Message}");
-                Debug.WriteLine($"[GROUP CHAT LIST PAGE] Exception type: {ex.GetType().Name}");
-                Debug.WriteLine($"[GROUP CHAT LIST PAGE] StackTrace: {ex.StackTrace}");
                 await DisplayAlert("Error", $"Failed to load groups: {ex.Message}", "OK");
             }
         }
@@ -54,38 +52,20 @@ namespace CraftConnect_Mobile_App.Pages
         }
 
         /// <summary>
-        /// Handles the add button click - Shows options for creating feed or group chat
+        /// Navigates directly to Create Feed — no action sheet prompt.
         /// </summary>
         private async void OnAddGroupClicked(object sender, EventArgs e)
         {
-            Debug.WriteLine("[GROUP CHAT LIST PAGE] Add button clicked");
+            Debug.WriteLine("[GROUP CHAT LIST PAGE] Add button clicked — navigating to AI Feed Chat");
 
             try
             {
-                var action = await DisplayActionSheet(
-                    "What would you like to create?",
-                    "Cancel",
-                    null,
-                    "📝 Create Feed Post (AI Assistant)",
-                    "💬 Create Group Chat"
-                );
-
-                if (action == "📝 Create Feed Post (AI Assistant)")
-                {
-                    Debug.WriteLine("[GROUP CHAT LIST PAGE] Navigating to AI Feed Chat");
-                    await Shell.Current.GoToAsync("aifeedchat");
-                }
-                else if (action == "💬 Create Group Chat")
-                {
-                    Debug.WriteLine("[GROUP CHAT LIST PAGE] Navigating to regular chat");
-                    // Navigate to regular group chat creation or existing chat
-                    await Shell.Current.GoToAsync("chat");
-                }
+                await Shell.Current.GoToAsync("aifeedchat");
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[GROUP CHAT LIST PAGE] ❌ Navigation error: {ex.Message}");
-                await DisplayAlert("Error", $"Could not open chat: {ex.Message}", "OK");
+                await DisplayAlert("Error", $"Could not open feed creation: {ex.Message}", "OK");
             }
         }
 

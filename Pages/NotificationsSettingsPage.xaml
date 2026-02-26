@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CraftConnect_Mobile_App.Pages.NotificationsSettingsPage"
+             Title=""
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#F0F4F8">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Header -->
+        <Grid Grid.Row="0"
+              BackgroundColor="#1B2B3A"
+              Padding="16,52,16,20"
+              ColumnDefinitions="Auto,*,Auto">
+            <ImageButton Grid.Column="0"
+                         Source="chevron_left.svg"
+                         WidthRequest="24"
+                         HeightRequest="24"
+                         VerticalOptions="Center"
+                         BackgroundColor="Transparent"
+                         Clicked="OnBackClicked"/>
+            <Label Grid.Column="1"
+                   Text="Notifications"
+                   TextColor="White"
+                   FontSize="18"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"/>
+            <BoxView Grid.Column="2" WidthRequest="24"/>
+        </Grid>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="16" Padding="16,20,16,30">
+
+                <!-- PUSH NOTIFICATIONS -->
+                <VerticalStackLayout Spacing="0">
+                    <Label Text="PUSH NOTIFICATIONS"
+                           TextColor="#8A9BAD"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           Margin="4,0,0,8"
+                           CharacterSpacing="1.2"/>
+
+                    <Frame BackgroundColor="White"
+                           CornerRadius="14"
+                           Padding="0"
+                           HasShadow="False"
+                           BorderColor="#E8EDF2">
+                        <VerticalStackLayout Spacing="0">
+
+                            <!-- All Notifications Master Toggle -->
+                            <Grid ColumnDefinitions="*,Auto" Padding="16,16" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="3" VerticalOptions="Center">
+                                    <Label Text="All Notifications"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           FontAttributes="Bold"/>
+                                    <Label Text="Enable or disable all push alerts"
+                                           TextColor="#8A9BAD"
+                                           FontSize="12"/>
+                                </VerticalStackLayout>
+                                <Switch x:Name="AllNotificationsSwitch"
+                                        Grid.Column="1"
+                                        OnColor="#4DA6E8"
+                                        ThumbColor="White"
+                                        IsToggled="True"
+                                        VerticalOptions="Center"
+                                        Toggled="OnAllNotificationsToggled"/>
+                            </Grid>
+
+                            <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
+
+                            <!-- New Messages -->
+                            <Grid ColumnDefinitions="*,Auto" Padding="16,14" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="3" VerticalOptions="Center">
+                                    <Label Text="New Messages"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"/>
+                                    <Label Text="Alerts when you receive a chat message"
+                                           TextColor="#8A9BAD"
+                                           FontSize="12"/>
+                                </VerticalStackLayout>
+                                <Switch x:Name="MessagesSwitch"
+                                        Grid.Column="1"
+                                        OnColor="#4DA6E8"
+                                        ThumbColor="White"
+                                        IsToggled="True"
+                                        VerticalOptions="Center"/>
+                            </Grid>
+
+                            <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
+
+                            <!-- Job Requests (Artisan only) -->
+                            <Grid x:Name="JobRequestsRow"
+                                  ColumnDefinitions="*,Auto"
+                                  Padding="16,14"
+                                  ColumnSpacing="12"
+                                  IsVisible="False">
+                                <VerticalStackLayout Grid.Column="0" Spacing="3" VerticalOptions="Center">
+                                    <Label Text="Job Requests"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"/>
+                                    <Label Text="New booking and job requests"
+                                           TextColor="#8A9BAD"
+                                           FontSize="12"/>
+                                </VerticalStackLayout>
+                                <Switch x:Name="JobRequestsSwitch"
+                                        Grid.Column="1"
+                                        OnColor="#4DA6E8"
+                                        ThumbColor="White"
+                                        IsToggled="True"
+                                        VerticalOptions="Center"/>
+                            </Grid>
+
+                            <BoxView x:Name="JobRequestsDivider"
+                                     HeightRequest="1"
+                                     Color="#F0F4F8"
+                                     Margin="16,0"
+                                     IsVisible="False"/>
+
+                            <!-- Promotions -->
+                            <Grid ColumnDefinitions="*,Auto" Padding="16,14" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="3" VerticalOptions="Center">
+                                    <Label Text="Promotions &amp; Updates"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"/>
+                                    <Label Text="News, offers and platform updates"
+                                           TextColor="#8A9BAD"
+                                           FontSize="12"/>
+                                </VerticalStackLayout>
+                                <Switch x:Name="PromotionsSwitch"
+                                        Grid.Column="1"
+                                        OnColor="#4DA6E8"
+                                        ThumbColor="White"
+                                        IsToggled="False"
+                                        VerticalOptions="Center"/>
+                            </Grid>
+
+                        </VerticalStackLayout>
+                    </Frame>
+                </VerticalStackLayout>
+
+                <!-- EMAIL NOTIFICATIONS -->
+                <VerticalStackLayout Spacing="0">
+                    <Label Text="EMAIL NOTIFICATIONS"
+                           TextColor="#8A9BAD"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           Margin="4,0,0,8"
+                           CharacterSpacing="1.2"/>
+
+                    <Frame BackgroundColor="White"
+                           CornerRadius="14"
+                           Padding="0"
+                           HasShadow="False"
+                           BorderColor="#E8EDF2">
+                        <VerticalStackLayout Spacing="0">
+
+                            <!-- Email Updates -->
+                            <Grid ColumnDefinitions="*,Auto" Padding="16,16" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="3" VerticalOptions="Center">
+                                    <Label Text="Email Notifications"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           FontAttributes="Bold"/>
+                                    <Label Text="Receive updates directly to your email"
+                                           TextColor="#8A9BAD"
+                                           FontSize="12"/>
+                                </VerticalStackLayout>
+                                <Switch x:Name="EmailNotificationsSwitch"
+                                        Grid.Column="1"
+                                        OnColor="#4DA6E8"
+                                        ThumbColor="White"
+                                        IsToggled="True"
+                                        VerticalOptions="Center"
+                                        Toggled="OnEmailNotificationsToggled"/>
+                            </Grid>
+
+                            <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
+
+                            <!-- Weekly Summary -->
+                            <Grid ColumnDefinitions="*,Auto" Padding="16,14" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="3" VerticalOptions="Center">
+                                    <Label Text="Weekly Summary"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"/>
+                                    <Label Text="A digest of your weekly activity"
+                                           TextColor="#8A9BAD"
+                                           FontSize="12"/>
+                                </VerticalStackLayout>
+                                <Switch x:Name="WeeklySummarySwitch"
+                                        Grid.Column="1"
+                                        OnColor="#4DA6E8"
+                                        ThumbColor="White"
+                                        IsToggled="False"
+                                        VerticalOptions="Center"/>
+                            </Grid>
+
+                        </VerticalStackLayout>
+                    </Frame>
+                </VerticalStackLayout>
+
+                <!-- Info note -->
+                <Frame BackgroundColor="#EBF3FB"
+                       CornerRadius="12"
+                       Padding="14"
+                       HasShadow="False"
+                       BorderColor="#BFDBFE">
+                    <HorizontalStackLayout Spacing="10">
+                        <Image Source="info.svg"
+                               WidthRequest="18"
+                               HeightRequest="18"
+                               VerticalOptions="Start"/>
+                        <Label Text="Some notifications are required for service alerts and cannot be disabled."
+                               TextColor="#3B82F6"
+                               FontSize="12"
+                               HorizontalOptions="FillAndExpand"/>
+                    </HorizontalStackLayout>
+                </Frame>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

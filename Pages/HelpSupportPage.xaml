@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CraftConnect_Mobile_App.Pages.HelpSupportPage"
+             Title=""
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#F0F4F8">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Header -->
+        <Grid Grid.Row="0"
+              BackgroundColor="#1B2B3A"
+              Padding="16,52,16,20"
+              ColumnDefinitions="Auto,*,Auto">
+            <ImageButton Grid.Column="0"
+                         Source="chevron_left.svg"
+                         WidthRequest="24"
+                         HeightRequest="24"
+                         VerticalOptions="Center"
+                         BackgroundColor="Transparent"
+                         Clicked="OnBackClicked"/>
+            <Label Grid.Column="1"
+                   Text="Help &amp; Support"
+                   TextColor="White"
+                   FontSize="18"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"/>
+            <BoxView Grid.Column="2" WidthRequest="24"/>
+        </Grid>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="16" Padding="16,20,16,30">
+
+                <!-- Hero -->
+                <Frame BackgroundColor="#1B2B3A"
+                       CornerRadius="16"
+                       Padding="20"
+                       HasShadow="False"
+                       BorderColor="Transparent">
+                    <VerticalStackLayout Spacing="8" HorizontalOptions="Center">
+                        <Image Source="help_circle.svg"
+                               WidthRequest="48"
+                               HeightRequest="48"
+                               HorizontalOptions="Center"/>
+                        <Label Text="How can we help?"
+                               TextColor="White"
+                               FontSize="20"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"/>
+                        <Label Text="Find answers or reach our support team"
+                               TextColor="#A0B4C8"
+                               FontSize="13"
+                               HorizontalOptions="Center"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- CONTACT US -->
+                <VerticalStackLayout Spacing="0">
+                    <Label Text="CONTACT US"
+                           TextColor="#8A9BAD"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           Margin="4,0,0,8"
+                           CharacterSpacing="1.2"/>
+
+                    <Frame BackgroundColor="White"
+                           CornerRadius="14"
+                           Padding="0"
+                           HasShadow="False"
+                           BorderColor="#E8EDF2">
+                        <VerticalStackLayout Spacing="0">
+
+                            <!-- WhatsApp -->
+                            <Grid ColumnDefinitions="44,*,24"
+                                  Padding="16,14"
+                                  ColumnSpacing="12">
+                                <Frame Grid.Column="0"
+                                       BackgroundColor="#D1FAE5"
+                                       CornerRadius="10"
+                                       Padding="0"
+                                       HasShadow="False"
+                                       WidthRequest="36"
+                                       HeightRequest="36">
+                                    <Label Text="W"
+                                           TextColor="#10B981"
+                                           FontSize="16"
+                                           FontAttributes="Bold"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"/>
+                                </Frame>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                    <Label Text="WhatsApp Support"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           FontAttributes="Bold"/>
+                                    <Label Text="Chat with us instantly"
+                                           TextColor="#8A9BAD"
+                                           FontSize="12"/>
+                                </VerticalStackLayout>
+                                <Image Grid.Column="2"
+                                       Source="chevron_right.svg"
+                                       WidthRequest="16"
+                                       HeightRequest="16"
+                                       VerticalOptions="Center"/>
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnWhatsAppClicked"/>
+                                </Grid.GestureRecognizers>
+                            </Grid>
+
+                            <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
+
+                            <!-- Email -->
+                            <Grid ColumnDefinitions="44,*,24"
+                                  Padding="16,14"
+                                  ColumnSpacing="12">
+                                <Frame Grid.Column="0"
+                                       BackgroundColor="#EBF3FB"
+                                       CornerRadius="10"
+                                       Padding="0"
+                                       HasShadow="False"
+                                       WidthRequest="36"
+                                       HeightRequest="36">
+                                    <Image Source="document.svg"
+                                           WidthRequest="18"
+                                           HeightRequest="18"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"/>
+                                </Frame>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                    <Label Text="Email Support"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           FontAttributes="Bold"/>
+                                    <Label Text="support@craftconnect.com"
+                                           TextColor="#4DA6E8"
+                                           FontSize="12"/>
+                                </VerticalStackLayout>
+                                <Image Grid.Column="2"
+                                       Source="chevron_right.svg"
+                                       WidthRequest="16"
+                                       HeightRequest="16"
+                                       VerticalOptions="Center"/>
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnEmailSupportClicked"/>
+                                </Grid.GestureRecognizers>
+                            </Grid>
+
+                            <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
+
+                            <!-- Call -->
+                            <Grid ColumnDefinitions="44,*,24"
+                                  Padding="16,14"
+                                  ColumnSpacing="12">
+                                <Frame Grid.Column="0"
+                                       BackgroundColor="#EBF3FB"
+                                       CornerRadius="10"
+                                       Padding="0"
+                                       HasShadow="False"
+                                       WidthRequest="36"
+                                       HeightRequest="36">
+                                    <Image Source="availability.svg"
+                                           WidthRequest="18"
+                                           HeightRequest="18"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"/>
+                                </Frame>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                    <Label Text="Call Us"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           FontAttributes="Bold"/>
+                                    <Label Text="+233 30 000 0000  |  Mon–Fri 8am–6pm"
+                                           TextColor="#8A9BAD"
+                                           FontSize="12"/>
+                                </VerticalStackLayout>
+                                <Image Grid.Column="2"
+                                       Source="chevron_right.svg"
+                                       WidthRequest="16"
+                                       HeightRequest="16"
+                                       VerticalOptions="Center"/>
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnCallClicked"/>
+                                </Grid.GestureRecognizers>
+                            </Grid>
+
+                        </VerticalStackLayout>
+                    </Frame>
+                </VerticalStackLayout>
+
+                <!-- FAQs -->
+                <VerticalStackLayout Spacing="0">
+                    <Label Text="FREQUENTLY ASKED QUESTIONS"
+                           TextColor="#8A9BAD"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           Margin="4,0,0,8"
+                           CharacterSpacing="1.2"/>
+
+                    <Frame BackgroundColor="White"
+                           CornerRadius="14"
+                           Padding="0"
+                           HasShadow="False"
+                           BorderColor="#E8EDF2">
+                        <VerticalStackLayout Spacing="0">
+
+                            <VerticalStackLayout x:Name="Faq1Container" Spacing="0">
+                                <Grid ColumnDefinitions="*,24"
+                                      Padding="16,14"
+                                      ColumnSpacing="12">
+                                    <Label Grid.Column="0"
+                                           Text="How do I book an artisan?"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           VerticalOptions="Center"/>
+                                    <Image x:Name="Faq1Icon"
+                                           Grid.Column="1"
+                                           Source="chevron_right.svg"
+                                           WidthRequest="16"
+                                           HeightRequest="16"
+                                           VerticalOptions="Center"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnFaq1Tapped"/>
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+                                <Frame x:Name="Faq1Answer"
+                                       BackgroundColor="#F8FAFC"
+                                       CornerRadius="0"
+                                       Padding="16,12"
+                                       HasShadow="False"
+                                       BorderColor="Transparent"
+                                       IsVisible="False">
+                                    <Label Text="Browse the Contacts tab to find artisans in your area. Tap their profile, then tap 'Book Service'. Choose a date, describe your job, and submit your request."
+                                           TextColor="#4A6080"
+                                           FontSize="13"
+                                           LineHeight="1.5"/>
+                                </Frame>
+                            </VerticalStackLayout>
+
+                            <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
+
+                            <VerticalStackLayout x:Name="Faq2Container" Spacing="0">
+                                <Grid ColumnDefinitions="*,24"
+                                      Padding="16,14"
+                                      ColumnSpacing="12">
+                                    <Label Grid.Column="0"
+                                           Text="How does payment work?"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           VerticalOptions="Center"/>
+                                    <Image x:Name="Faq2Icon"
+                                           Grid.Column="1"
+                                           Source="chevron_right.svg"
+                                           WidthRequest="16"
+                                           HeightRequest="16"
+                                           VerticalOptions="Center"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnFaq2Tapped"/>
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+                                <Frame x:Name="Faq2Answer"
+                                       BackgroundColor="#F8FAFC"
+                                       CornerRadius="0"
+                                       Padding="16,12"
+                                       HasShadow="False"
+                                       BorderColor="Transparent"
+                                       IsVisible="False">
+                                    <Label Text="Payment is held securely until you confirm the job is complete. We support Mobile Money (MTN, Vodafone, AirtelTigo) and bank cards."
+                                           TextColor="#4A6080"
+                                           FontSize="13"
+                                           LineHeight="1.5"/>
+                                </Frame>
+                            </VerticalStackLayout>
+
+                            <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
+
+                            <VerticalStackLayout x:Name="Faq3Container" Spacing="0">
+                                <Grid ColumnDefinitions="*,24"
+                                      Padding="16,14"
+                                      ColumnSpacing="12">
+                                    <Label Grid.Column="0"
+                                           Text="How do I become a verified artisan?"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           VerticalOptions="Center"/>
+                                    <Image x:Name="Faq3Icon"
+                                           Grid.Column="1"
+                                           Source="chevron_right.svg"
+                                           WidthRequest="16"
+                                           HeightRequest="16"
+                                           VerticalOptions="Center"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnFaq3Tapped"/>
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+                                <Frame x:Name="Faq3Answer"
+                                       BackgroundColor="#F8FAFC"
+                                       CornerRadius="0"
+                                       Padding="16,12"
+                                       HasShadow="False"
+                                       BorderColor="Transparent"
+                                       IsVisible="False">
+                                    <Label Text="Complete your profile, upload a valid ID, and submit your trade certificate. Our team will review your application within 2–3 business days."
+                                           TextColor="#4A6080"
+                                           FontSize="13"
+                                           LineHeight="1.5"/>
+                                </Frame>
+                            </VerticalStackLayout>
+
+                            <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
+
+                            <VerticalStackLayout x:Name="Faq4Container" Spacing="0">
+                                <Grid ColumnDefinitions="*,24"
+                                      Padding="16,14"
+                                      ColumnSpacing="12">
+                                    <Label Grid.Column="0"
+                                           Text="Can I cancel a booking?"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           VerticalOptions="Center"/>
+                                    <Image x:Name="Faq4Icon"
+                                           Grid.Column="1"
+                                           Source="chevron_right.svg"
+                                           WidthRequest="16"
+                                           HeightRequest="16"
+                                           VerticalOptions="Center"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnFaq4Tapped"/>
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+                                <Frame x:Name="Faq4Answer"
+                                       BackgroundColor="#F8FAFC"
+                                       CornerRadius="0"
+                                       Padding="16,12"
+                                       HasShadow="False"
+                                       BorderColor="Transparent"
+                                       IsVisible="False">
+                                    <Label Text="Yes. You can cancel a booking up to 2 hours before the scheduled time without a fee. Late cancellations may incur a small charge."
+                                           TextColor="#4A6080"
+                                           FontSize="13"
+                                           LineHeight="1.5"/>
+                                </Frame>
+                            </VerticalStackLayout>
+
+                        </VerticalStackLayout>
+                    </Frame>
+                </VerticalStackLayout>
+
+                <!-- App version -->
+                <Label Text="CraftConnect v1.0.0  •  © 2024 CraftConnect Ltd."
+                       TextColor="#A0B4C8"
+                       FontSize="11"
+                       HorizontalOptions="Center"
+                       Margin="0,4,0,0"/>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

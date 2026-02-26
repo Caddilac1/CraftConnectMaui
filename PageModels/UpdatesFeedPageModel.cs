@@ -27,31 +27,19 @@ namespace CraftConnect_Mobile_App.PageModels
         public bool IsRefreshing
         {
             get => _isRefreshing;
-            set
-            {
-                _isRefreshing = value;
-                OnPropertyChanged();
-            }
+            set { _isRefreshing = value; OnPropertyChanged(); }
         }
 
         public bool IsLoadingMore
         {
             get => _isLoadingMore;
-            set
-            {
-                _isLoadingMore = value;
-                OnPropertyChanged();
-            }
+            set { _isLoadingMore = value; OnPropertyChanged(); }
         }
 
         public bool IsEmpty
         {
             get => _isEmpty;
-            set
-            {
-                _isEmpty = value;
-                OnPropertyChanged();
-            }
+            set { _isEmpty = value; OnPropertyChanged(); }
         }
 
         public bool HasFeaturedFeeds => FeaturedFeeds?.Count > 0;
@@ -59,11 +47,7 @@ namespace CraftConnect_Mobile_App.PageModels
         public string FeedCount
         {
             get => _feedCount;
-            set
-            {
-                _feedCount = value;
-                OnPropertyChanged();
-            }
+            set { _feedCount = value; OnPropertyChanged(); }
         }
 
         public ObservableCollection<FeedItemModel> FeaturedFeeds
@@ -89,6 +73,18 @@ namespace CraftConnect_Mobile_App.PageModels
         }
         #endregion
 
+        #region Events
+
+        /// <summary>
+        /// Raised when the user taps "Send Proposal" on a feed card.
+        /// The page subscribes to this and handles the actual navigation,
+        /// because CreateProposalPage needs complex objects (feed list)
+        /// that cannot travel through Shell query parameters.
+        /// </summary>
+        public event EventHandler<SendProposalNavigationArgs>? NavigateToCreateProposal;
+
+        #endregion
+
         #region Commands
         public ICommand RefreshCommand { get; }
         public ICommand SearchCommand { get; }
@@ -105,19 +101,19 @@ namespace CraftConnect_Mobile_App.PageModels
         {
             _userFeedService = userFeedService;
 
-            // Initialize collections
             FeaturedFeeds = new ObservableCollection<FeedItemModel>();
             AllFeeds = new ObservableCollection<FeedItemModel>();
 
-            // Initialize commands
             RefreshCommand = new Command(async () => await RefreshFeeds());
             SearchCommand = new Command(OnSearch);
             FilterCommand = new Command(OnFilter);
             LoadMoreCommand = new Command(async () => await LoadMoreFeeds());
             FeedTappedCommand = new Command<FeedItemModel>(OnFeedTapped);
             AddToFavoriteCommand = new Command<FeedItemModel>(async (feed) => await AddToFavorite(feed));
-            SendProposalCommand = new Command<FeedItemModel>(async (feed) => await SendProposal(feed));
             LikeFeedCommand = new Command<FeedItemModel>(async (feed) => await LikeFeed(feed));
+
+            // ── SendProposal fires event; navigation handled by the page ──
+            SendProposalCommand = new Command<FeedItemModel>(OnSendProposal);
         }
         #endregion
 
@@ -125,14 +121,12 @@ namespace CraftConnect_Mobile_App.PageModels
         public async Task InitializeAsync()
         {
             if (_hasInitialized) return;
-
             await LoadFeedsAsync();
             _hasInitialized = true;
         }
 
         public async Task LoadFeedsAsync()
         {
-            // Use IsLoadingMore instead of IsRefreshing for initial load
             if (IsRefreshing || IsLoadingMore) return;
 
             IsLoadingMore = true;
@@ -143,7 +137,6 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 System.Diagnostics.Debug.WriteLine("[UpdatesFeed] Loading feeds from API...");
 
-                // Load featured feeds in parallel with main feeds for better performance
                 var featuredTask = _userFeedService.GetFeaturedFeedsAsync(10);
                 var allFeedsTask = _userFeedService.GetUserFeedsAsync(page: _currentPage, pageSize: PAGE_SIZE);
 
@@ -154,43 +147,34 @@ namespace CraftConnect_Mobile_App.PageModels
 
                 _totalPages = totalPages;
 
-                // Update UI on main thread
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
                     FeaturedFeeds.Clear();
                     foreach (var feed in featuredData)
-                    {
                         FeaturedFeeds.Add(MapToFeedItemModel(feed));
-                    }
 
                     AllFeeds.Clear();
                     foreach (var feed in feeds)
-                    {
                         AllFeeds.Add(MapToFeedItemModel(feed));
-                    }
 
                     IsEmpty = AllFeeds.Count == 0;
                     UpdateFeedCount();
                 });
 
-                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] ✅ Loaded {AllFeeds.Count} feeds successfully");
+                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] ✅ Loaded {AllFeeds.Count} feeds");
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] ❌ Error loading feeds: {ex.Message}");
 
-                MainThread.BeginInvokeOnMainThread(() =>
-                {
-                    IsEmpty = true;
-                });
+                MainThread.BeginInvokeOnMainThread(() => IsEmpty = true);
 
                 if (Application.Current?.MainPage != null)
                 {
                     await Application.Current.MainPage.DisplayAlert(
                         "Connection Error",
                         "Unable to load feeds. Please check your internet connection.",
-                        "OK"
-                    );
+                        "OK");
                 }
             }
             finally
@@ -198,7 +182,7 @@ namespace CraftConnect_Mobile_App.PageModels
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
                     IsLoadingMore = false;
-                    IsRefreshing = false; // Ensure refresh indicator stops
+                    IsRefreshing = false;
                 });
             }
         }
@@ -206,13 +190,9 @@ namespace CraftConnect_Mobile_App.PageModels
         public async Task RefreshFeeds()
         {
             System.Diagnostics.Debug.WriteLine("[UpdatesFeed] Refreshing feeds...");
-
             IsRefreshing = true;
             _currentPage = 1;
-
             await LoadFeedsAsync();
-
-            // Ensure refresh stops
             IsRefreshing = false;
         }
 
@@ -224,20 +204,16 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 System.Diagnostics.Debug.WriteLine("[UpdatesFeed] Loading more feeds...");
                 IsLoadingMore = true;
-
                 _currentPage++;
 
                 var (feeds, _, _) = await _userFeedService.GetUserFeedsAsync(
                     page: _currentPage,
-                    pageSize: PAGE_SIZE
-                );
+                    pageSize: PAGE_SIZE);
 
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
                     foreach (var feed in feeds)
-                    {
                         AllFeeds.Add(MapToFeedItemModel(feed));
-                    }
                     UpdateFeedCount();
                 });
 
@@ -245,20 +221,39 @@ namespace CraftConnect_Mobile_App.PageModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] ❌ Error loading more feeds: {ex.Message}");
-                _currentPage--; // Revert page increment on error
+                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] ❌ Error loading more: {ex.Message}");
+                _currentPage--;
             }
             finally
             {
-                MainThread.BeginInvokeOnMainThread(() =>
-                {
-                    IsLoadingMore = false;
-                });
+                MainThread.BeginInvokeOnMainThread(() => IsLoadingMore = false);
             }
         }
         #endregion
 
         #region Private Methods
+
+        /// <summary>
+        /// Fires NavigateToCreateProposal so the page can push CreateProposalPage
+        /// with the full feed list and this feed pre-selected.
+        /// </summary>
+        private void OnSendProposal(FeedItemModel feed)
+        {
+            if (feed == null)
+            {
+                System.Diagnostics.Debug.WriteLine("[UpdatesFeed] ❌ SendProposal called with null feed.");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] 📨 Send Proposal — Id: {feed.Id}, Title: {feed.Title}");
+
+            NavigateToCreateProposal?.Invoke(this, new SendProposalNavigationArgs
+            {
+                FeedId = feed.Id,
+                FeedTitle = feed.Title ?? string.Empty
+            });
+        }
+
         private FeedItemModel MapToFeedItemModel(UserFeedDto dto)
         {
             var userName = dto.User?.FullName ?? dto.UserFullName ?? "Anonymous";
@@ -271,8 +266,8 @@ namespace CraftConnect_Mobile_App.PageModels
                 Title = dto.Title,
                 Description = dto.Description,
                 ImageUrl = !string.IsNullOrEmpty(dto.InvoiceImage)
-                    ? dto.InvoiceImage
-                    : "https://via.placeholder.com/400x250?text=No+Image",
+                                       ? dto.InvoiceImage
+                                       : "https://via.placeholder.com/400x250?text=No+Image",
                 Category = dto.JobCategory,
                 PublishedDate = dto.CreatedAt,
                 Author = userName,
@@ -311,10 +306,7 @@ namespace CraftConnect_Mobile_App.PageModels
         private void OnFeedTapped(FeedItemModel feed)
         {
             if (feed == null) return;
-
             System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] Feed tapped: {feed.Title}");
-
-            // Navigate to feed detail page
             Shell.Current.GoToAsync($"feedDetail?id={feed.Id}");
         }
 
@@ -325,39 +317,14 @@ namespace CraftConnect_Mobile_App.PageModels
             try
             {
                 System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] Toggling favorite: {feed.Title}");
-
-                // Toggle favorite status immediately for better UX
                 feed.IsFavorite = !feed.IsFavorite;
-
-                // TODO: Call API to save favorite
-                // await _userFeedService.AddToFavoriteAsync(Guid.Parse(feed.Id));
-
-                var message = feed.IsFavorite ? "Added to favorites ❤️" : "Removed from favorites";
-
-                // Use toast instead of alert for better UX
-                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] {message}");
+                // TODO: await _userFeedService.AddToFavoriteAsync(Guid.Parse(feed.Id));
+                System.Diagnostics.Debug.WriteLine(feed.IsFavorite ? "Added to favorites ❤️" : "Removed from favorites");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] ❌ Error toggling favorite: {ex.Message}");
-                feed.IsFavorite = !feed.IsFavorite; // Revert on error
-            }
-        }
-
-        private async Task SendProposal(FeedItemModel feed)
-        {
-            if (feed == null) return;
-
-            try
-            {
-                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] Opening proposal for: {feed.Title}");
-
-                // Navigate to proposal page
-                await Shell.Current.GoToAsync($"sendProposal?feedId={feed.Id}&feedTitle={Uri.EscapeDataString(feed.Title)}");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] ❌ Error opening proposal: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] ❌ Favorite error: {ex.Message}");
+                feed.IsFavorite = !feed.IsFavorite; // revert
             }
         }
 
@@ -369,39 +336,52 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] Liking feed: {feed.Title}");
 
-                // Optimistic update
                 var wasLiked = feed.IsLiked;
                 feed.IsLiked = !feed.IsLiked;
                 feed.LikesCount += feed.IsLiked ? 1 : -1;
 
-                // Call API
                 var success = await _userFeedService.LikeFeedAsync(Guid.Parse(feed.Id));
 
                 if (!success)
                 {
-                    // Revert on failure
                     feed.IsLiked = wasLiked;
                     feed.LikesCount += wasLiked ? 1 : -1;
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] ❌ Error liking feed: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] ❌ Like error: {ex.Message}");
             }
         }
+
         #endregion
 
         #region INotifyPropertyChanged
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         #endregion
     }
 
-    #region Feed Item Model
+    // ══════════════════════════════════════════════════════════════════
+    // ▌ NAVIGATION ARGS
+    // ══════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Carried by the NavigateToCreateProposal event so the page knows
+    /// which feed was tapped and can pre-select it on CreateProposalPage.
+    /// </summary>
+    public class SendProposalNavigationArgs : EventArgs
+    {
+        public string FeedId { get; init; } = string.Empty;
+        public string FeedTitle { get; init; } = string.Empty;
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // ▌ FEED ITEM MODEL
+    // ══════════════════════════════════════════════════════════════════
+
     public class FeedItemModel : INotifyPropertyChanged
     {
         private bool _isLiked;
@@ -429,21 +409,13 @@ namespace CraftConnect_Mobile_App.PageModels
         public int LikesCount
         {
             get => _likesCount;
-            set
-            {
-                _likesCount = value;
-                OnPropertyChanged();
-            }
+            set { _likesCount = value; OnPropertyChanged(); }
         }
 
         public bool IsLiked
         {
             get => _isLiked;
-            set
-            {
-                _isLiked = value;
-                OnPropertyChanged();
-            }
+            set { _isLiked = value; OnPropertyChanged(); }
         }
 
         public bool IsFavorite
@@ -463,13 +435,10 @@ namespace CraftConnect_Mobile_App.PageModels
         {
             get
             {
-                var timeSpan = DateTime.Now - PublishedDate;
-                if (timeSpan.TotalMinutes < 60)
-                    return $"{(int)timeSpan.TotalMinutes}m ago";
-                if (timeSpan.TotalHours < 24)
-                    return $"{(int)timeSpan.TotalHours}h ago";
-                if (timeSpan.TotalDays < 7)
-                    return $"{(int)timeSpan.TotalDays}d ago";
+                var ts = DateTime.Now - PublishedDate;
+                if (ts.TotalMinutes < 60) return $"{(int)ts.TotalMinutes}m ago";
+                if (ts.TotalHours < 24) return $"{(int)ts.TotalHours}h ago";
+                if (ts.TotalDays < 7) return $"{(int)ts.TotalDays}d ago";
                 return PublishedDate.ToString("MMM dd");
             }
         }
@@ -477,9 +446,6 @@ namespace CraftConnect_Mobile_App.PageModels
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
-    #endregion
 }

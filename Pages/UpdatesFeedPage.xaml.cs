@@ -1,4 +1,5 @@
 ﻿using CraftConnect_Mobile_App.PageModels;
+using CraftConnect_Mobile_App.Pages;
 
 namespace CraftConnect_Mobile_App.Pages
 {
@@ -14,17 +15,74 @@ namespace CraftConnect_Mobile_App.Pages
             InitializeComponent();
             _viewModel = viewModel;
             BindingContext = _viewModel;
+
+            // Wire SendProposal navigation event
+            _viewModel.NavigateToCreateProposal += OnNavigateToCreateProposal;
         }
 
         protected override async void OnAppearing()
         {
             base.OnAppearing();
-            await _viewModel.InitializeAsync();
 
-            // Initialize scroll indicators after data loads
-            await Task.Delay(300); // Small delay to ensure items are rendered
+            // Re-subscribe if returning to this page (in case of OnDisappearing)
+            _viewModel.NavigateToCreateProposal -= OnNavigateToCreateProposal;
+            _viewModel.NavigateToCreateProposal += OnNavigateToCreateProposal;
+
+            await _viewModel.InitializeAsync();
+            await Task.Delay(300);
             InitializeScrollIndicators();
         }
+
+        protected override void OnDisappearing()
+        {
+            base.OnDisappearing();
+            _viewModel.NavigateToCreateProposal -= OnNavigateToCreateProposal;
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // SEND PROPOSAL → navigate to CreateProposalPage
+        // ══════════════════════════════════════════════════════════════
+
+        private async void OnNavigateToCreateProposal(object? sender, SendProposalNavigationArgs args)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[UpdatesFeed] Navigating to CreateProposalPage — FeedId: {args.FeedId}, Title: {args.FeedTitle}");
+
+                // Resolve from DI (must be registered as Transient)
+                var createPage = Handler?.MauiContext?.Services.GetService<CreateProposalPage>();
+
+                if (createPage == null)
+                {
+                    await DisplayAlert("Error", "Could not open the proposal page. Please try again.", "OK");
+                    return;
+                }
+
+                // Pass the full feed list so the Picker is populated
+                createPage.AvailableProjects = _viewModel.AllFeeds?
+                    .Select(f => (f.Id, f.Title ?? "Untitled"))
+                    .ToList()
+                    ?? new List<(string, string)>();
+
+                // Pre-select the feed the user tapped
+                createPage.PreselectedFeedId = args.FeedId;
+
+                await Navigation.PushAsync(createPage);
+
+                System.Diagnostics.Debug.WriteLine(
+                    $"[UpdatesFeed] Pushed CreateProposalPage. PreselectedFeedId: {args.FeedId}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] Navigation error: {ex.Message}");
+                await DisplayAlert("Error", "Could not open the proposal page. Please try again.", "OK");
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // SCROLL INDICATORS
+        // ══════════════════════════════════════════════════════════════
 
         private void InitializeScrollIndicators()
         {
@@ -36,7 +94,6 @@ namespace CraftConnect_Mobile_App.Pages
                 var feedCount = _viewModel.AllFeeds?.Count ?? 0;
                 if (feedCount == 0) return;
 
-                // Create dots (show max 5 at a time for better UX)
                 var dotsToShow = Math.Min(feedCount, 5);
 
                 for (int i = 0; i < dotsToShow; i++)
@@ -46,20 +103,20 @@ namespace CraftConnect_Mobile_App.Pages
                         WidthRequest = 8,
                         HeightRequest = 8,
                         CornerRadius = 4,
-                        BackgroundColor = i == 0 ? Color.FromArgb("#5F67EA") : Color.FromArgb("#D1D5DB"),
+                        BackgroundColor = i == 0
+                            ? Color.FromArgb("#5F67EA")
+                            : Color.FromArgb("#D1D5DB"),
                         HorizontalOptions = LayoutOptions.Center,
                         VerticalOptions = LayoutOptions.Center,
                         Margin = new Thickness(2, 0)
                     };
-
                     _indicatorDots.Add(dot);
                     ScrollIndicators.Children.Add(dot);
                 }
 
-                // If more than 5 items, add ellipsis indicator
                 if (feedCount > 5)
                 {
-                    var ellipsis = new Label
+                    ScrollIndicators.Children.Add(new Label
                     {
                         Text = "...",
                         FontSize = 14,
@@ -67,11 +124,10 @@ namespace CraftConnect_Mobile_App.Pages
                         TextColor = Color.FromArgb("#9CA3AF"),
                         VerticalOptions = LayoutOptions.Center,
                         Margin = new Thickness(4, 0, 0, 0)
-                    };
-                    ScrollIndicators.Children.Add(ellipsis);
+                    });
                 }
 
-                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] ✅ Initialized {dotsToShow} scroll indicators");
+                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] Initialized {dotsToShow} indicators");
             }
             catch (Exception ex)
             {
@@ -87,30 +143,21 @@ namespace CraftConnect_Mobile_App.Pages
             {
                 _isScrolling = true;
 
-                // Calculate current visible item index
-                var scrollX = e.ScrollX;
-                var itemWidth = 336; // Card width (320) + spacing (16)
-                var currentIndex = (int)Math.Round(scrollX / itemWidth);
+                var itemWidth = 336;
+                var currentIndex = (int)Math.Round(e.ScrollX / itemWidth);
 
-                if (currentIndex == _currentScrollIndex)
-                {
-                    _isScrolling = false;
-                    return;
-                }
+                if (currentIndex == _currentScrollIndex) return;
 
                 _currentScrollIndex = currentIndex;
                 UpdateScrollIndicators(currentIndex);
 
-                // Check if need to load more (when reaching end)
                 var feedCount = _viewModel.AllFeeds?.Count ?? 0;
                 if (feedCount > 0 && currentIndex >= feedCount - 3)
-                {
                     _ = _viewModel.LoadMoreFeeds();
-                }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] Error updating scroll: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] Scroll error: {ex.Message}");
             }
             finally
             {
@@ -125,44 +172,36 @@ namespace CraftConnect_Mobile_App.Pages
                 var feedCount = _viewModel.AllFeeds?.Count ?? 0;
                 if (feedCount == 0 || _indicatorDots.Count == 0) return;
 
-                // For 5 or fewer items, simple direct mapping
                 if (feedCount <= 5)
                 {
                     for (int i = 0; i < _indicatorDots.Count; i++)
-                    {
                         _indicatorDots[i].BackgroundColor = i == activeIndex
                             ? Color.FromArgb("#5F67EA")
                             : Color.FromArgb("#D1D5DB");
-                    }
                 }
                 else
                 {
-                    // For more items, use sliding window effect
                     var windowStart = Math.Max(0, Math.Min(activeIndex - 2, feedCount - 5));
-
                     for (int i = 0; i < _indicatorDots.Count; i++)
-                    {
-                        var itemIndex = windowStart + i;
-                        _indicatorDots[i].BackgroundColor = itemIndex == activeIndex
+                        _indicatorDots[i].BackgroundColor = (windowStart + i) == activeIndex
                             ? Color.FromArgb("#5F67EA")
                             : Color.FromArgb("#D1D5DB");
-                    }
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] Error updating indicators: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] Indicator error: {ex.Message}");
             }
         }
 
-        private void OnSearchClicked(object sender, EventArgs e)
-        {
-            _viewModel.SearchCommand?.Execute(null);
-        }
+        // ══════════════════════════════════════════════════════════════
+        // HEADER BUTTONS
+        // ══════════════════════════════════════════════════════════════
 
-        private void OnFilterClicked(object sender, EventArgs e)
-        {
+        private void OnSearchClicked(object sender, EventArgs e) =>
+            _viewModel.SearchCommand?.Execute(null);
+
+        private void OnFilterClicked(object sender, EventArgs e) =>
             _viewModel.FilterCommand?.Execute(null);
-        }
     }
 }
