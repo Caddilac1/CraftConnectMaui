@@ -17,6 +17,10 @@
     },
     "Profile 6": {
       "commandName": "Executable"
+    },
+    "WSL": {
+      "commandName": "WSL2",
+      "distributionName": ""
     }
   }
 }

@@ -4,7 +4,7 @@
              xmlns:vm="clr-namespace:CraftConnect_Mobile_App.PageModels"
              xmlns:models="clr-namespace:CraftConnect_Mobile_App.Models"
              xmlns:converters="clr-namespace:CraftConnect_Mobile_App.Converters"
-             xmlns:controls="clr-namespace:CraftConnect_Mobile_App.Controls"
+             xmlns:controls="clr-namespace:CraftConnect_Mobile_App.Pages"
              x:Class="CraftConnect_Mobile_App.Pages.GroupChatListPage"
              x:DataType="vm:GroupChatListPageModel"
              Shell.NavBarIsVisible="False"

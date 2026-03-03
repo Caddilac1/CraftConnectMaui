@@ -48,6 +48,10 @@ namespace CraftConnect_Mobile_App.PageModels
             }
         }
 
+        // ─── Helper to get current Page safely ───────────────────────────────────
+        private static Page? CurrentPage =>
+            Application.Current?.Windows[0].Page;
+
         public StorePageModel()
         {
             RefreshCommand = new Command(async () => await LoadStoreItems());
@@ -95,7 +99,7 @@ namespace CraftConnect_Mobile_App.PageModels
             catch (Exception ex)
             {
                 Debug.WriteLine($"[STORE PAGE MODEL] ❌ Error: {ex.Message}");
-                await Application.Current.MainPage.DisplayAlert(
+                await CurrentPage.DisplayAlert(
                     "Error",
                     $"Failed to load store items: {ex.Message}",
                     "OK");
@@ -117,12 +121,10 @@ namespace CraftConnect_Mobile_App.PageModels
 
             if (item.Type == StoreItemType.Product)
             {
-                // Add product to cart
                 await AddToCart(item);
             }
-            else // Service
+            else
             {
-                // Book service or request quote
                 await BookService(item);
             }
         }
@@ -134,18 +136,15 @@ namespace CraftConnect_Mobile_App.PageModels
         {
             try
             {
-                // Check if already in cart
                 var existingItem = CartItems.FirstOrDefault(c => c.Item.Id == product.Id);
 
                 if (existingItem != null)
                 {
-                    // Increment quantity
                     existingItem.Quantity++;
                     Debug.WriteLine($"[STORE PAGE MODEL] Increased quantity: {product.Name} x{existingItem.Quantity}");
                 }
                 else
                 {
-                    // Add new item to cart
                     var cartItem = new CartItem
                     {
                         Id = Guid.NewGuid(),
@@ -156,11 +155,9 @@ namespace CraftConnect_Mobile_App.PageModels
                     Debug.WriteLine($"[STORE PAGE MODEL] Added to cart: {product.Name}");
                 }
 
-                // Update cart count
                 CartItemCount = CartItems.Sum(c => c.Quantity);
 
-                // Show success message
-                await Application.Current.MainPage.DisplayAlert(
+                await CurrentPage.DisplayAlert(
                     "✓ Added to Cart",
                     $"{product.Name} has been added to your cart",
                     "OK");
@@ -170,7 +167,7 @@ namespace CraftConnect_Mobile_App.PageModels
             catch (Exception ex)
             {
                 Debug.WriteLine($"[STORE PAGE MODEL] ❌ Error adding to cart: {ex.Message}");
-                await Application.Current.MainPage.DisplayAlert(
+                await CurrentPage.DisplayAlert(
                     "Error",
                     "Failed to add item to cart",
                     "OK");
@@ -186,10 +183,9 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 if (service.RequiresQuote)
                 {
-                    // Navigate to quote request page
                     Debug.WriteLine($"[STORE PAGE MODEL] Requesting quote for: {service.Name}");
 
-                    await Application.Current.MainPage.DisplayAlert(
+                    await CurrentPage.DisplayAlert(
                         "Request Quote",
                         $"A quote request for '{service.Name}' will be sent to {service.SellerName}. They will contact you with pricing details.",
                         "OK");
@@ -199,10 +195,9 @@ namespace CraftConnect_Mobile_App.PageModels
                 }
                 else
                 {
-                    // Navigate to booking page
                     Debug.WriteLine($"[STORE PAGE MODEL] Booking service: {service.Name}");
 
-                    await Application.Current.MainPage.DisplayAlert(
+                    await CurrentPage.DisplayAlert(
                         "Book Service",
                         $"Booking '{service.Name}' - Duration: {service.Duration}\nYou'll be able to select a date and time in the next step.",
                         "Continue",
@@ -215,7 +210,7 @@ namespace CraftConnect_Mobile_App.PageModels
             catch (Exception ex)
             {
                 Debug.WriteLine($"[STORE PAGE MODEL] ❌ Error booking service: {ex.Message}");
-                await Application.Current.MainPage.DisplayAlert(
+                await CurrentPage.DisplayAlert(
                     "Error",
                     "Failed to process service request",
                     "OK");
@@ -234,7 +229,7 @@ namespace CraftConnect_Mobile_App.PageModels
             // TODO: Navigate to item details page
             // await Shell.Current.GoToAsync($"itemdetails?itemId={item.Id}");
 
-            await Application.Current.MainPage.DisplayAlert(
+            await CurrentPage.DisplayAlert(
                 item.Name,
                 $"{item.Description}\n\nPrice: {item.DisplayPrice}\nSeller: {item.SellerName}\nRating: {item.Rating}⭐ ({item.ReviewCount} reviews)",
                 "OK");
@@ -249,7 +244,7 @@ namespace CraftConnect_Mobile_App.PageModels
 
             if (CartItemCount == 0)
             {
-                await Application.Current.MainPage.DisplayAlert(
+                await CurrentPage.DisplayAlert(
                     "Cart Empty",
                     "Your cart is empty. Add some products to get started!",
                     "OK");
@@ -262,7 +257,7 @@ namespace CraftConnect_Mobile_App.PageModels
             var cartSummary = string.Join("\n", CartItems.Select(c => $"• {c.Item.Name} x{c.Quantity} - ${c.Subtotal:N2}"));
             var total = CartItems.Sum(c => c.Subtotal);
 
-            await Application.Current.MainPage.DisplayAlert(
+            await CurrentPage.DisplayAlert(
                 "Your Cart",
                 $"{cartSummary}\n\nTotal: ${total:N2}",
                 "OK");
@@ -370,7 +365,7 @@ namespace CraftConnect_Mobile_App.PageModels
                     ReviewCount = 67,
                     StockQuantity = null,
                     Duration = "Varies",
-                    RequiresQuote = true  // Custom quote needed
+                    RequiresQuote = true
                 },
                 new StoreItem
                 {

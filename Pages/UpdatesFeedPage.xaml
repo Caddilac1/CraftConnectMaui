@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:controls="clr-namespace:CraftConnect_Mobile_App.Controls"
+             xmlns:controls="clr-namespace:CraftConnect_Mobile_App.Pages"
              x:Class="CraftConnect_Mobile_App.Pages.UpdatesFeedPage"
              Title="Updates"
              BackgroundColor="#F5F6FA">

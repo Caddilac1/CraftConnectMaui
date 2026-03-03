@@ -1,0 +1,1019 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:CraftConnect_Mobile_App.PageModels"
+             xmlns:models="clr-namespace:CraftConnect_Mobile_App.Models"
+             xmlns:controls="clr-namespace:CraftConnect_Mobile_App.Pages"
+             x:Class="CraftConnect_Mobile_App.Pages.HomePage"
+             x:DataType="vm:HomePageModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#F4F5F7">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <!-- Brand Colors -->
+            <Color x:Key="Navy">#1A2332</Color>
+            <Color x:Key="NavyMid">#232F3E</Color>
+            <Color x:Key="NavyLight">#37475A</Color>
+            <Color x:Key="Orange">#FF9900</Color>
+            <Color x:Key="Yellow">#FEBD69</Color>
+            <Color x:Key="White">#FFFFFF</Color>
+            <Color x:Key="Surface">#F4F5F7</Color>
+            <Color x:Key="CardBg">#FFFFFF</Color>
+            <Color x:Key="TextPrimary">#1A2332</Color>
+            <Color x:Key="TextSecondary">#6B7280</Color>
+            <Color x:Key="TextMuted">#9CA3AF</Color>
+            <Color x:Key="Divider">#E5E7EB</Color>
+            <Color x:Key="BadgeGreen">#16A34A</Color>
+            <Color x:Key="BadgeRed">#DC2626</Color>
+
+            <!-- Shadows via styles -->
+            <Style x:Key="CardStyle" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="{StaticResource CardBg}"/>
+                <Setter Property="StrokeThickness" Value="0"/>
+                <Setter Property="Shadow">
+                    <Setter.Value>
+                        <Shadow Brush="#1A000000" Offset="0,2" Radius="8" Opacity="0.08"/>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="SectionTitle" TargetType="Label">
+                <Setter Property="FontSize" Value="17"/>
+                <Setter Property="FontAttributes" Value="Bold"/>
+                <Setter Property="TextColor" Value="{StaticResource TextPrimary}"/>
+            </Style>
+
+            <Style x:Key="SeeAllLabel" TargetType="Label">
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="TextColor" Value="{StaticResource Orange}"/>
+                <Setter Property="FontAttributes" Value="Bold"/>
+                <Setter Property="VerticalOptions" Value="Center"/>
+            </Style>
+
+            <Style x:Key="PriceLabel" TargetType="Label">
+                <Setter Property="FontSize" Value="15"/>
+                <Setter Property="FontAttributes" Value="Bold"/>
+                <Setter Property="TextColor" Value="{StaticResource TextPrimary}"/>
+            </Style>
+
+            <Style x:Key="OriginalPriceLabel" TargetType="Label">
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="TextColor" Value="{StaticResource TextMuted}"/>
+                <Setter Property="TextDecorations" Value="Strikethrough"/>
+            </Style>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto" RowSpacing="0">
+
+        <!-- ═══════════════════════════════════════════
+             STICKY HEADER
+        ═══════════════════════════════════════════ -->
+        <Grid Grid.Row="0"
+              BackgroundColor="{StaticResource Navy}"
+              RowDefinitions="Auto,Auto"
+              RowSpacing="0">
+
+            <!-- Top row: Logo + Location + Icons -->
+            <Grid Grid.Row="0" Padding="16,48,16,10"
+                  ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                  ColumnSpacing="12">
+
+                <!-- Logo -->
+                <Image Grid.Column="0"
+                       Source="agooha_logo_white.png"
+                       HeightRequest="28"
+                       WidthRequest="90"
+                       Aspect="AspectFit"
+                       VerticalOptions="Center"/>
+
+                <!-- Delivery location -->
+                <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                    <Label Text="Deliver to"
+                           FontSize="11"
+                           TextColor="{StaticResource Yellow}"
+                           Opacity="0.85"/>
+                    <Label FontSize="13" FontAttributes="Bold" TextColor="{StaticResource White}">
+                        <Label.FormattedText>
+                            <FormattedString>
+                                <Span Text="📍 "/>
+                                <Span Text="Ghana" FontAttributes="Bold"/>
+                            </FormattedString>
+                        </Label.FormattedText>
+                    </Label>
+                </VerticalStackLayout>
+
+                <!-- Notification bell -->
+                <Grid Grid.Column="2" WidthRequest="36" HeightRequest="36">
+                    <Border BackgroundColor="Transparent" StrokeThickness="0">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenNotificationsCommand}"/>
+                        </Border.GestureRecognizers>
+                        <Label Text="🔔" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center"/>
+                    </Border>
+                </Grid>
+
+                <!-- Messages -->
+                <Grid Grid.Column="3" WidthRequest="36" HeightRequest="36">
+                    <Border BackgroundColor="Transparent" StrokeThickness="0">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenMessagesCommand}"/>
+                        </Border.GestureRecognizers>
+                        <Label Text="✉️" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center"/>
+                    </Border>
+                </Grid>
+
+                <!-- Cart with badge -->
+                <Grid Grid.Column="4" WidthRequest="36" HeightRequest="36">
+                    <Border BackgroundColor="Transparent" StrokeThickness="0">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenCartCommand}"/>
+                        </Border.GestureRecognizers>
+                        <Label Text="🛒" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center"/>
+                    </Border>
+                    <!-- Cart count badge -->
+                    <Border IsVisible="{Binding HasCartItems}"
+                            BackgroundColor="{StaticResource Orange}"
+                            StrokeThickness="0"
+                            WidthRequest="18" HeightRequest="18"
+                            HorizontalOptions="End" VerticalOptions="Start"
+                            Margin="0,0,0,0">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="9"/>
+                        </Border.StrokeShape>
+                        <Label Text="{Binding CartCount}"
+                               FontSize="10" FontAttributes="Bold"
+                               TextColor="{StaticResource Navy}"
+                               HorizontalOptions="Center" VerticalOptions="Center"/>
+                    </Border>
+                </Grid>
+            </Grid>
+
+            <!-- Search bar row -->
+            <Grid Grid.Row="1" Padding="16,0,16,12" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <Border Grid.Column="0"
+                        BackgroundColor="{StaticResource White}"
+                        StrokeThickness="0"
+                        Padding="12,0">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="8"/>
+                    </Border.StrokeShape>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenSearchCommand}"/>
+                    </Border.GestureRecognizers>
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" HeightRequest="42">
+                        <Label Grid.Column="0" Text="🔍" FontSize="16" VerticalOptions="Center" Opacity="0.5"/>
+                        <Label Grid.Column="1"
+                               Text="Search Agooha"
+                               TextColor="{StaticResource TextMuted}"
+                               FontSize="14"
+                               VerticalOptions="Center"/>
+                        <Label Grid.Column="2" Text="🎙️" FontSize="16" VerticalOptions="Center" Opacity="0.6"/>
+                    </Grid>
+                </Border>
+
+                <!-- QR / Scan button -->
+                <Border Grid.Column="1"
+                        BackgroundColor="{StaticResource Orange}"
+                        StrokeThickness="0"
+                        WidthRequest="42" HeightRequest="42">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="8"/>
+                    </Border.StrokeShape>
+                    <Label Text="⊞" FontSize="18" TextColor="{StaticResource Navy}"
+                           HorizontalOptions="Center" VerticalOptions="Center" FontAttributes="Bold"/>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- ═══════════════════════════════════════════
+             SCROLLABLE CONTENT
+        ═══════════════════════════════════════════ -->
+        <RefreshView Grid.Row="1"
+                     Command="{Binding RefreshCommand}"
+                     IsRefreshing="{Binding IsRefreshing}"
+                     RefreshColor="{StaticResource Orange}">
+            <ScrollView BackgroundColor="{StaticResource Surface}">
+                <VerticalStackLayout Spacing="0">
+
+                    <!-- ─── GREETING BANNER ─────────────────────── -->
+                    <Grid BackgroundColor="{StaticResource NavyMid}"
+                          Padding="16,12,16,16"
+                          ColumnDefinitions="*,Auto"
+                          IsVisible="{Binding IsAuthenticated}">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                            <Label Text="{Binding GreetingText}"
+                                   FontSize="13"
+                                   TextColor="{StaticResource Yellow}"
+                                   Opacity="0.9"/>
+                            <Label Text="{Binding GreetingName}"
+                                   FontSize="16"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource White}"/>
+                        </VerticalStackLayout>
+                        <Border Grid.Column="1"
+                                WidthRequest="44" HeightRequest="44"
+                                StrokeThickness="2"
+                                Stroke="{StaticResource Orange}">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="22"/>
+                            </Border.StrokeShape>
+                            <Image Source="{Binding ProfileImageUrl}"
+                                   Aspect="AspectFill"/>
+                        </Border>
+                    </Grid>
+
+                    <!-- ─── BROAD CATEGORIES PILL STRIP ────────── -->
+                    <VerticalStackLayout BackgroundColor="{StaticResource Navy}" Padding="0,0,0,16">
+                        <ScrollView Orientation="Horizontal"
+                                    HorizontalScrollBarVisibility="Never"
+                                    Padding="16,0">
+                            <BindableLayout.ItemsSource>
+                                <x:Reference Name="BroadCategoryLayout"/>
+                            </BindableLayout.ItemsSource>
+                            <HorizontalStackLayout x:Name="BroadCategoryLayout" Spacing="8">
+                                <BindableLayout.ItemsSource>
+                                    <Binding Path="BroadCategories"/>
+                                </BindableLayout.ItemsSource>
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="models:BroadCategoryModel">
+                                        <Border BackgroundColor="#FFFFFF15"
+                                                StrokeThickness="1"
+                                                Stroke="#FFFFFF25"
+                                                Padding="14,8">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="20"/>
+                                            </Border.StrokeShape>
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HomePageModel}}, Path=SelectBroadCategoryCommand}"
+                                                                      CommandParameter="{Binding BroadCategoryId}"/>
+                                            </Border.GestureRecognizers>
+                                            <Label Text="{Binding Name}"
+                                                   FontSize="13"
+                                                   TextColor="{StaticResource White}"
+                                                   FontAttributes="Bold"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </HorizontalStackLayout>
+                        </ScrollView>
+                    </VerticalStackLayout>
+
+                    <!-- ─── PROMO CAROUSEL ──────────────────────── -->
+                    <VerticalStackLayout BackgroundColor="{StaticResource Surface}" Spacing="0">
+                        <CarouselView ItemsSource="{Binding CurrentPromotions}"
+                                      HeightRequest="180"
+                                      Loop="True"
+                                      IndicatorView="PromoIndicator"
+                                      Margin="0,12,0,0">
+                            <CarouselView.ItemTemplate>
+                                <DataTemplate x:DataType="models:PromotionCarouselModel">
+                                    <Border Margin="16,0"
+                                            StrokeThickness="0"
+                                            HeightRequest="160">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="14"/>
+                                        </Border.StrokeShape>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HomePageModel}}, Path=OpenPromotionCommand}"
+                                                                  CommandParameter="{Binding ButtonUrl}"/>
+                                        </Border.GestureRecognizers>
+                                        <Grid>
+                                            <!-- Background image -->
+                                            <Image Source="{Binding ImageUrl}"
+                                                   Aspect="AspectFill"/>
+                                            <!-- Gradient overlay -->
+                                            <BoxView>
+                                                <BoxView.Background>
+                                                    <LinearGradientBrush EndPoint="1,0">
+                                                        <GradientStop Color="#CC1A2332" Offset="0"/>
+                                                        <GradientStop Color="#661A2332" Offset="0.5"/>
+                                                        <GradientStop Color="#001A2332" Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </BoxView.Background>
+                                            </BoxView>
+                                            <!-- Text content -->
+                                            <VerticalStackLayout Padding="20" VerticalOptions="Center" HorizontalOptions="Start">
+                                                <Label Text="{Binding Title}"
+                                                       FontSize="18"
+                                                       FontAttributes="Bold"
+                                                       TextColor="{StaticResource White}"
+                                                       MaxLines="2"/>
+                                                <Label Text="{Binding Description}"
+                                                       FontSize="12"
+                                                       TextColor="{StaticResource Yellow}"
+                                                       Opacity="0.9"
+                                                       MaxLines="2"
+                                                       Margin="0,4,0,10"/>
+                                                <Border BackgroundColor="{StaticResource Orange}"
+                                                        StrokeThickness="0"
+                                                        Padding="14,7"
+                                                        HorizontalOptions="Start">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="6"/>
+                                                    </Border.StrokeShape>
+                                                    <Label Text="{Binding ButtonText}"
+                                                           FontSize="12"
+                                                           FontAttributes="Bold"
+                                                           TextColor="{StaticResource Navy}"/>
+                                                </Border>
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </CarouselView.ItemTemplate>
+                        </CarouselView>
+
+                        <!-- Carousel dots -->
+                        <IndicatorView x:Name="PromoIndicator"
+                                       IndicatorColor="#CCCCCC"
+                                       SelectedIndicatorColor="{StaticResource Orange}"
+                                       IndicatorSize="7"
+                                       HorizontalOptions="Center"
+                                       Margin="0,8,0,0"/>
+                    </VerticalStackLayout>
+
+                    <!-- ─── FILTER CHIPS ────────────────────────── -->
+                    <ScrollView Orientation="Horizontal"
+                                HorizontalScrollBarVisibility="Never"
+                                BackgroundColor="{StaticResource Surface}"
+                                Padding="16,12">
+                        <HorizontalStackLayout Spacing="8">
+                            <!-- All -->
+                            <Border StrokeThickness="0" Padding="14,8">
+                                <Border.Background>
+                                    <LinearGradientBrush>
+                                        <GradientStop Color="{StaticResource Orange}" Offset="0"/>
+                                        <GradientStop Color="{StaticResource Yellow}" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="20"/>
+                                </Border.StrokeShape>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SetFilterCommand}" CommandParameter=""/>
+                                </Border.GestureRecognizers>
+                                <Label Text="All Items" FontSize="13" FontAttributes="Bold" TextColor="{StaticResource Navy}"/>
+                            </Border>
+                            <!-- Popular -->
+                            <Border BackgroundColor="{StaticResource CardBg}"
+                                    StrokeThickness="1" Stroke="{StaticResource Divider}"
+                                    Padding="14,8">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="20"/>
+                                </Border.StrokeShape>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SetFilterCommand}" CommandParameter="popular"/>
+                                </Border.GestureRecognizers>
+                                <Label Text="🔥 Popular" FontSize="13" TextColor="{StaticResource TextPrimary}"/>
+                            </Border>
+                            <!-- Promotions -->
+                            <Border BackgroundColor="{StaticResource CardBg}"
+                                    StrokeThickness="1" Stroke="{StaticResource Divider}"
+                                    Padding="14,8">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="20"/>
+                                </Border.StrokeShape>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SetFilterCommand}" CommandParameter="promotions"/>
+                                </Border.GestureRecognizers>
+                                <Label Text="🏷️ Deals" FontSize="13" TextColor="{StaticResource TextPrimary}"/>
+                            </Border>
+                            <!-- Wishlist -->
+                            <Border BackgroundColor="{StaticResource CardBg}"
+                                    StrokeThickness="1" Stroke="{StaticResource Divider}"
+                                    Padding="14,8">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="20"/>
+                                </Border.StrokeShape>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SetFilterCommand}" CommandParameter="wishlist"/>
+                                </Border.GestureRecognizers>
+                                <Label Text="❤️ Wishlist" FontSize="13" TextColor="{StaticResource TextPrimary}"/>
+                            </Border>
+                        </HorizontalStackLayout>
+                    </ScrollView>
+
+                    <!-- ─── SPECIAL DEALS COUNTDOWN ─────────────── -->
+                    <VerticalStackLayout IsVisible="{Binding HasSpecialDeals}"
+                                         BackgroundColor="{StaticResource CardBg}"
+                                         Padding="16,16,16,0"
+                                         Margin="0,8,0,0">
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                <Label Style="{StaticResource SectionTitle}" Text="⚡ Special Deals"/>
+                                <Label Text="{Binding DealCountdownText}"
+                                       FontSize="12"
+                                       TextColor="{StaticResource BadgeRed}"
+                                       FontAttributes="Bold"/>
+                            </VerticalStackLayout>
+                            <Label Grid.Column="1"
+                                   Style="{StaticResource SeeAllLabel}"
+                                   Text="See All →">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SeeAllDealsCommand}"/>
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </Grid>
+
+                        <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" Margin="0,0,-16,16">
+                            <HorizontalStackLayout Spacing="12" BindableLayout.ItemsSource="{Binding SpecialDeals}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="models:SpecialDealModel">
+                                        <Border Style="{StaticResource CardStyle}"
+                                                WidthRequest="150"
+                                                StrokeThickness="0">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="12"/>
+                                            </Border.StrokeShape>
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HomePageModel}}, Path=OpenItemCommand}"
+                                                                      CommandParameter="{Binding .}"/>
+                                            </Border.GestureRecognizers>
+                                            <Grid RowDefinitions="130,Auto" RowSpacing="0">
+                                                <Grid Grid.Row="0">
+                                                    <Image Source="{Binding ImageUrl}"
+                                                           Aspect="AspectFill"
+                                                           HeightRequest="130"/>
+                                                    <!-- Discount badge -->
+                                                    <Border BackgroundColor="{StaticResource BadgeRed}"
+                                                            StrokeThickness="0"
+                                                            Padding="6,3"
+                                                            HorizontalOptions="Start"
+                                                            VerticalOptions="Start"
+                                                            Margin="8,8,0,0">
+                                                        <Border.StrokeShape>
+                                                            <RoundRectangle CornerRadius="4"/>
+                                                        </Border.StrokeShape>
+                                                        <Label Text="{Binding DiscountPercentage, StringFormat='-{0}%'}"
+                                                               FontSize="11" FontAttributes="Bold"
+                                                               TextColor="{StaticResource White}"/>
+                                                    </Border>
+                                                </Grid>
+                                                <VerticalStackLayout Grid.Row="1" Padding="10,8,10,10" Spacing="3">
+                                                    <Label Text="{Binding Name}"
+                                                           FontSize="13"
+                                                           TextColor="{StaticResource TextPrimary}"
+                                                           MaxLines="2"
+                                                           LineBreakMode="TailTruncation"/>
+                                                    <Label Text="{Binding SalePrice, StringFormat='₵{0:F2}'}"
+                                                           Style="{StaticResource PriceLabel}"/>
+                                                    <Label Text="{Binding OriginalPrice, StringFormat='₵{0:F2}'}"
+                                                           Style="{StaticResource OriginalPriceLabel}"/>
+                                                </VerticalStackLayout>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </HorizontalStackLayout>
+                        </ScrollView>
+                    </VerticalStackLayout>
+
+                    <!-- ─── FEATURED ITEMS ──────────────────────── -->
+                    <VerticalStackLayout IsVisible="{Binding HasFeaturedItems}"
+                                         BackgroundColor="{StaticResource CardBg}"
+                                         Padding="16,16,16,0"
+                                         Margin="0,8,0,0">
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                            <Label Grid.Column="0" Style="{StaticResource SectionTitle}" Text="⭐ Featured Items"/>
+                            <Label Grid.Column="1" Style="{StaticResource SeeAllLabel}" Text="See All →">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SeeAllFeaturedCommand}"/>
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </Grid>
+
+                        <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" Margin="0,0,-16,16">
+                            <HorizontalStackLayout Spacing="12" BindableLayout.ItemsSource="{Binding FeaturedItems}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="models:EcommerceItemModel">
+                                        <Border Style="{StaticResource CardStyle}"
+                                                WidthRequest="145"
+                                                StrokeThickness="0">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="12"/>
+                                            </Border.StrokeShape>
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HomePageModel}}, Path=OpenEcommerceItemCommand}"
+                                                                      CommandParameter="{Binding .}"/>
+                                            </Border.GestureRecognizers>
+                                            <Grid RowDefinitions="120,Auto">
+                                                <Grid Grid.Row="0">
+                                                    <Image Source="{Binding ImageUrl}" Aspect="AspectFill" HeightRequest="120"/>
+                                                    <!-- Wishlist heart -->
+                                                    <Border BackgroundColor="#AAFFFFFF"
+                                                            StrokeThickness="0"
+                                                            WidthRequest="30" HeightRequest="30"
+                                                            HorizontalOptions="End" VerticalOptions="Start"
+                                                            Margin="0,8,8,0">
+                                                        <Border.StrokeShape>
+                                                            <RoundRectangle CornerRadius="15"/>
+                                                        </Border.StrokeShape>
+                                                        <Border.GestureRecognizers>
+                                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HomePageModel}}, Path=ToggleWishlistCommand}"
+                                                                                  CommandParameter="{Binding .}"/>
+                                                        </Border.GestureRecognizers>
+                                                        <Label Text="{Binding IsInWishlist, Converter={StaticResource WishlistIconConverter}}"
+                                                               FontSize="14"
+                                                               HorizontalOptions="Center" VerticalOptions="Center"/>
+                                                    </Border>
+                                                </Grid>
+                                                <VerticalStackLayout Grid.Row="1" Padding="10,8,10,10" Spacing="3">
+                                                    <Label Text="{Binding Name}"
+                                                           FontSize="13"
+                                                           TextColor="{StaticResource TextPrimary}"
+                                                           MaxLines="2"
+                                                           LineBreakMode="TailTruncation"/>
+                                                    <!-- Star rating -->
+                                                    <HorizontalStackLayout Spacing="3">
+                                                        <Label Text="★" FontSize="12" TextColor="{StaticResource Orange}"/>
+                                                        <Label Text="{Binding AverageRating, StringFormat='{0:F1}'}"
+                                                               FontSize="12" TextColor="{StaticResource TextSecondary}"/>
+                                                        <Label Text="{Binding TotalComments, StringFormat='({0})'}"
+                                                               FontSize="11" TextColor="{StaticResource TextMuted}"/>
+                                                    </HorizontalStackLayout>
+                                                    <Label Text="{Binding Price, StringFormat='₵{0:F2}'}"
+                                                           Style="{StaticResource PriceLabel}"/>
+                                                </VerticalStackLayout>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </HorizontalStackLayout>
+                        </ScrollView>
+                    </VerticalStackLayout>
+
+                    <!-- ─── TRENDING CATEGORIES GRID ────────────── -->
+                    <VerticalStackLayout IsVisible="{Binding HasTrendingCategories}"
+                                         BackgroundColor="{StaticResource CardBg}"
+                                         Padding="16"
+                                         Margin="0,8,0,0">
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                            <Label Grid.Column="0" Style="{StaticResource SectionTitle}" Text="📊 Trending Categories"/>
+                            <Label Grid.Column="1" Style="{StaticResource SeeAllLabel}" Text="See All →">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SeeAllCategoriesCommand}"/>
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </Grid>
+
+                        <!-- 3-column grid using BindableLayout in a FlexLayout -->
+                        <FlexLayout BindableLayout.ItemsSource="{Binding TrendingCategories}"
+                                    Wrap="Wrap"
+                                    JustifyContent="SpaceBetween">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:CategoryViewModel">
+                                    <Border BackgroundColor="{StaticResource Surface}"
+                                            StrokeThickness="0"
+                                            WidthRequest="106"
+                                            Margin="0,0,0,10">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="10"/>
+                                        </Border.StrokeShape>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HomePageModel}}, Path=SelectCategoryCommand}"
+                                                                  CommandParameter="{Binding CategoryId}"/>
+                                        </Border.GestureRecognizers>
+                                        <VerticalStackLayout Padding="8" Spacing="6">
+                                            <Border BackgroundColor="{StaticResource NavyMid}"
+                                                    StrokeThickness="0"
+                                                    HeightRequest="64"
+                                                    HorizontalOptions="Fill">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="8"/>
+                                                </Border.StrokeShape>
+                                                <Image Source="{Binding ImageUrl}"
+                                                       Aspect="AspectFill"/>
+                                            </Border>
+                                            <Label Text="{Binding Name}"
+                                                   FontSize="12"
+                                                   FontAttributes="Bold"
+                                                   TextColor="{StaticResource TextPrimary}"
+                                                   HorizontalTextAlignment="Center"
+                                                   MaxLines="2"
+                                                   LineBreakMode="TailTruncation"/>
+                                            <Label Text="{Binding ProductCount, StringFormat='{0} items'}"
+                                                   FontSize="10"
+                                                   TextColor="{StaticResource TextMuted}"
+                                                   HorizontalTextAlignment="Center"/>
+                                        </VerticalStackLayout>
+                                    </Border>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </FlexLayout>
+                    </VerticalStackLayout>
+
+                    <!-- ─── FEATURED SERVICES ───────────────────── -->
+                    <VerticalStackLayout IsVisible="{Binding HasFeaturedServices}"
+                                         BackgroundColor="{StaticResource CardBg}"
+                                         Padding="16,16,16,0"
+                                         Margin="0,8,0,0">
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                <Label Style="{StaticResource SectionTitle}" Text="🔧 Featured Services"/>
+                                <Label Text="Book skilled professionals" FontSize="12" TextColor="{StaticResource TextMuted}"/>
+                            </VerticalStackLayout>
+                            <Label Grid.Column="1" Style="{StaticResource SeeAllLabel}" Text="See All →">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SeeAllServicesCommand}"/>
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </Grid>
+
+                        <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" Margin="0,0,-16,16">
+                            <HorizontalStackLayout Spacing="12" BindableLayout.ItemsSource="{Binding FeaturedServices}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="models:ServiceViewModel">
+                                        <Border Style="{StaticResource CardStyle}"
+                                                WidthRequest="200"
+                                                StrokeThickness="0">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="12"/>
+                                            </Border.StrokeShape>
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HomePageModel}}, Path=OpenServiceCommand}"
+                                                                      CommandParameter="{Binding .}"/>
+                                            </Border.GestureRecognizers>
+                                            <Grid RowDefinitions="120,Auto">
+                                                <Grid Grid.Row="0">
+                                                    <Image Source="{Binding ImageUrl}" Aspect="AspectFill" HeightRequest="120"/>
+                                                    <Border BackgroundColor="#CC1A2332"
+                                                            StrokeThickness="0"
+                                                            Padding="8,4"
+                                                            HorizontalOptions="Start"
+                                                            VerticalOptions="End"
+                                                            Margin="0,0,0,0">
+                                                        <Label Text="{Binding ServiceTypeName}"
+                                                               FontSize="10" FontAttributes="Bold"
+                                                               TextColor="{StaticResource Yellow}"/>
+                                                    </Border>
+                                                </Grid>
+                                                <VerticalStackLayout Grid.Row="1" Padding="10,8,10,10" Spacing="4">
+                                                    <Label Text="{Binding Name}"
+                                                           FontSize="14" FontAttributes="Bold"
+                                                           TextColor="{StaticResource TextPrimary}"
+                                                           MaxLines="1" LineBreakMode="TailTruncation"/>
+                                                    <Label Text="{Binding Description}"
+                                                           FontSize="12"
+                                                           TextColor="{StaticResource TextSecondary}"
+                                                           MaxLines="2" LineBreakMode="TailTruncation"/>
+                                                    <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                                                        <Label Grid.Column="0"
+                                                               Text="{Binding Price, StringFormat='From ₵{0:F2}'}"
+                                                               FontSize="14" FontAttributes="Bold"
+                                                               TextColor="{StaticResource Navy}"/>
+                                                        <Border Grid.Column="1"
+                                                                BackgroundColor="{StaticResource Orange}"
+                                                                StrokeThickness="0"
+                                                                Padding="12,6">
+                                                            <Border.StrokeShape>
+                                                                <RoundRectangle CornerRadius="6"/>
+                                                            </Border.StrokeShape>
+                                                            <Border.GestureRecognizers>
+                                                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HomePageModel}}, Path=BookServiceCommand}"
+                                                                                      CommandParameter="{Binding .}"/>
+                                                            </Border.GestureRecognizers>
+                                                            <Label Text="Book" FontSize="12" FontAttributes="Bold" TextColor="{StaticResource Navy}"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </VerticalStackLayout>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </HorizontalStackLayout>
+                        </ScrollView>
+                    </VerticalStackLayout>
+
+                    <!-- ─── CRAFTCONNECT FEEDS ──────────────────── -->
+                    <VerticalStackLayout IsVisible="{Binding HasFeaturedFeeds}"
+                                         BackgroundColor="{StaticResource CardBg}"
+                                         Padding="16"
+                                         Margin="0,8,0,0">
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                <Label Style="{StaticResource SectionTitle}" Text="🛠️ CraftConnect Feeds"/>
+                                <Label Text="Latest job postings near you" FontSize="12" TextColor="{StaticResource TextMuted}"/>
+                            </VerticalStackLayout>
+                            <Label Grid.Column="1" Style="{StaticResource SeeAllLabel}" Text="Browse →">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SeeAllFeedsCommand}"/>
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </Grid>
+
+                        <VerticalStackLayout Spacing="0" BindableLayout.ItemsSource="{Binding FeaturedFeeds}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:FeedViewModel">
+                                    <Grid>
+                                        <!-- Feed row -->
+                                        <Border BackgroundColor="{StaticResource Surface}"
+                                                StrokeThickness="0"
+                                                Padding="12"
+                                                Margin="0,0,0,8">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="10"/>
+                                            </Border.StrokeShape>
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HomePageModel}}, Path=OpenFeedCommand}"
+                                                                      CommandParameter="{Binding .}"/>
+                                            </Border.GestureRecognizers>
+                                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
+                                                <!-- Priority badge + Title -->
+                                                <HorizontalStackLayout Grid.Row="0" Grid.Column="0" Spacing="8">
+                                                    <Border Padding="6,2" StrokeThickness="0">
+                                                        <Border.StrokeShape>
+                                                            <RoundRectangle CornerRadius="4"/>
+                                                        </Border.StrokeShape>
+                                                        <Border.Background>
+                                                            <LinearGradientBrush>
+                                                                <GradientStop Color="{StaticResource Orange}" Offset="0"/>
+                                                                <GradientStop Color="{StaticResource Yellow}" Offset="1"/>
+                                                            </LinearGradientBrush>
+                                                        </Border.Background>
+                                                        <Label Text="{Binding Priority}" FontSize="10" FontAttributes="Bold" TextColor="{StaticResource Navy}"/>
+                                                    </Border>
+                                                    <Label Text="{Binding JobCategory}"
+                                                           FontSize="11"
+                                                           TextColor="{StaticResource TextMuted}"
+                                                           VerticalOptions="Center"/>
+                                                </HorizontalStackLayout>
+                                                <Label Grid.Row="1" Grid.Column="0"
+                                                       Text="{Binding Title}"
+                                                       FontSize="14" FontAttributes="Bold"
+                                                       TextColor="{StaticResource TextPrimary}"
+                                                       MaxLines="1" LineBreakMode="TailTruncation"/>
+                                                <HorizontalStackLayout Grid.Row="2" Grid.Column="0" Spacing="12">
+                                                    <Label Text="{Binding Location, StringFormat='📍 {0}'}"
+                                                           FontSize="12" TextColor="{StaticResource TextSecondary}"/>
+                                                    <Label Text="{Binding ViewsCount, StringFormat='👁 {0}'}"
+                                                           FontSize="12" TextColor="{StaticResource TextMuted}"/>
+                                                </HorizontalStackLayout>
+                                                <!-- Chevron -->
+                                                <Label Grid.RowSpan="3" Grid.Column="1"
+                                                       Text="›" FontSize="22"
+                                                       TextColor="{StaticResource TextMuted}"
+                                                       VerticalOptions="Center"/>
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+
+                    <!-- ─── MAIN PRODUCTS GRID ──────────────────── -->
+                    <VerticalStackLayout BackgroundColor="{StaticResource Surface}" Margin="0,8,0,0">
+                        <Grid Padding="16,16,16,12" ColumnDefinitions="*,Auto" BackgroundColor="{StaticResource CardBg}">
+                            <Label Grid.Column="0" Style="{StaticResource SectionTitle}" Text="🛍️ Products For You"/>
+                            <Label Grid.Column="1" Style="{StaticResource SeeAllLabel}" Text="See All →">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SeeAllProductsCommand}"/>
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </Grid>
+
+                        <!-- Sort bar -->
+                        <ScrollView Orientation="Horizontal"
+                                    HorizontalScrollBarVisibility="Never"
+                                    BackgroundColor="{StaticResource CardBg}"
+                                    Padding="16,0,16,12">
+                            <HorizontalStackLayout Spacing="6">
+                                <Border Padding="10,6" StrokeThickness="0" BackgroundColor="{StaticResource Surface}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="6"/>
+                                    </Border.StrokeShape>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SetSortCommand}" CommandParameter="popular"/>
+                                    </Border.GestureRecognizers>
+                                    <Label Text="Popular" FontSize="12" TextColor="{StaticResource TextPrimary}"/>
+                                </Border>
+                                <Border Padding="10,6" StrokeThickness="0" BackgroundColor="{StaticResource Surface}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="6"/>
+                                    </Border.StrokeShape>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SetSortCommand}" CommandParameter="price"/>
+                                    </Border.GestureRecognizers>
+                                    <Label Text="Price ↑" FontSize="12" TextColor="{StaticResource TextPrimary}"/>
+                                </Border>
+                                <Border Padding="10,6" StrokeThickness="0" BackgroundColor="{StaticResource Surface}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="6"/>
+                                    </Border.StrokeShape>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SetSortCommand}" CommandParameter="price_desc"/>
+                                    </Border.GestureRecognizers>
+                                    <Label Text="Price ↓" FontSize="12" TextColor="{StaticResource TextPrimary}"/>
+                                </Border>
+                                <Border Padding="10,6" StrokeThickness="0" BackgroundColor="{StaticResource Surface}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="6"/>
+                                    </Border.StrokeShape>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SetSortCommand}" CommandParameter="newest"/>
+                                    </Border.GestureRecognizers>
+                                    <Label Text="Newest" FontSize="12" TextColor="{StaticResource TextPrimary}"/>
+                                </Border>
+                                <Border Padding="10,6" StrokeThickness="0" BackgroundColor="{StaticResource Surface}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="6"/>
+                                    </Border.StrokeShape>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SetSortCommand}" CommandParameter="rating"/>
+                                    </Border.GestureRecognizers>
+                                    <Label Text="Rating" FontSize="12" TextColor="{StaticResource TextPrimary}"/>
+                                </Border>
+                                <Border Padding="10,6" StrokeThickness="0" BackgroundColor="{StaticResource Surface}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="6"/>
+                                    </Border.StrokeShape>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SetSortCommand}" CommandParameter="discount"/>
+                                    </Border.GestureRecognizers>
+                                    <Label Text="Discount" FontSize="12" TextColor="{StaticResource TextPrimary}"/>
+                                </Border>
+                            </HorizontalStackLayout>
+                        </ScrollView>
+
+                        <!-- 2-column product grid using BindableLayout + FlexLayout -->
+                        <FlexLayout Padding="12,0,12,16"
+                                    BackgroundColor="{StaticResource Surface}"
+                                    BindableLayout.ItemsSource="{Binding Commerce}"
+                                    Wrap="Wrap"
+                                    JustifyContent="SpaceBetween">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:EcommerceItemModel">
+                                    <Border Style="{StaticResource CardStyle}"
+                                            WidthRequest="170"
+                                            Margin="0,0,0,12"
+                                            StrokeThickness="0">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="12"/>
+                                        </Border.StrokeShape>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HomePageModel}}, Path=OpenEcommerceItemCommand}"
+                                                                  CommandParameter="{Binding .}"/>
+                                        </Border.GestureRecognizers>
+                                        <Grid RowDefinitions="160,Auto">
+                                            <Grid Grid.Row="0">
+                                                <Image Source="{Binding ImageUrl}" Aspect="AspectFill" HeightRequest="160"/>
+                                                <!-- Wishlist button -->
+                                                <Border BackgroundColor="#BBFFFFFF"
+                                                        StrokeThickness="0"
+                                                        WidthRequest="32" HeightRequest="32"
+                                                        HorizontalOptions="End" VerticalOptions="Start"
+                                                        Margin="0,8,8,0">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="16"/>
+                                                    </Border.StrokeShape>
+                                                    <Border.GestureRecognizers>
+                                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HomePageModel}}, Path=ToggleWishlistCommand}"
+                                                                              CommandParameter="{Binding .}"/>
+                                                    </Border.GestureRecognizers>
+                                                    <Label Text="{Binding IsInWishlist, Converter={StaticResource WishlistIconConverter}}"
+                                                           FontSize="15"
+                                                           HorizontalOptions="Center" VerticalOptions="Center"/>
+                                                </Border>
+                                                <!-- Discount badge if applicable -->
+                                                <Border IsVisible="{Binding HasDiscount}"
+                                                        BackgroundColor="{StaticResource BadgeRed}"
+                                                        StrokeThickness="0"
+                                                        Padding="6,3"
+                                                        HorizontalOptions="Start" VerticalOptions="Start"
+                                                        Margin="8,8,0,0">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="4"/>
+                                                    </Border.StrokeShape>
+                                                    <Label Text="{Binding DiscountPercentage, StringFormat='-{0}%'}"
+                                                           FontSize="10" FontAttributes="Bold"
+                                                           TextColor="{StaticResource White}"/>
+                                                </Border>
+                                            </Grid>
+                                            <VerticalStackLayout Grid.Row="1" Padding="10,8,10,10" Spacing="4">
+                                                <Label Text="{Binding Name}"
+                                                       FontSize="13"
+                                                       TextColor="{StaticResource TextPrimary}"
+                                                       MaxLines="2" LineBreakMode="TailTruncation"/>
+                                                <HorizontalStackLayout Spacing="3">
+                                                    <Label Text="★" FontSize="11" TextColor="{StaticResource Orange}"/>
+                                                    <Label Text="{Binding AverageRating, StringFormat='{0:F1}'}"
+                                                           FontSize="11" TextColor="{StaticResource TextSecondary}"/>
+                                                    <Label Text="{Binding TotalComments, StringFormat='({0})'}"
+                                                           FontSize="10" TextColor="{StaticResource TextMuted}"/>
+                                                </HorizontalStackLayout>
+                                                <Label Text="{Binding Manufacturer}"
+                                                       FontSize="11"
+                                                       TextColor="{StaticResource TextMuted}"
+                                                       MaxLines="1" LineBreakMode="TailTruncation"
+                                                       IsVisible="{Binding HasManufacturer}"/>
+                                                <Grid ColumnDefinitions="*,Auto" Margin="0,2,0,0">
+                                                    <Label Grid.Column="0"
+                                                           Text="{Binding Price, StringFormat='₵{0:F2}'}"
+                                                           Style="{StaticResource PriceLabel}"
+                                                           VerticalOptions="Center"/>
+                                                    <Border Grid.Column="1"
+                                                            BackgroundColor="{StaticResource Navy}"
+                                                            StrokeThickness="0"
+                                                            WidthRequest="32" HeightRequest="32">
+                                                        <Border.StrokeShape>
+                                                            <RoundRectangle CornerRadius="8"/>
+                                                        </Border.StrokeShape>
+                                                        <Border.GestureRecognizers>
+                                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HomePageModel}}, Path=AddToCartCommand}"
+                                                                                  CommandParameter="{Binding .}"/>
+                                                        </Border.GestureRecognizers>
+                                                        <Label Text="+" FontSize="18" FontAttributes="Bold"
+                                                               TextColor="{StaticResource Orange}"
+                                                               HorizontalOptions="Center" VerticalOptions="Center"/>
+                                                    </Border>
+                                                </Grid>
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </FlexLayout>
+
+                        <!-- Load more -->
+                        <Border BackgroundColor="{StaticResource CardBg}"
+                                StrokeThickness="0"
+                                Padding="16,12"
+                                IsVisible="{Binding HasMorePages}"
+                                Margin="16,0,16,16">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="8"/>
+                            </Border.StrokeShape>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding LoadMoreCommand}"/>
+                            </Border.GestureRecognizers>
+                            <Label Text="{Binding IsLoadingMore, Converter={StaticResource LoadingTextConverter}, ConverterParameter='Load More Products'}"
+                                   FontSize="14" FontAttributes="Bold"
+                                   TextColor="{StaticResource Navy}"
+                                   HorizontalOptions="Center"/>
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- ─── RECENTLY VIEWED ─────────────────────── -->
+                    <VerticalStackLayout IsVisible="{Binding HasRecentlyViewed}"
+                                         BackgroundColor="{StaticResource CardBg}"
+                                         Padding="16,16,16,0"
+                                         Margin="0,8,0,0">
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                            <Label Grid.Column="0" Style="{StaticResource SectionTitle}" Text="🕐 Recently Viewed"/>
+                            <Label Grid.Column="1" Style="{StaticResource SeeAllLabel}" Text="Clear">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding ClearRecentlyViewedCommand}"/>
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </Grid>
+
+                        <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" Margin="0,0,-16,16">
+                            <HorizontalStackLayout Spacing="10" BindableLayout.ItemsSource="{Binding RecentlyViewed}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="models:EcommerceItemModel">
+                                        <Border Style="{StaticResource CardStyle}"
+                                                WidthRequest="110"
+                                                StrokeThickness="0">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="10"/>
+                                            </Border.StrokeShape>
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HomePageModel}}, Path=OpenEcommerceItemCommand}"
+                                                                      CommandParameter="{Binding .}"/>
+                                            </Border.GestureRecognizers>
+                                            <Grid RowDefinitions="90,Auto">
+                                                <Image Grid.Row="0" Source="{Binding ImageUrl}" Aspect="AspectFill" HeightRequest="90"/>
+                                                <VerticalStackLayout Grid.Row="1" Padding="8,6,8,8" Spacing="2">
+                                                    <Label Text="{Binding Name}"
+                                                           FontSize="11"
+                                                           TextColor="{StaticResource TextPrimary}"
+                                                           MaxLines="2" LineBreakMode="TailTruncation"/>
+                                                    <Label Text="{Binding Price, StringFormat='₵{0:F2}'}"
+                                                           FontSize="12" FontAttributes="Bold"
+                                                           TextColor="{StaticResource Navy}"/>
+                                                </VerticalStackLayout>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </HorizontalStackLayout>
+                        </ScrollView>
+                    </VerticalStackLayout>
+
+                    <!-- Bottom padding for nav bar -->
+                    <BoxView HeightRequest="80" BackgroundColor="Transparent"/>
+
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
+
+        <!-- ═══════════════════════════════════════════
+             BOTTOM NAVIGATION BAR
+        ═══════════════════════════════════════════ -->
+        <controls:BottomNavBar Grid.Row="2" ActiveTab="Home"/>
+
+    </Grid>
+
+</ContentPage>
