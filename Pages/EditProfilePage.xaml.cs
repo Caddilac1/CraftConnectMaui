@@ -16,6 +16,11 @@ namespace CraftConnect_Mobile_App.Pages
         private ArtisanUser _artisanUser;
         private string _role;
 
+        // ── Passthrough properties set by UpdatesFeedPage ──────────────
+        public string? ReturnFeedId { get; set; }
+        public string? ReturnFeedTitle { get; set; }
+        public List<(string Id, string Title)>? AllFeedsSnapshot { get; set; }
+
         public EditProfilePage(AuthService authService, IUserService userService)
         {
             InitializeComponent();
@@ -116,6 +121,37 @@ namespace CraftConnect_Mobile_App.Pages
                 }
 
                 await DisplayAlert("Success", "Profile updated successfully.", "OK");
+
+                // ── If we arrived here from UpdatesFeedPage (no artisan profile),
+                //    push CreateProposalPage instead of going back. ──────────────
+                if (!string.IsNullOrEmpty(ReturnFeedId))
+                {
+                    var createPage = Handler?.MauiContext?.Services
+                        .GetService<CreateProposalPage>();
+
+                    if (createPage != null)
+                    {
+                        createPage.AvailableProjects =
+                            AllFeedsSnapshot ?? new List<(string, string)>();
+                        createPage.PreselectedFeedId = ReturnFeedId;
+
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[EditProfile] Profile saved — pushing CreateProposalPage. " +
+                            $"ReturnFeedId: {ReturnFeedId}, Title: {ReturnFeedTitle}");
+
+                        await Navigation.PushAsync(createPage);
+                        return; // do NOT fall through to GoToAsync("..")
+                    }
+
+                    // DI resolution failed — go back gracefully
+                    System.Diagnostics.Debug.WriteLine(
+                        "[EditProfile] Could not resolve CreateProposalPage from DI.");
+                    await DisplayAlert(
+                        "Notice",
+                        "Profile saved! Please find and apply to the job manually.",
+                        "OK");
+                }
+
                 await Shell.Current.GoToAsync("..");
             }
             catch (Exception ex)

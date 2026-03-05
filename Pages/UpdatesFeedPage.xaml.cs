@@ -16,17 +16,19 @@ namespace CraftConnect_Mobile_App.Pages
             _viewModel = viewModel;
             BindingContext = _viewModel;
 
-            // Wire SendProposal navigation event
             _viewModel.NavigateToCreateProposal += OnNavigateToCreateProposal;
+            _viewModel.NavigateToEditProfile += OnNavigateToEditProfile;
         }
 
         protected override async void OnAppearing()
         {
             base.OnAppearing();
 
-            // Re-subscribe if returning to this page (in case of OnDisappearing)
             _viewModel.NavigateToCreateProposal -= OnNavigateToCreateProposal;
             _viewModel.NavigateToCreateProposal += OnNavigateToCreateProposal;
+
+            _viewModel.NavigateToEditProfile -= OnNavigateToEditProfile;
+            _viewModel.NavigateToEditProfile += OnNavigateToEditProfile;
 
             await _viewModel.InitializeAsync();
             await Task.Delay(300);
@@ -37,10 +39,11 @@ namespace CraftConnect_Mobile_App.Pages
         {
             base.OnDisappearing();
             _viewModel.NavigateToCreateProposal -= OnNavigateToCreateProposal;
+            _viewModel.NavigateToEditProfile -= OnNavigateToEditProfile;
         }
 
         // ══════════════════════════════════════════════════════════════
-        // SEND PROPOSAL → navigate to CreateProposalPage
+        // SEND PROPOSAL → user HAS a profile → go to CreateProposalPage
         // ══════════════════════════════════════════════════════════════
 
         private async void OnNavigateToCreateProposal(object? sender, SendProposalNavigationArgs args)
@@ -50,7 +53,6 @@ namespace CraftConnect_Mobile_App.Pages
                 System.Diagnostics.Debug.WriteLine(
                     $"[UpdatesFeed] Navigating to CreateProposalPage — FeedId: {args.FeedId}, Title: {args.FeedTitle}");
 
-                // Resolve from DI (must be registered as Transient)
                 var createPage = Handler?.MauiContext?.Services.GetService<CreateProposalPage>();
 
                 if (createPage == null)
@@ -59,24 +61,77 @@ namespace CraftConnect_Mobile_App.Pages
                     return;
                 }
 
-                // Pass the full feed list so the Picker is populated
                 createPage.AvailableProjects = _viewModel.AllFeeds?
                     .Select(f => (f.Id, f.Title ?? "Untitled"))
                     .ToList()
                     ?? new List<(string, string)>();
 
-                // Pre-select the feed the user tapped
                 createPage.PreselectedFeedId = args.FeedId;
 
                 await Navigation.PushAsync(createPage);
-
-                System.Diagnostics.Debug.WriteLine(
-                    $"[UpdatesFeed] Pushed CreateProposalPage. PreselectedFeedId: {args.FeedId}");
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] Navigation error: {ex.Message}");
                 await DisplayAlert("Error", "Could not open the proposal page. Please try again.", "OK");
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // SEND PROPOSAL → user has NO profile → show popup, then redirect
+        // to EditArtisanProfilePage so they can complete their profile
+        // before continuing to CreateProposalPage.
+        // ══════════════════════════════════════════════════════════════
+
+        private async void OnNavigateToEditProfile(object? sender, NoProfileNavigationArgs args)
+        {
+            try
+            {
+                // ── Confirmation dialog ───────────────────────────────
+                bool proceed = await DisplayAlert(
+                    "Artisan Profile Required",
+                    "Sending a proposal is only available to users with an artisan profile. " +
+                    "Would you like to set up your artisan profile now? " +
+                    "Tap \"Set Up Profile\" to complete your profile and continue, " +
+                    "or \"Not Now\" to cancel.",
+                    "Set Up Profile",
+                    "Not Now");
+
+                if (!proceed)
+                {
+                    System.Diagnostics.Debug.WriteLine("[UpdatesFeed] User declined profile setup.");
+                    return;
+                }
+
+                System.Diagnostics.Debug.WriteLine(
+                    $"[UpdatesFeed] No artisan profile — pushing EditArtisanProfilePage. ReturnFeedId: {args.FeedId}");
+
+                var editPage = Handler?.MauiContext?.Services.GetService<EditArtisanProfilePage>();
+
+                if (editPage == null)
+                {
+                    await DisplayAlert("Error", "Could not open the profile setup page. Please try again.", "OK");
+                    return;
+                }
+
+                // Pass return context so EditArtisanProfilePage knows where
+                // to navigate after a successful save.
+                editPage.ReturnFeedId = args.FeedId;
+                editPage.ReturnFeedTitle = args.FeedTitle;
+                editPage.AllFeedsSnapshot = _viewModel.AllFeeds?
+                    .Select(f => (f.Id, f.Title ?? "Untitled"))
+                    .ToList()
+                    ?? new List<(string, string)>();
+
+                // Tell the page model this is a proposal redirect so the
+                // banner and save-button text adjust accordingly.
+
+                await Navigation.PushAsync(editPage);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] EditProfile navigation error: {ex.Message}");
+                await DisplayAlert("Error", "Could not open the profile setup page. Please try again.", "OK");
             }
         }
 
@@ -126,8 +181,6 @@ namespace CraftConnect_Mobile_App.Pages
                         Margin = new Thickness(4, 0, 0, 0)
                     });
                 }
-
-                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] Initialized {dotsToShow} indicators");
             }
             catch (Exception ex)
             {

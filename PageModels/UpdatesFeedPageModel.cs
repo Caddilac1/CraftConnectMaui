@@ -11,6 +11,7 @@ namespace CraftConnect_Mobile_App.PageModels
     {
         #region Fields
         private readonly IUserFeedService _userFeedService;
+        private readonly IProfileApiService _profileApiService;   // ← NEW
         private bool _isRefreshing;
         private bool _isLoadingMore;
         private bool _isEmpty;
@@ -76,12 +77,16 @@ namespace CraftConnect_Mobile_App.PageModels
         #region Events
 
         /// <summary>
-        /// Raised when the user taps "Send Proposal" on a feed card.
-        /// The page subscribes to this and handles the actual navigation,
-        /// because CreateProposalPage needs complex objects (feed list)
-        /// that cannot travel through Shell query parameters.
+        /// Raised when the user taps "Send Proposal" and HAS an artisan profile.
+        /// The page subscribes and handles navigation to CreateProposalPage.
         /// </summary>
         public event EventHandler<SendProposalNavigationArgs>? NavigateToCreateProposal;
+
+        /// <summary>
+        /// Raised when the user taps "Send Proposal" but does NOT have an artisan profile.
+        /// The page subscribes and navigates to EditProfilePage with the returnUrl set.
+        /// </summary>
+        public event EventHandler<NoProfileNavigationArgs>? NavigateToEditProfile;
 
         #endregion
 
@@ -97,9 +102,12 @@ namespace CraftConnect_Mobile_App.PageModels
         #endregion
 
         #region Constructor
-        public UpdatesFeedPageModel(IUserFeedService userFeedService)
+
+        // ── Inject IProfileApiService alongside IUserFeedService ──────────
+        public UpdatesFeedPageModel(IUserFeedService userFeedService, IProfileApiService profileApiService)
         {
             _userFeedService = userFeedService;
+            _profileApiService = profileApiService;   // ← NEW
 
             FeaturedFeeds = new ObservableCollection<FeedItemModel>();
             AllFeeds = new ObservableCollection<FeedItemModel>();
@@ -112,8 +120,8 @@ namespace CraftConnect_Mobile_App.PageModels
             AddToFavoriteCommand = new Command<FeedItemModel>(async (feed) => await AddToFavorite(feed));
             LikeFeedCommand = new Command<FeedItemModel>(async (feed) => await LikeFeed(feed));
 
-            // ── SendProposal fires event; navigation handled by the page ──
-            SendProposalCommand = new Command<FeedItemModel>(OnSendProposal);
+            // ── SendProposal now checks profile before firing event ────────
+            SendProposalCommand = new Command<FeedItemModel>(async (feed) => await OnSendProposalAsync(feed));
         }
         #endregion
 
@@ -143,7 +151,7 @@ namespace CraftConnect_Mobile_App.PageModels
                 await Task.WhenAll(featuredTask, allFeedsTask);
 
                 var featuredData = await featuredTask;
-                var (feeds, totalCount, totalPages) = await allFeedsTask;
+                var (feeds, _, totalPages) = await allFeedsTask;
 
                 _totalPages = totalPages;
 
@@ -166,7 +174,6 @@ namespace CraftConnect_Mobile_App.PageModels
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] ❌ Error loading feeds: {ex.Message}");
-
                 MainThread.BeginInvokeOnMainThread(() => IsEmpty = true);
 
                 if (Application.Current?.MainPage != null)
@@ -234,10 +241,13 @@ namespace CraftConnect_Mobile_App.PageModels
         #region Private Methods
 
         /// <summary>
-        /// Fires NavigateToCreateProposal so the page can push CreateProposalPage
-        /// with the full feed list and this feed pre-selected.
+        /// Checks whether the current user has an artisan profile.
+        /// - If YES  → fires NavigateToCreateProposal (existing flow).
+        /// - If NO   → fires NavigateToEditProfile so the page can push
+        ///             EditProfilePage with a returnUrl that brings the user
+        ///             back to CreateProposalPage after saving.
         /// </summary>
-        private void OnSendProposal(FeedItemModel feed)
+        private async Task OnSendProposalAsync(FeedItemModel feed)
         {
             if (feed == null)
             {
@@ -247,11 +257,42 @@ namespace CraftConnect_Mobile_App.PageModels
 
             System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] 📨 Send Proposal — Id: {feed.Id}, Title: {feed.Title}");
 
-            NavigateToCreateProposal?.Invoke(this, new SendProposalNavigationArgs
+            try
             {
-                FeedId = feed.Id,
-                FeedTitle = feed.Title ?? string.Empty
-            });
+                var hasProfile = await _profileApiService.HasArtisanProfileAsync();
+
+                if (hasProfile)
+                {
+                    // ── Normal path: user already has a profile ────────────
+                    System.Diagnostics.Debug.WriteLine("[UpdatesFeed] ✅ Has artisan profile → going to CreateProposalPage");
+                    NavigateToCreateProposal?.Invoke(this, new SendProposalNavigationArgs
+                    {
+                        FeedId = feed.Id,
+                        FeedTitle = feed.Title ?? string.Empty
+                    });
+                }
+                else
+                {
+                    // ── Redirect path: user must create a profile first ────
+                    System.Diagnostics.Debug.WriteLine("[UpdatesFeed] ⚠️ No artisan profile → redirecting to EditProfilePage");
+                    NavigateToEditProfile?.Invoke(this, new NoProfileNavigationArgs
+                    {
+                        FeedId = feed.Id,
+                        FeedTitle = feed.Title ?? string.Empty
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] ❌ Profile check error: {ex.Message}");
+                // Fallback: proceed as normal so the proposal service can return
+                // its own "no profile" error message to the user.
+                NavigateToCreateProposal?.Invoke(this, new SendProposalNavigationArgs
+                {
+                    FeedId = feed.Id,
+                    FeedTitle = feed.Title ?? string.Empty
+                });
+            }
         }
 
         private FeedItemModel MapToFeedItemModel(UserFeedDto dto)
@@ -294,13 +335,11 @@ namespace CraftConnect_Mobile_App.PageModels
         private void OnSearch()
         {
             System.Diagnostics.Debug.WriteLine("[UpdatesFeed] Search clicked");
-            // TODO: Navigate to search page
         }
 
         private void OnFilter()
         {
             System.Diagnostics.Debug.WriteLine("[UpdatesFeed] Filter clicked");
-            // TODO: Show filter options
         }
 
         private void OnFeedTapped(FeedItemModel feed)
@@ -318,13 +357,12 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] Toggling favorite: {feed.Title}");
                 feed.IsFavorite = !feed.IsFavorite;
-                // TODO: await _userFeedService.AddToFavoriteAsync(Guid.Parse(feed.Id));
                 System.Diagnostics.Debug.WriteLine(feed.IsFavorite ? "Added to favorites ❤️" : "Removed from favorites");
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] ❌ Favorite error: {ex.Message}");
-                feed.IsFavorite = !feed.IsFavorite; // revert
+                feed.IsFavorite = !feed.IsFavorite;
             }
         }
 
@@ -369,8 +407,8 @@ namespace CraftConnect_Mobile_App.PageModels
     // ══════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// Carried by the NavigateToCreateProposal event so the page knows
-    /// which feed was tapped and can pre-select it on CreateProposalPage.
+    /// Carried by NavigateToCreateProposal — user has a profile, go straight
+    /// to the proposal form with this feed pre-selected.
     /// </summary>
     public class SendProposalNavigationArgs : EventArgs
     {
@@ -378,8 +416,19 @@ namespace CraftConnect_Mobile_App.PageModels
         public string FeedTitle { get; init; } = string.Empty;
     }
 
+    /// <summary>
+    /// Carried by NavigateToEditProfile — user has NO artisan profile.
+    /// The page should push EditProfilePage and pass ReturnFeedId so that
+    /// after a successful save it can continue to CreateProposalPage.
+    /// </summary>
+    public class NoProfileNavigationArgs : EventArgs
+    {
+        public string FeedId { get; init; } = string.Empty;
+        public string FeedTitle { get; init; } = string.Empty;
+    }
+
     // ══════════════════════════════════════════════════════════════════
-    // ▌ FEED ITEM MODEL
+    // ▌ FEED ITEM MODEL  (unchanged)
     // ══════════════════════════════════════════════════════════════════
 
     public class FeedItemModel : INotifyPropertyChanged

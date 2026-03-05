@@ -565,6 +565,17 @@ namespace CraftConnect_Mobile_App.Services
             }
         }
 
+        private bool IsNoProfileError(string errorMessage)
+        {
+            if (string.IsNullOrEmpty(errorMessage)) return false;
+
+            // Check for the exact error message from your backend
+            return errorMessage.Contains("create an artisan profile", StringComparison.OrdinalIgnoreCase) ||
+                   errorMessage.Contains("need to create an artisan profile", StringComparison.OrdinalIgnoreCase) ||
+                   errorMessage.Contains("no artisan profile", StringComparison.OrdinalIgnoreCase);
+        }
+
+
         /// <summary>
         /// Builds a multipart/form-data body for the Create endpoint.
         /// </summary>

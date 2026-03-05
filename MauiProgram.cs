@@ -24,7 +24,7 @@ namespace CraftConnect_Mobile_App
                 });
 
             // ========================================
-            // 🔧 FIX GRAY NAVIGATION BAR - Android
+            // FIX GRAY NAVIGATION BAR - Android
             // ========================================
             builder.ConfigureLifecycleEvents(events =>
             {
@@ -44,11 +44,11 @@ namespace CraftConnect_Mobile_App
                                 if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.R)
                                     activity.Window.SetDecorFitsSystemWindows(false);
 
-                                System.Diagnostics.Debug.WriteLine("[MauiProgram] ✅ Navigation bar transparency applied globally");
+                                System.Diagnostics.Debug.WriteLine("[MauiProgram] Navigation bar transparency applied globally");
                             }
                             catch (System.Exception ex)
                             {
-                                System.Diagnostics.Debug.WriteLine($"[MauiProgram] ❌ Error setting navigation bar: {ex.Message}");
+                                System.Diagnostics.Debug.WriteLine($"[MauiProgram] Error setting navigation bar: {ex.Message}");
                             }
                         }
                     })
@@ -82,6 +82,8 @@ namespace CraftConnect_Mobile_App
             builder.Services.AddSingleton<IUserService, UserService>();
             builder.Services.AddSingleton<AiFeedChatService>();
             builder.Services.AddSingleton<ArtisanProposalService>();
+            builder.Services.AddSingleton<IProfileApiService>(sp =>
+                new ProfileApiService(sp.GetRequiredService<ApiConfig>()));
 
             // ========================================
             // VIEWMODELS
@@ -94,10 +96,9 @@ namespace CraftConnect_Mobile_App
             builder.Services.AddTransient<SettingsPageViewModel>();
             builder.Services.AddTransient<AiFeedChatPageModel>();
             builder.Services.AddTransient<UpdatesFeedPageModel>();
-            builder.Services.AddTransient<CreateProposalPage>();
 
             // ========================================
-            // PAGES - Existing
+            // PAGES - Core
             // ========================================
             builder.Services.AddTransient<LoginPage>();
             builder.Services.AddTransient<GroupChatListPage>();
@@ -107,6 +108,23 @@ namespace CraftConnect_Mobile_App
             builder.Services.AddTransient<AiFeedChatPage>();
             builder.Services.AddTransient<StorePage>();
             builder.Services.AddTransient<UpdatesFeedPage>();
+
+            // ========================================
+            // PAGES - Proposal flow
+            // NOTE: CreateProposalPage moved here from ViewModels section
+            //       where it was previously misregistered.
+            // ========================================
+            builder.Services.AddTransient<CreateProposalPage>();
+
+            // ========================================
+            // PAGES - Profile flow
+            // FIX: EditArtisanProfilePage was never registered in DI,
+            //      causing GetService<EditArtisanProfilePage>() to always
+            //      return null and showing an Error dialog when the user
+            //      tapped "Set Up Profile". Registered as Transient so
+            //      each push gets a fresh instance with _initialized = false.
+            // ========================================
+            builder.Services.AddTransient<EditArtisanProfilePage>();
 
             // ========================================
             // PAGES - Settings sub-pages
