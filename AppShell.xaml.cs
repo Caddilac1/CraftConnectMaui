@@ -28,6 +28,8 @@ namespace CraftConnect_Mobile_App
             Routing.RegisterRoute("PrivacySecurityPage", typeof(Pages.PrivacySecurityPage));
             Routing.RegisterRoute("PaymentMethodsPage", typeof(Pages.PaymentMethodsPage));
             Routing.RegisterRoute("HelpSupportPage", typeof(Pages.HelpSupportPage));
+            // AppShell.xaml.cs constructor
+            Routing.RegisterRoute(nameof(Pages.RegisterPage), typeof(Pages.RegisterPage));
 
             // Note: LoginPage and GroupChatListPage don't need registration
             // because they're already defined in AppShell.xaml as ShellContent
