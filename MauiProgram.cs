@@ -86,6 +86,7 @@ namespace CraftConnect_Mobile_App
             // ========================================
             // VIEWMODELS
             // ========================================
+            builder.Services.AddTransient<RegisterPageModel>();
             builder.Services.AddTransient<LoginPageModel>();
             builder.Services.AddTransient<GroupChatListPageModel>();
             builder.Services.AddTransient<ChatPageModel>();
@@ -99,6 +100,7 @@ namespace CraftConnect_Mobile_App
             // ========================================
             // PAGES - Existing
             // ========================================
+            builder.Services.AddTransient<RegisterPage>();
             builder.Services.AddTransient<LoginPage>();
             builder.Services.AddTransient<GroupChatListPage>();
             builder.Services.AddTransient<ChatPage>();
