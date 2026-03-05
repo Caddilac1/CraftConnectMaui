@@ -11,29 +11,43 @@ using CraftConnect_Mobile_App.Models;
 namespace CraftConnect_Mobile_App.Services
 {
     // ═══════════════════════════════════════════════════════════════
-    // API RESPONSE MODELS (matches backend structure)
+    // PRIVATE API RESPONSE MODELS — match backend JSON shapes exactly
     // ═══════════════════════════════════════════════════════════════
 
-    public class GroupsResponse
+    internal class GroupsResponse
     {
         public bool Success { get; set; }
-        public List<GroupChatItem> Groups { get; set; }
+        public List<GroupApiDto> Groups { get; set; }
         public int TotalGroups { get; set; }
+        public int TotalUnread { get; set; }
     }
 
-    public class MessagesResponse
+    internal class GroupApiDto
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public string FeedId { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public string LastMessage { get; set; }
+        public DateTime? LastMessageTime { get; set; }
+        public int MemberCount { get; set; }
+        public int UnreadCount { get; set; }
+        public bool HasUnread { get; set; }
+    }
+
+    internal class MessagesResponse
     {
         public bool Success { get; set; }
-        public List<MessageDto> Messages { get; set; }
+        public List<MessageApiDto> Messages { get; set; }
         public int TotalMessages { get; set; }
     }
 
-    public class MessageDto
+    internal class MessageApiDto
     {
-        public Guid Id { get; set; }
+        public string Id { get; set; }
         public string Message { get; set; }
         public DateTime SentAt { get; set; }
-        public Guid SenderId { get; set; }
+        public string SenderId { get; set; }
         public string SenderName { get; set; }
         public string SenderFullName { get; set; }
         public bool HasAttachment { get; set; }
@@ -42,21 +56,52 @@ namespace CraftConnect_Mobile_App.Services
         public string AttachmentSize { get; set; }
         public string AttachmentType { get; set; }
         public string MediaType { get; set; }
-        public FileInfoDto FileInfo { get; set; }
     }
 
-    public class FileInfoDto
+    internal class MarkReadResponse
     {
-        public string Name { get; set; }
-        public string Extension { get; set; }
-        public string Type { get; set; }
-        public string DisplayIcon { get; set; }
+        public bool Success { get; set; }
+        public string Message { get; set; }
+        public DateTime? LastReadAt { get; set; }
     }
+
+    internal class UnreadCountResponse
+    {
+        public bool Success { get; set; }
+        public string GroupId { get; set; }
+        public int UnreadCount { get; set; }
+        public bool HasUnread { get; set; }
+        public DateTime? LastReadAt { get; set; }
+    }
+
+    internal class UnreadTotalResponse
+    {
+        public bool Success { get; set; }
+        public int TotalUnread { get; set; }
+        public bool HasUnread { get; set; }
+        public List<PerGroupUnread> PerGroup { get; set; }
+    }
+
+    internal class PerGroupUnread
+    {
+        public string GroupId { get; set; }
+        public int UnreadCount { get; set; }
+        public DateTime? LastReadAt { get; set; }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // CHAT SERVICE
+    // ═══════════════════════════════════════════════════════════════
 
     public class ChatService : IChatService
     {
         private readonly HttpClient _httpClient;
         private readonly string _baseUrl;
+
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
 
         public ChatService(ApiConfig config)
         {
@@ -122,6 +167,7 @@ namespace CraftConnect_Mobile_App.Services
 
         // ═══════════════════════════════════════════════════════════════
         // GET MY GROUPS  →  GET /api/chat/my-groups
+        // Now includes UnreadCount and HasUnread per group
         // ═══════════════════════════════════════════════════════════════
 
         public async Task<List<GroupChatItem>> GetMyGroupsAsync()
@@ -141,34 +187,35 @@ namespace CraftConnect_Mobile_App.Services
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    Debug.WriteLine($"[CHAT SERVICE] ❌ Error: {errorContent}");
-
-                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    {
-                        SecureStorage.Remove("auth_token");
-                        throw new UnauthorizedAccessException("Token expired or invalid. Please login again.");
-                    }
-
-                    throw new HttpRequestException($"API Error: {response.StatusCode}");
+                    await HandleErrorResponseAsync(response, "GetMyGroups");
+                    return new List<GroupChatItem>();
                 }
 
                 var json = await response.Content.ReadAsStringAsync();
-                Debug.WriteLine($"[CHAT SERVICE] 📄 Response JSON length: {json.Length} chars");
+                var result = JsonSerializer.Deserialize<GroupsResponse>(json, _jsonOptions);
 
-                var result = JsonSerializer.Deserialize<GroupsResponse>(json, new JsonSerializerOptions
+                if (result?.Success != true)
                 {
-                    PropertyNameCaseInsensitive = true
-                });
-
-                if (result?.Success == true)
-                {
-                    Debug.WriteLine($"[CHAT SERVICE] ✅ Fetched {result.TotalGroups} groups");
-                    return result.Groups ?? new List<GroupChatItem>();
+                    Debug.WriteLine("[CHAT SERVICE] ⚠️ API returned success=false");
+                    return new List<GroupChatItem>();
                 }
 
-                Debug.WriteLine("[CHAT SERVICE] ⚠️ API returned success=false");
-                return new List<GroupChatItem>();
+                // Map API DTOs → mobile GroupChatItem, populating unread fields
+                var groups = (result.Groups ?? new List<GroupApiDto>()).Select(g => new GroupChatItem
+                {
+                    Id = g.Id,
+                    Name = g.Name,
+                    CreatedAt = g.CreatedAt,
+                    LastMessage = g.LastMessage,
+                    LastMessageTime = g.LastMessageTime ?? DateTime.MinValue,
+                    // MemberCount is read-only (computed from Members list) — cannot assign
+                    UnreadCount = g.UnreadCount,
+                    LastMessageIsRead = !g.HasUnread,
+                    LastMessageIsDelivered = true
+                }).ToList();
+
+                Debug.WriteLine($"[CHAT SERVICE] ✅ Fetched {groups.Count} groups. Total unread: {result.TotalUnread}");
+                return groups;
             }
             catch (UnauthorizedAccessException)
             {
@@ -183,6 +230,7 @@ namespace CraftConnect_Mobile_App.Services
 
         // ═══════════════════════════════════════════════════════════════
         // GET MESSAGES  →  GET /api/chat/groups/{groupId}/messages
+        // Auto-marks the group as read on the server when called
         // ═══════════════════════════════════════════════════════════════
 
         public async Task<List<GroupMessageItem>> GetGroupMessagesAsync(Guid groupId)
@@ -202,25 +250,12 @@ namespace CraftConnect_Mobile_App.Services
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    Debug.WriteLine($"[CHAT SERVICE] ❌ Error: {response.StatusCode} - {errorContent}");
-
-                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    {
-                        SecureStorage.Remove("auth_token");
-                        throw new UnauthorizedAccessException("Session expired. Please login again.");
-                    }
-
-                    throw new HttpRequestException($"Failed to get messages: {response.StatusCode}");
+                    await HandleErrorResponseAsync(response, "GetGroupMessages");
+                    return new List<GroupMessageItem>();
                 }
 
                 var json = await response.Content.ReadAsStringAsync();
-                Debug.WriteLine($"[CHAT SERVICE] 📄 Response JSON length: {json.Length} chars");
-
-                var result = JsonSerializer.Deserialize<MessagesResponse>(json, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                var result = JsonSerializer.Deserialize<MessagesResponse>(json, _jsonOptions);
 
                 if (result?.Success != true || result.Messages == null)
                 {
@@ -228,11 +263,13 @@ namespace CraftConnect_Mobile_App.Services
                     return new List<GroupMessageItem>();
                 }
 
+                // The server auto-marks LastReadAt = now when GET messages is called,
+                // so all these messages are considered read from this point forward.
                 var messages = result.Messages.Select(m => new GroupMessageItem
                 {
-                    Id = m.Id,
+                    Id = Guid.TryParse(m.Id, out var msgId) ? msgId : Guid.Empty,
                     GroupChatId = groupId,
-                    SenderId = m.SenderId,
+                    SenderId = Guid.TryParse(m.SenderId, out var sId) ? sId : Guid.Empty,
                     SenderName = m.SenderName,
                     SenderFullName = m.SenderFullName,
                     Message = m.Message,
@@ -246,11 +283,15 @@ namespace CraftConnect_Mobile_App.Services
                     IsPending = false,
                     IsSent = true,
                     IsDelivered = true,
-                    IsRead = false
+                    IsRead = true   // server marked as read when we fetched
                 }).ToList();
 
-                Debug.WriteLine($"[CHAT SERVICE] ✅ Parsed {messages.Count} messages");
+                Debug.WriteLine($"[CHAT SERVICE] ✅ Parsed {messages.Count} messages (group marked as read)");
                 return messages;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -284,25 +325,127 @@ namespace CraftConnect_Mobile_App.Services
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    Debug.WriteLine($"[CHAT SERVICE] ❌ Error: {response.StatusCode} - {errorContent}");
-
-                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    {
-                        SecureStorage.Remove("auth_token");
-                        throw new UnauthorizedAccessException("Session expired. Please login again.");
-                    }
-
+                    await HandleErrorResponseAsync(response, "SendMessage");
                     return false;
                 }
 
                 Debug.WriteLine("[CHAT SERVICE] ✅ Message sent successfully");
                 return true;
             }
+            catch (UnauthorizedAccessException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[CHAT SERVICE] ❌ Error sending message: {ex.Message}");
                 return false;
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // MARK GROUP AS READ  →  POST /api/chat/groups/{groupId}/mark-read
+        // ═══════════════════════════════════════════════════════════════
+
+        public async Task<bool> MarkGroupAsReadAsync(Guid groupId)
+        {
+            try
+            {
+                Debug.WriteLine($"[CHAT SERVICE] 📖 Marking group as read: {groupId}");
+
+                if (!await SetAuthHeaderAsync())
+                    return false;
+
+                // Empty body — server only needs the groupId from the route
+                var response = await _httpClient.PostAsync(
+                    $"/api/chat/groups/{groupId}/mark-read",
+                    new StringContent("{}", System.Text.Encoding.UTF8, "application/json"));
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Debug.WriteLine($"[CHAT SERVICE] ❌ Mark-read failed: {response.StatusCode}");
+                    return false;
+                }
+
+                Debug.WriteLine($"[CHAT SERVICE] ✅ Group {groupId} marked as read");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CHAT SERVICE] ❌ Error marking as read: {ex.Message}");
+                return false;
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // GET UNREAD COUNT FOR ONE GROUP
+        //   GET /api/chat/groups/{groupId}/unread-count
+        // ═══════════════════════════════════════════════════════════════
+
+        public async Task<int> GetUnreadCountAsync(Guid groupId)
+        {
+            try
+            {
+                Debug.WriteLine($"[CHAT SERVICE] 🔢 Getting unread count for group: {groupId}");
+
+                if (!await SetAuthHeaderAsync())
+                    return 0;
+
+                var response = await _httpClient.GetAsync($"/api/chat/groups/{groupId}/unread-count");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Debug.WriteLine($"[CHAT SERVICE] ❌ Unread count failed: {response.StatusCode}");
+                    return 0;
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<UnreadCountResponse>(json, _jsonOptions);
+
+                var count = result?.UnreadCount ?? 0;
+                Debug.WriteLine($"[CHAT SERVICE] ✅ Unread count for group {groupId}: {count}");
+                return count;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CHAT SERVICE] ❌ Error getting unread count: {ex.Message}");
+                return 0;
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // GET TOTAL UNREAD ACROSS ALL GROUPS
+        //   GET /api/chat/unread-total
+        // ═══════════════════════════════════════════════════════════════
+
+        public async Task<int> GetTotalUnreadCountAsync()
+        {
+            try
+            {
+                Debug.WriteLine("[CHAT SERVICE] 🔢 Getting total unread count...");
+
+                if (!await SetAuthHeaderAsync())
+                    return 0;
+
+                var response = await _httpClient.GetAsync("/api/chat/unread-total");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Debug.WriteLine($"[CHAT SERVICE] ❌ Total unread failed: {response.StatusCode}");
+                    return 0;
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<UnreadTotalResponse>(json, _jsonOptions);
+
+                var total = result?.TotalUnread ?? 0;
+                Debug.WriteLine($"[CHAT SERVICE] ✅ Total unread across all groups: {total}");
+                return total;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CHAT SERVICE] ❌ Error getting total unread: {ex.Message}");
+                return 0;
             }
         }
 
@@ -370,6 +513,21 @@ namespace CraftConnect_Mobile_App.Services
         // ═══════════════════════════════════════════════════════════════
         // PRIVATE HELPERS
         // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Centralised error handler — logs details and throws for 401s.
+        /// </summary>
+        private async Task HandleErrorResponseAsync(HttpResponseMessage response, string caller)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            Debug.WriteLine($"[CHAT SERVICE] ❌ {caller} error {(int)response.StatusCode}: {body}");
+
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                SecureStorage.Remove("auth_token");
+                throw new UnauthorizedAccessException("Session expired. Please login again.");
+            }
+        }
 
         private static string ExtractFileNameFromUrl(string url)
         {

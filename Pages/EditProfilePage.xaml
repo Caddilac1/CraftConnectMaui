@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CraftConnect_Mobile_App.Pages.EditProfilePage"
+             Title=""
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#F0F4F8">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Header -->
+        <Grid Grid.Row="0"
+              BackgroundColor="#1B2B3A"
+              Padding="16,52,16,20"
+              ColumnDefinitions="Auto,*,Auto">
+            <ImageButton Grid.Column="0"
+                         Source="chevron_left.svg"
+                         WidthRequest="24"
+                         HeightRequest="24"
+                         VerticalOptions="Center"
+                         BackgroundColor="Transparent"
+                         Clicked="OnBackClicked"/>
+            <Label Grid.Column="1"
+                   Text="Edit Profile"
+                   TextColor="White"
+                   FontSize="18"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"/>
+            <BoxView Grid.Column="2" WidthRequest="24"/>
+        </Grid>
+
+        <!-- Scrollable Form -->
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="16" Padding="16,20,16,20">
+
+                <!-- Avatar -->
+                <Frame WidthRequest="90"
+                       HeightRequest="90"
+                       CornerRadius="22"
+                       Padding="0"
+                       HasShadow="False"
+                       HorizontalOptions="Center"
+                       IsClippedToBounds="True">
+                    <Frame.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#4DA6E8" Offset="0"/>
+                            <GradientStop Color="#2E6FD8" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Frame.Background>
+                    <Label x:Name="AvatarInitialsLabel"
+                           Text="JD"
+                           TextColor="White"
+                           FontSize="32"
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"/>
+                </Frame>
+
+                <!-- PERSONAL DETAILS -->
+                <VerticalStackLayout Spacing="0">
+                    <Label Text="PERSONAL DETAILS"
+                           TextColor="#8A9BAD"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           Margin="4,0,0,8"
+                           CharacterSpacing="1.2"/>
+
+                    <Frame BackgroundColor="White"
+                           CornerRadius="14"
+                           Padding="16"
+                           HasShadow="False"
+                           BorderColor="#E8EDF2">
+                        <VerticalStackLayout Spacing="16">
+
+                            <!-- Full Name -->
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Full Name"
+                                       TextColor="#8A9BAD"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       CharacterSpacing="0.5"/>
+                                <Frame BackgroundColor="#F8FAFC"
+                                       CornerRadius="10"
+                                       Padding="12,0"
+                                       HasShadow="False"
+                                       BorderColor="#E8EDF2"
+                                       HeightRequest="48">
+                                    <Entry x:Name="FullNameEntry"
+                                           Placeholder="Enter your full name"
+                                           PlaceholderColor="#A0B4C8"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           VerticalOptions="Center"
+                                           BackgroundColor="Transparent"/>
+                                </Frame>
+                            </VerticalStackLayout>
+
+                            <!-- Phone -->
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Phone Number"
+                                       TextColor="#8A9BAD"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       CharacterSpacing="0.5"/>
+                                <Frame BackgroundColor="#F8FAFC"
+                                       CornerRadius="10"
+                                       Padding="12,0"
+                                       HasShadow="False"
+                                       BorderColor="#E8EDF2"
+                                       HeightRequest="48">
+                                    <Entry x:Name="PhoneEntry"
+                                           Placeholder="+233 XX XXX XXXX"
+                                           PlaceholderColor="#A0B4C8"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           Keyboard="Telephone"
+                                           VerticalOptions="Center"
+                                           BackgroundColor="Transparent"/>
+                                </Frame>
+                            </VerticalStackLayout>
+
+                            <!-- Email (read-only) -->
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Email Address"
+                                       TextColor="#8A9BAD"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       CharacterSpacing="0.5"/>
+                                <Frame BackgroundColor="#F0F4F8"
+                                       CornerRadius="10"
+                                       Padding="12,0"
+                                       HasShadow="False"
+                                       BorderColor="#E8EDF2"
+                                       HeightRequest="48">
+                                    <Entry x:Name="EmailEntry"
+                                           PlaceholderColor="#A0B4C8"
+                                           TextColor="#8A9BAD"
+                                           FontSize="15"
+                                           IsReadOnly="True"
+                                           VerticalOptions="Center"
+                                           BackgroundColor="Transparent"/>
+                                </Frame>
+                                <Label Text="To change your email go to Privacy &amp; Security"
+                                       TextColor="#A0B4C8"
+                                       FontSize="11"/>
+                            </VerticalStackLayout>
+
+                        </VerticalStackLayout>
+                    </Frame>
+                </VerticalStackLayout>
+
+                <!-- ARTISAN BUSINESS DETAILS -->
+                <VerticalStackLayout x:Name="ArtisanSection" Spacing="0" IsVisible="False">
+                    <Label Text="BUSINESS DETAILS"
+                           TextColor="#8A9BAD"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           Margin="4,0,0,8"
+                           CharacterSpacing="1.2"/>
+
+                    <Frame BackgroundColor="White"
+                           CornerRadius="14"
+                           Padding="16"
+                           HasShadow="False"
+                           BorderColor="#E8EDF2">
+                        <VerticalStackLayout Spacing="16">
+
+                            <!-- Business Name -->
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Business Name"
+                                       TextColor="#8A9BAD"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       CharacterSpacing="0.5"/>
+                                <Frame BackgroundColor="#F8FAFC"
+                                       CornerRadius="10"
+                                       Padding="12,0"
+                                       HasShadow="False"
+                                       BorderColor="#E8EDF2"
+                                       HeightRequest="48">
+                                    <Entry x:Name="BusinessNameEntry"
+                                           Placeholder="Your business name"
+                                           PlaceholderColor="#A0B4C8"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           VerticalOptions="Center"
+                                           BackgroundColor="Transparent"/>
+                                </Frame>
+                            </VerticalStackLayout>
+
+                            <!-- Specializations -->
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Specializations"
+                                       TextColor="#8A9BAD"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       CharacterSpacing="0.5"/>
+                                <Frame BackgroundColor="#F8FAFC"
+                                       CornerRadius="10"
+                                       Padding="12,8"
+                                       HasShadow="False"
+                                       BorderColor="#E8EDF2">
+                                    <Editor x:Name="SpecializationsEntry"
+                                            Placeholder="e.g. Carpentry, Plumbing, Electrical"
+                                            PlaceholderColor="#A0B4C8"
+                                            TextColor="#1B2B3A"
+                                            FontSize="15"
+                                            AutoSize="TextChanges"
+                                            BackgroundColor="Transparent"/>
+                                </Frame>
+                                <Label Text="Separate each specialization with a comma"
+                                       TextColor="#A0B4C8"
+                                       FontSize="11"/>
+                            </VerticalStackLayout>
+
+                            <!-- Availability Toggle -->
+                            <Grid ColumnDefinitions="*,Auto">
+                                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                    <Label Text="Available for Work"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           FontAttributes="Bold"/>
+                                    <Label Text="Show clients you are open for jobs"
+                                           TextColor="#8A9BAD"
+                                           FontSize="12"/>
+                                </VerticalStackLayout>
+                                <Switch x:Name="AvailabilitySwitch"
+                                        Grid.Column="1"
+                                        OnColor="#10B981"
+                                        ThumbColor="White"
+                                        IsToggled="True"
+                                        VerticalOptions="Center"/>
+                            </Grid>
+
+                        </VerticalStackLayout>
+                    </Frame>
+                </VerticalStackLayout>
+
+                <!-- Error label -->
+                <Label x:Name="ErrorLabel"
+                       TextColor="#EF4444"
+                       FontSize="13"
+                       HorizontalOptions="Center"
+                       IsVisible="False"/>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- Save Button -->
+        <Frame Grid.Row="2"
+               BackgroundColor="#1B2B3A"
+               CornerRadius="14"
+               Padding="0"
+               HasShadow="False"
+               BorderColor="Transparent"
+               Margin="16,8,16,16">
+            <Grid Padding="20,16">
+                <ActivityIndicator x:Name="SaveIndicator"
+                                   IsRunning="False"
+                                   IsVisible="False"
+                                   Color="White"
+                                   HorizontalOptions="Center"/>
+                <Label x:Name="SaveButtonLabel"
+                       Text="Save Changes"
+                       TextColor="White"
+                       FontSize="16"
+                       FontAttributes="Bold"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center"/>
+            </Grid>
+            <Frame.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnSaveClicked"/>
+            </Frame.GestureRecognizers>
+        </Frame>
+
+    </Grid>
+</ContentPage>

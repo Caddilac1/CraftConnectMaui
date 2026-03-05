@@ -35,10 +35,8 @@ namespace CraftConnect_Mobile_App.Pages
             {
                 IsBusy = true;
 
-                // Load user profile from API
                 _currentUser = await _userService.LoadUserProfileAsync();
 
-                // Get role from JWT token
                 var token = await _authService.GetTokenAsync();
                 string role = "Customer";
 
@@ -55,40 +53,36 @@ namespace CraftConnect_Mobile_App.Pages
                 {
                     UserNameLabel.Text = _currentUser.FullName ?? "User";
                     UserEmailLabel.Text = _currentUser.Email ?? "";
-                    EmailLabel.Text = _currentUser.Email ?? "";
-                    PhoneLabel.Text = _currentUser.PhoneNumber ?? "Not set";
+
+                    // Initials fallback
+                    AvatarInitialsLabel.Text = GetInitials(_currentUser.FullName);
+
+                    // ── Load real profile photo if available ──────────
+                    if (!string.IsNullOrWhiteSpace(_currentUser.ProfileImageUrl))
+                        ShowProfilePhoto(_currentUser.ProfileImageUrl);
+                    // ─────────────────────────────────────────────────
 
                     _primaryRole = role;
-                    UserRoleLabel.Text = GetRoleDisplayName(_primaryRole);
 
                     if (_primaryRole.Equals("Artisan", StringComparison.OrdinalIgnoreCase) &&
                         _currentUser is ArtisanUser artisan)
                     {
                         _artisanUser = artisan;
-
-                        BusinessNameLabel.Text = artisan.BusinessName ?? "Not set";
-                        SpecializationLabel.Text = artisan.Specializations?.Any() == true
-                            ? string.Join(", ", artisan.Specializations)
-                            : "Not set";
-
                         AvailabilitySwitch.IsToggled = artisan.IsAvailable;
-                        AvailabilityLabel.Text = artisan.IsAvailable ? "Available" : "Unavailable";
-                        AvailabilityLabel.TextColor = artisan.IsAvailable
-                            ? Color.FromArgb("#10B981")
-                            : Color.FromArgb("#EF4444");
                     }
 
                     ConfigureUIForRole(_primaryRole);
                 }
                 else
                 {
-                    await DisplayAlert("Error", "Unable to load user profile. Please try logging in again.", "OK");
+                    UserNameLabel.Text = "User";
+                    UserEmailLabel.Text = "";
+                    AvatarInitialsLabel.Text = "?";
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[SETTINGS] Error loading user data: {ex.Message}");
-                await DisplayAlert("Error", "Failed to load user data. Please try again.", "OK");
             }
             finally
             {
@@ -96,178 +90,105 @@ namespace CraftConnect_Mobile_App.Pages
             }
         }
 
-        private string GetRoleDisplayName(string role) => role?.ToLower() switch
-        {
-            "admin" => "Administrator",
-            "artisan" => "Artisan",
-            "customer" => "Customer",
-            _ => "User"
-        };
+        // ── Profile photo helpers ─────────────────────────────────────
 
-        private void ConfigureUIForRole(string role)
+        private void ShowProfilePhoto(string path)
         {
-            HideAllRoleSpecificSections();
+            AvatarImage.Source = ImageSource.FromFile(path);
+            AvatarPhotoFrame.IsVisible = true;
+            AvatarInitialsFrame.IsVisible = false;
+        }
 
-            switch (role?.ToLower())
+        private void ShowInitials()
+        {
+            AvatarPhotoFrame.IsVisible = false;
+            AvatarInitialsFrame.IsVisible = true;
+        }
+
+        // ── Change photo (tap the 📷 badge) ──────────────────────────
+
+        private async void OnChangePhotoClicked(object sender, EventArgs e)
+        {
+            try
             {
-                case "artisan": ShowArtisanSections(); break;
-                case "admin": ShowAdminSections(); break;
+                var result = await MediaPicker.Default.PickPhotoAsync(new MediaPickerOptions
+                {
+                    Title = "Select profile photo"
+                });
+
+                if (result != null)
+                {
+                    ShowProfilePhoto(result.FullPath);
+
+                    // TODO: upload result.OpenReadAsync() to your API
+                    // and save the returned URL to _currentUser.ProfilePhotoUrl
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Photo pick error: {ex.Message}");
             }
         }
 
-        private void HideAllRoleSpecificSections()
+        // ─────────────────────────────────────────────────────────────
+
+        private string GetInitials(string fullName)
         {
-            ArtisanSectionHeader.IsVisible = false;
-            BusinessProfileFrame.IsVisible = false;
-            SpecializationFrame.IsVisible = false;
-            AvailabilityFrame.IsVisible = false;
-            AdminSectionHeader.IsVisible = false;
-            ManageUsersFrame.IsVisible = false;
-            SystemReportsFrame.IsVisible = false;
-            VerificationFrame.IsVisible = false;
+            if (string.IsNullOrWhiteSpace(fullName)) return "?";
+            var parts = fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 1) return parts[0][0].ToString().ToUpper();
+            return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
         }
 
-        private void ShowArtisanSections()
+        private void ConfigureUIForRole(string role)
         {
-            ArtisanSectionHeader.IsVisible = true;
-            BusinessProfileFrame.IsVisible = true;
-            SpecializationFrame.IsVisible = true;
-            AvailabilityFrame.IsVisible = true;
+            ArtisanSectionContainer.IsVisible = false;
+            AdminSectionContainer.IsVisible = false;
+
+            switch (role?.ToLower())
+            {
+                case "artisan":
+                    ArtisanSectionContainer.IsVisible = true;
+                    break;
+                case "admin":
+                    ArtisanSectionContainer.IsVisible = true;
+                    AdminSectionContainer.IsVisible = true;
+                    break;
+            }
         }
 
-        private void ShowAdminSections()
+        // ── ACCOUNT ──────────────────────────────────────────────────
+
+        private async void OnProfileSettingsClicked(object sender, EventArgs e)
         {
-            AdminSectionHeader.IsVisible = true;
-            ManageUsersFrame.IsVisible = true;
-            SystemReportsFrame.IsVisible = true;
-            VerificationFrame.IsVisible = true;
+            try { await Shell.Current.GoToAsync("ProfileSettingsPage"); }
+            catch { await DisplayAlert("Info", "Profile Settings page is not yet available.", "OK"); }
         }
 
         private async void OnEditProfileClicked(object sender, EventArgs e)
         {
             try { await Shell.Current.GoToAsync("EditProfilePage"); }
-            catch { await DisplayAlert("Info", "Profile editing page is not yet available.", "OK"); }
+            catch { await DisplayAlert("Info", "Edit Profile page is not yet available.", "OK"); }
         }
 
-        private async void OnEditEmailClicked(object sender, EventArgs e)
+        private async void OnNotificationsClicked(object sender, EventArgs e)
         {
-            if (_currentUser == null) { await DisplayAlert("Error", "User data not loaded.", "OK"); return; }
-
-            string result = await DisplayPromptAsync("Change Email", "Enter your new email address",
-                initialValue: _currentUser.Email, keyboard: Keyboard.Email);
-
-            if (!string.IsNullOrWhiteSpace(result) && result != _currentUser.Email)
-            {
-                try
-                {
-                    IsBusy = true;
-                    bool success = await _userService.UpdateEmailAsync(result);
-                    if (success)
-                    {
-                        _currentUser.Email = result;
-                        UserEmailLabel.Text = result;
-                        EmailLabel.Text = result;
-                        await DisplayAlert("Success", "Email updated successfully", "OK");
-                    }
-                    else
-                    {
-                        await DisplayAlert("Error", "Failed to update email. Please try again.", "OK");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await DisplayAlert("Error", $"Failed to update email: {ex.Message}", "OK");
-                }
-                finally { IsBusy = false; }
-            }
+            try { await Shell.Current.GoToAsync("NotificationsSettingsPage"); }
+            catch { await DisplayAlert("Info", "Notifications page is not yet available.", "OK"); }
         }
 
-        private async void OnEditPhoneClicked(object sender, EventArgs e)
-        {
-            if (_currentUser == null) { await DisplayAlert("Error", "User data not loaded.", "OK"); return; }
-
-            string result = await DisplayPromptAsync("Change Phone", "Enter your new phone number",
-                initialValue: _currentUser.PhoneNumber, keyboard: Keyboard.Telephone);
-
-            if (!string.IsNullOrWhiteSpace(result) && result != _currentUser.PhoneNumber)
-            {
-                try
-                {
-                    IsBusy = true;
-                    bool success = await _userService.UpdatePhoneNumberAsync(result);
-                    if (success)
-                    {
-                        _currentUser.PhoneNumber = result;
-                        PhoneLabel.Text = result;
-                        await DisplayAlert("Success", "Phone number updated successfully", "OK");
-                    }
-                    else
-                    {
-                        await DisplayAlert("Error", "Failed to update phone number. Please try again.", "OK");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await DisplayAlert("Error", $"Failed to update phone: {ex.Message}", "OK");
-                }
-                finally { IsBusy = false; }
-            }
-        }
-
-        private async void OnChangePasswordClicked(object sender, EventArgs e)
-        {
-            try { await Shell.Current.GoToAsync("ChangePasswordPage"); }
-            catch { await DisplayAlert("Info", "Password change page is not yet available.", "OK"); }
-        }
+        // ── ARTISAN ───────────────────────────────────────────────────
 
         private async void OnEditBusinessClicked(object sender, EventArgs e)
         {
             try { await Shell.Current.GoToAsync("BusinessProfilePage"); }
-            catch { await DisplayAlert("Info", "Business profile page is not yet available.", "OK"); }
-        }
-
-        private async void OnEditSpecializationClicked(object sender, EventArgs e)
-        {
-            if (_artisanUser == null) { await DisplayAlert("Error", "Artisan profile not loaded.", "OK"); return; }
-
-            string currentSpecs = _artisanUser.Specializations?.Any() == true
-                ? string.Join(", ", _artisanUser.Specializations) : "";
-
-            string result = await DisplayPromptAsync("Update Specialization",
-                "Enter your specializations (comma-separated)", initialValue: currentSpecs);
-
-            if (!string.IsNullOrWhiteSpace(result) && result != currentSpecs)
-            {
-                try
-                {
-                    IsBusy = true;
-                    _artisanUser.Specializations = result.Split(',')
-                        .Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s)).ToList();
-
-                    bool success = await _userService.UpdateUserAsync(_artisanUser);
-                    if (success)
-                    {
-                        SpecializationLabel.Text = string.Join(", ", _artisanUser.Specializations);
-                        await DisplayAlert("Success", "Specialization updated", "OK");
-                    }
-                    else
-                    {
-                        await DisplayAlert("Error", "Failed to update specialization.", "OK");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await DisplayAlert("Error", $"Failed to update specialization: {ex.Message}", "OK");
-                }
-                finally { IsBusy = false; }
-            }
+            catch { await DisplayAlert("Info", "Business Profile page is not yet available.", "OK"); }
         }
 
         private async void OnAvailabilityToggled(object sender, ToggledEventArgs e)
         {
             if (_artisanUser == null)
             {
-                await DisplayAlert("Error", "Artisan profile not loaded.", "OK");
                 AvailabilitySwitch.IsToggled = !e.Value;
                 return;
             }
@@ -277,16 +198,9 @@ namespace CraftConnect_Mobile_App.Pages
                 _artisanUser.IsAvailable = e.Value;
                 bool success = await _userService.UpdateUserAsync(_artisanUser);
 
-                if (success)
+                if (!success)
                 {
-                    AvailabilityLabel.Text = e.Value ? "Available" : "Unavailable";
-                    AvailabilityLabel.TextColor = e.Value
-                        ? Color.FromArgb("#10B981")
-                        : Color.FromArgb("#EF4444");
-                }
-                else
-                {
-                    await DisplayAlert("Error", "Failed to update availability status.", "OK");
+                    await DisplayAlert("Error", "Failed to update availability.", "OK");
                     AvailabilitySwitch.IsToggled = !e.Value;
                     _artisanUser.IsAvailable = !e.Value;
                 }
@@ -299,10 +213,12 @@ namespace CraftConnect_Mobile_App.Pages
             }
         }
 
+        // ── ADMIN ─────────────────────────────────────────────────────
+
         private async void OnManageUsersClicked(object sender, EventArgs e)
         {
             try { await Shell.Current.GoToAsync("ManageUsersPage"); }
-            catch { await DisplayAlert("Info", "User management page is not yet available.", "OK"); }
+            catch { await DisplayAlert("Info", "Manage Users page is not yet available.", "OK"); }
         }
 
         private async void OnViewReportsClicked(object sender, EventArgs e)
@@ -317,55 +233,26 @@ namespace CraftConnect_Mobile_App.Pages
             catch { await DisplayAlert("Info", "Verification page is not yet available.", "OK"); }
         }
 
-        private async void OnNotificationsToggled(object sender, ToggledEventArgs e)
+        // ── SECURITY ──────────────────────────────────────────────────
+
+        private async void OnPrivacySecurityClicked(object sender, EventArgs e)
         {
-            try
-            {
-                bool success = await _userService.UpdateNotificationPreferenceAsync(e.Value);
-                if (!success)
-                {
-                    await DisplayAlert("Error", "Failed to update notification settings.", "OK");
-                    ((Switch)sender).IsToggled = !e.Value;
-                }
-            }
-            catch (Exception ex)
-            {
-                await DisplayAlert("Error", $"Failed to update notifications: {ex.Message}", "OK");
-                ((Switch)sender).IsToggled = !e.Value;
-            }
+            try { await Shell.Current.GoToAsync("PrivacySecurityPage"); }
+            catch { await DisplayAlert("Info", "Privacy & Security page is not yet available.", "OK"); }
         }
 
-        private async void OnEmailNotificationsToggled(object sender, ToggledEventArgs e)
+        private async void OnPaymentMethodsClicked(object sender, EventArgs e)
         {
-            try
-            {
-                bool success = await _userService.UpdateEmailNotificationPreferenceAsync(e.Value);
-                if (!success)
-                {
-                    await DisplayAlert("Error", "Failed to update email notification settings.", "OK");
-                    ((Switch)sender).IsToggled = !e.Value;
-                }
-            }
-            catch (Exception ex)
-            {
-                await DisplayAlert("Error", $"Failed to update email notifications: {ex.Message}", "OK");
-                ((Switch)sender).IsToggled = !e.Value;
-            }
+            try { await Shell.Current.GoToAsync("PaymentMethodsPage"); }
+            catch { await DisplayAlert("Info", "Payment Methods page is not yet available.", "OK"); }
         }
 
-        private async void OnLanguageClicked(object sender, EventArgs e)
-        {
-            string result = await DisplayActionSheet("Select Language", "Cancel", null,
-                "English", "French", "Spanish", "German");
-
-            if (result != "Cancel" && result != null)
-                await DisplayAlert("Language", $"Language changed to {result}\n\nThis feature will be implemented in a future update.", "OK");
-        }
+        // ── SUPPORT ───────────────────────────────────────────────────
 
         private async void OnHelpClicked(object sender, EventArgs e)
         {
             try { await Shell.Current.GoToAsync("HelpPage"); }
-            catch { await DisplayAlert("Info", "Help page is not yet available.", "OK"); }
+            catch { await DisplayAlert("Info", "Help & Support page is not yet available.", "OK"); }
         }
 
         private async void OnTermsClicked(object sender, EventArgs e)
@@ -374,17 +261,13 @@ namespace CraftConnect_Mobile_App.Pages
             catch { await DisplayAlert("Info", "Terms & Conditions page is not yet available.", "OK"); }
         }
 
-        private async void OnPrivacyClicked(object sender, EventArgs e)
-        {
-            try { await Shell.Current.GoToAsync("PrivacyPage"); }
-            catch { await DisplayAlert("Info", "Privacy Policy page is not yet available.", "OK"); }
-        }
-
         private async void OnAboutClicked(object sender, EventArgs e)
         {
             await DisplayAlert("About CraftConnect",
                 "Version 1.0.0\n\n© 2024 CraftConnect\nConnecting skilled artisans with customers.\n\nAll rights reserved.", "OK");
         }
+
+        // ── LOGOUT / DELETE ───────────────────────────────────────────
 
         private async void OnLogoutClicked(object sender, EventArgs e)
         {
@@ -426,7 +309,7 @@ namespace CraftConnect_Mobile_App.Pages
                     bool success = await _userService.DeleteAccountAsync(password);
                     if (success)
                     {
-                        await DisplayAlert("Account Deleted", "Your account has been permanently deleted", "OK");
+                        await DisplayAlert("Account Deleted", "Your account has been permanently deleted.", "OK");
                         await Shell.Current.GoToAsync("//LoginPage");
                     }
                     else

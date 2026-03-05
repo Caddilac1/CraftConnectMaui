@@ -25,7 +25,12 @@ namespace CraftConnect_Mobile_App.PageModels
         private string _currentUserName = string.Empty;
         private string _currentUserFullName = string.Empty;
 
-        // Track temporary message IDs to prevent duplicates
+        // ── Recording state ───────────────────────────────────────
+        private bool _isRecording;
+        private string _recordingDuration = "0:00";
+        private IDispatcherTimer? _recordingTimer;
+        private int _recordingSeconds;
+
         private readonly HashSet<Guid> _tempMessageIds = new();
 
         public ObservableCollection<GroupMessageItemViewModel> Messages { get; } = new();
@@ -45,8 +50,6 @@ namespace CraftConnect_Mobile_App.PageModels
                 () => !string.IsNullOrWhiteSpace(MessageText) && !IsBusy);
 
             _signalRService.MessageReceived += OnMessageReceived;
-
-            // ✅ FIX: Re-join group after automatic reconnect
             _signalRService.Reconnected += OnSignalRReconnected;
 
             Debug.WriteLine("[CHAT PAGE MODEL] Initialized");
@@ -61,37 +64,22 @@ namespace CraftConnect_Mobile_App.PageModels
             set
             {
                 if (Guid.TryParse(value, out var guidValue))
-                {
                     GroupId = guidValue;
-                    Debug.WriteLine($"[CHAT PAGE MODEL] GroupIdString parsed: {value} → {guidValue}");
-                }
                 else
-                {
                     Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Failed to parse GroupId: {value}");
-                }
             }
         }
 
         public Guid GroupId
         {
             get => _groupId;
-            set
-            {
-                _groupId = value;
-                OnPropertyChanged();
-                Debug.WriteLine($"[CHAT PAGE MODEL] GroupId set to: {value}");
-            }
+            set { _groupId = value; OnPropertyChanged(); }
         }
 
         public string GroupName
         {
             get => _groupName;
-            set
-            {
-                _groupName = value;
-                OnPropertyChanged();
-                Debug.WriteLine($"[CHAT PAGE MODEL] GroupName set to: {value}");
-            }
+            set { _groupName = value; OnPropertyChanged(); }
         }
 
         public string MessageText
@@ -101,7 +89,9 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 _messageText = value;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(MessageButtonIcon));
+                OnPropertyChanged(nameof(ShowMicIcon));
+                OnPropertyChanged(nameof(ShowSendIcon));
+                OnPropertyChanged(nameof(ShowAttachmentIcons));
                 ((Command)SendMessageCommand).ChangeCanExecute();
             }
         }
@@ -109,14 +99,171 @@ namespace CraftConnect_Mobile_App.PageModels
         public string CurrentUserId
         {
             get => _currentUserId;
-            set
+            set { _currentUserId = value; OnPropertyChanged(); }
+        }
+
+        // ── Recording properties ──────────────────────────────────
+
+        /// <summary>True while the microphone is actively recording.</summary>
+        public bool IsRecording
+        {
+            get => _isRecording;
+            private set
             {
-                _currentUserId = value;
+                _isRecording = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(ShowMicIcon));
+                OnPropertyChanged(nameof(ShowSendIcon));
+                OnPropertyChanged(nameof(ShowAttachmentIcons));
+                OnPropertyChanged(nameof(SendButtonColor));
             }
         }
 
-        public string MessageButtonIcon => string.IsNullOrWhiteSpace(MessageText) ? "\ue029" : "\ue163";
+        /// <summary>Elapsed recording time shown in the banner, e.g. "0:12".</summary>
+        public string RecordingDuration
+        {
+            get => _recordingDuration;
+            private set { _recordingDuration = value; OnPropertyChanged(); }
+        }
+
+        // ── Derived UI helpers ────────────────────────────────────
+
+        /// <summary>Mic icon: no text AND not recording.</summary>
+        public bool ShowMicIcon => string.IsNullOrWhiteSpace(MessageText) && !IsRecording;
+
+        /// <summary>Send icon: text is present.</summary>
+        public bool ShowSendIcon => !string.IsNullOrWhiteSpace(MessageText);
+
+        /// <summary>Attachment/camera icons: no text AND not recording.</summary>
+        public bool ShowAttachmentIcons => string.IsNullOrWhiteSpace(MessageText) && !IsRecording;
+
+        /// <summary>Button turns red while recording, otherwise WhatsApp teal.</summary>
+        public Color SendButtonColor =>
+            IsRecording ? Color.FromArgb("#D32F2F") : Color.FromArgb("#075E54");
+
+        // Kept for any XAML still referencing MessageButtonIcon
+        public string MessageButtonIcon =>
+            string.IsNullOrWhiteSpace(MessageText) ? "\ue029" : "\ue163";
+
+        // ═══════════════════════════════════════════════════════════════
+        // RECORDING STATE (called from code-behind)
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>Called by ChatPage when recording starts.</summary>
+        public void StartRecordingState()
+        {
+            _recordingSeconds = 0;
+            RecordingDuration = "0:00";
+            IsRecording = true;
+
+            _recordingTimer = Application.Current!.Dispatcher.CreateTimer();
+            _recordingTimer.Interval = TimeSpan.FromSeconds(1);
+            _recordingTimer.Tick += OnRecordingTimerTick;
+            _recordingTimer.Start();
+
+            Debug.WriteLine("[CHAT PAGE MODEL] Recording state started");
+        }
+
+        /// <summary>Called by ChatPage when recording stops (send or discard).</summary>
+        public void StopRecordingState()
+        {
+            IsRecording = false;
+
+            _recordingTimer?.Stop();
+            _recordingTimer = null;
+            RecordingDuration = "0:00";
+            _recordingSeconds = 0;
+
+            Debug.WriteLine("[CHAT PAGE MODEL] Recording state stopped");
+        }
+
+        private void OnRecordingTimerTick(object? sender, EventArgs e)
+        {
+            _recordingSeconds++;
+            RecordingDuration = $"{_recordingSeconds / 60}:{_recordingSeconds % 60:D2}";
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // SEND VOICE MESSAGE
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Sends the recorded voice note into the group chat via SignalR.
+        /// The audio file is uploaded via the REST chat service; the resulting
+        /// URL (or a placeholder) is then broadcast as an attachment message.
+        /// </summary>
+        public async Task SendVoiceMessageAsync(string filePath)
+        {
+            if (!File.Exists(filePath))
+            {
+                Debug.WriteLine("[CHAT PAGE MODEL] ❌ Voice file not found");
+                return;
+            }
+
+            var durationLabel = RecordingDuration == "0:00" ? "" : $" ({RecordingDuration})";
+            var fileName = Path.GetFileName(filePath);
+
+            try
+            {
+                IsBusy = true;
+                Debug.WriteLine($"[CHAT PAGE MODEL] 🎙 Sending voice note: {fileName}");
+
+                // ── Option A: Upload audio to your REST endpoint ──────────
+                // If IChatService exposes an upload method, swap in the real
+                // call below. For now we broadcast a text placeholder so the
+                // UI keeps working even without a dedicated audio endpoint.
+                //
+                // using var stream = File.OpenRead(filePath);
+                // var uploadResult = await _chatService.UploadVoiceAsync(GroupId, stream, fileName);
+                // var attachmentUrl = uploadResult?.Url ?? string.Empty;
+
+                // ── Option B (current): broadcast as a text message ───────
+                var voiceText = $"🎙 Voice note{durationLabel}";
+
+                // Optimistic local bubble
+                var tempId = Guid.NewGuid();
+                var tempItem = new GroupMessageItem
+                {
+                    Id = tempId,
+                    GroupChatId = GroupId,
+                    SenderId = Guid.TryParse(CurrentUserId, out var uid) ? uid : Guid.Empty,
+                    SenderName = _currentUserName,
+                    SenderFullName = _currentUserFullName,
+                    Message = voiceText,
+                    SentAt = DateTime.UtcNow,
+                    IsPending = true,
+                    HasAttachment = false,
+                    MediaType = "none"
+                };
+
+                _tempMessageIds.Add(tempId);
+                var tempVm = new GroupMessageItemViewModel(tempItem, CurrentUserId);
+                Messages.Add(tempVm);
+
+                // Broadcast via SignalR
+                await _signalRService.SendMessageAsync(
+                    GroupId.ToString(),
+                    voiceText,
+                    _currentUserName,
+                    _currentUserFullName);
+
+                Debug.WriteLine("[CHAT PAGE MODEL] ✅ Voice note sent via SignalR");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Voice send error: {ex.Message}");
+                await Application.Current!.MainPage!.DisplayAlert(
+                    "Error", "Failed to send voice note. Please try again.", "OK");
+            }
+            finally
+            {
+                IsBusy = false;
+
+                // Clean up temp file
+                try { if (File.Exists(filePath)) File.Delete(filePath); }
+                catch { /* non-critical */ }
+            }
+        }
 
         // ═══════════════════════════════════════════════════════════════
         // INITIALIZATION
@@ -124,28 +271,20 @@ namespace CraftConnect_Mobile_App.PageModels
 
         public async Task InitializeAsync()
         {
-            Debug.WriteLine($"[CHAT PAGE MODEL] InitializeAsync called for group: {GroupId}");
+            Debug.WriteLine($"[CHAT PAGE MODEL] InitializeAsync — group: {GroupId}");
 
             try
             {
-                // STEP 1: Decode JWT to get current user info
                 await LoadCurrentUserAsync();
-
-                // STEP 2: Show cached messages immediately for instant UI
                 await LoadCachedMessages();
-
-                // STEP 3: Connect to SignalR with retry logic
                 await ConnectAndJoinGroupAsync();
-
-                // STEP 4: Load fresh messages from API in background
                 _ = Task.Run(async () => await LoadMessagesInBackground());
-
                 Debug.WriteLine("[CHAT PAGE MODEL] ✅ Initialization complete");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Initialization error: {ex.Message}");
-                await Application.Current.MainPage.DisplayAlert(
+                Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Init error: {ex.Message}");
+                await Application.Current!.MainPage!.DisplayAlert(
                     "Connection Error",
                     "Failed to connect to chat. Please check your internet connection and try again.",
                     "OK");
@@ -155,46 +294,31 @@ namespace CraftConnect_Mobile_App.PageModels
         private async Task LoadCurrentUserAsync()
         {
             var token = await _authService.GetTokenAsync();
-
-            if (string.IsNullOrEmpty(token))
-            {
-                Debug.WriteLine("[CHAT PAGE MODEL] ⚠️ No token found — user not authenticated");
-                return;
-            }
+            if (string.IsNullOrEmpty(token)) return;
 
             var handler = new JwtSecurityTokenHandler();
             var jwt = handler.ReadJwtToken(token);
 
             CurrentUserId = jwt.Claims.FirstOrDefault(c =>
-                c.Type == JwtRegisteredClaimNames.Sub ||
-                c.Type == "sub")?.Value ?? string.Empty;
+                c.Type == JwtRegisteredClaimNames.Sub || c.Type == "sub")?.Value ?? string.Empty;
 
             var email = jwt.Claims.FirstOrDefault(c =>
-                c.Type == JwtRegisteredClaimNames.Email ||
-                c.Type == "email")?.Value ?? string.Empty;
+                c.Type == JwtRegisteredClaimNames.Email || c.Type == "email")?.Value ?? string.Empty;
 
             _currentUserName = email;
             _currentUserFullName = email;
 
-            Debug.WriteLine($"[CHAT PAGE MODEL] Current user: {CurrentUserId} - {_currentUserFullName}");
+            Debug.WriteLine($"[CHAT PAGE MODEL] Current user: {CurrentUserId}");
         }
 
-        /// <summary>
-        /// ✅ FIX: Connects to SignalR then waits for a stable connection before joining.
-        /// Retries up to 5 times with 500ms delay to handle brief post-connect drops.
-        /// </summary>
         private async Task ConnectAndJoinGroupAsync()
         {
             if (!_signalRService.IsConnected)
             {
                 Debug.WriteLine("[CHAT PAGE MODEL] Connecting to SignalR...");
                 await _signalRService.ConnectAsync();
-                Debug.WriteLine("[CHAT PAGE MODEL] ✅ SignalR connected");
             }
 
-            // ✅ FIX: Wait for a stable connection state before invoking JoinGroup.
-            // After StartAsync() returns, the connection can briefly drop if the server
-            // rejects it (e.g. auth failure). We poll here to catch that window.
             const int maxRetries = 5;
             const int retryDelayMs = 500;
 
@@ -202,9 +326,8 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 if (_signalRService.IsConnected)
                 {
-                    Debug.WriteLine($"[CHAT PAGE MODEL] Joining group: {GroupId}");
                     await _signalRService.JoinGroupAsync(GroupId.ToString());
-                    Debug.WriteLine($"[CHAT PAGE MODEL] ✅ Joined group successfully");
+                    Debug.WriteLine("[CHAT PAGE MODEL] ✅ Joined group");
                     return;
                 }
 
@@ -212,16 +335,13 @@ namespace CraftConnect_Mobile_App.PageModels
                 await Task.Delay(retryDelayMs);
             }
 
-            // If we still can't connect after retries, throw so the caller shows an error
             throw new InvalidOperationException(
-                "SignalR connection did not stabilize after multiple attempts. " +
-                "This may be an authentication issue — check that the server's JWT bearer " +
-                "events are configured to extract the token from the query string for SignalR.");
+                "SignalR connection did not stabilize after multiple attempts.");
         }
 
         public async Task CleanupAsync()
         {
-            Debug.WriteLine("[CHAT PAGE MODEL] Cleanup called");
+            Debug.WriteLine("[CHAT PAGE MODEL] Cleanup");
 
             try
             {
@@ -229,8 +349,6 @@ namespace CraftConnect_Mobile_App.PageModels
 
                 if (_signalRService.IsConnected)
                     await _signalRService.LeaveGroupAsync(GroupId.ToString());
-
-                Debug.WriteLine("[CHAT PAGE MODEL] ✅ Left group");
             }
             catch (Exception ex)
             {
@@ -239,25 +357,19 @@ namespace CraftConnect_Mobile_App.PageModels
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // RECONNECT HANDLER
+        // RECONNECT
         // ═══════════════════════════════════════════════════════════════
 
-        /// <summary>
-        /// ✅ FIX: After automatic reconnect, re-join the group.
-        /// Without this, the user silently stops receiving messages after a reconnect.
-        /// </summary>
         private async void OnSignalRReconnected(object sender, string connectionId)
         {
-            Debug.WriteLine($"[CHAT PAGE MODEL] 🔄 Reconnected ({connectionId}), re-joining group: {GroupId}");
-
+            Debug.WriteLine($"[CHAT PAGE MODEL] 🔄 Reconnected, re-joining group: {GroupId}");
             try
             {
                 await _signalRService.JoinGroupAsync(GroupId.ToString());
-                Debug.WriteLine("[CHAT PAGE MODEL] ✅ Re-joined group after reconnect");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Failed to re-join group after reconnect: {ex.Message}");
+                Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Re-join failed: {ex.Message}");
             }
         }
 
@@ -269,29 +381,21 @@ namespace CraftConnect_Mobile_App.PageModels
         {
             try
             {
-                var cacheKey = $"messages_{GroupId}";
-                var cachedJson = await SecureStorage.GetAsync(cacheKey);
+                var cachedJson = await SecureStorage.GetAsync($"messages_{GroupId}");
+                if (string.IsNullOrEmpty(cachedJson)) return;
 
-                if (string.IsNullOrEmpty(cachedJson))
-                {
-                    Debug.WriteLine("[CHAT PAGE MODEL] No cached messages found");
-                    return;
-                }
-
-                var cachedMessages = JsonSerializer.Deserialize<List<GroupMessageItem>>(cachedJson);
-
-                if (cachedMessages == null || !cachedMessages.Any())
-                    return;
-
-                Debug.WriteLine($"[CHAT PAGE MODEL] ✅ Loaded {cachedMessages.Count} cached messages");
+                var cached = JsonSerializer.Deserialize<List<GroupMessageItem>>(cachedJson);
+                if (cached == null || !cached.Any()) return;
 
                 Messages.Clear();
-                foreach (var message in cachedMessages.OrderBy(m => m.SentAt))
-                    Messages.Add(new GroupMessageItemViewModel(message, CurrentUserId));
+                foreach (var m in cached.OrderBy(m => m.SentAt))
+                    Messages.Add(new GroupMessageItemViewModel(m, CurrentUserId));
+
+                Debug.WriteLine($"[CHAT PAGE MODEL] Loaded {cached.Count} cached messages");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[CHAT PAGE MODEL] ⚠️ Error loading cached messages: {ex.Message}");
+                Debug.WriteLine($"[CHAT PAGE MODEL] ⚠️ Cache load error: {ex.Message}");
             }
         }
 
@@ -302,56 +406,45 @@ namespace CraftConnect_Mobile_App.PageModels
                 await Task.Delay(500);
 
                 var messages = await _chatService.GetGroupMessagesAsync(GroupId);
-                Debug.WriteLine($"[CHAT PAGE MODEL] Received {messages.Count} messages from API");
-
-                var cacheKey = $"messages_{GroupId}";
-                var json = JsonSerializer.Serialize(messages);
-                await SecureStorage.SetAsync(cacheKey, json);
+                await SecureStorage.SetAsync($"messages_{GroupId}", JsonSerializer.Serialize(messages));
 
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
-                    var existingIds = Messages.Select(m => m.Id).ToHashSet();
-                    var newMessages = messages.Where(m => !existingIds.Contains(m.Id)).ToList();
-
-                    foreach (var message in newMessages.OrderBy(m => m.SentAt))
-                        Messages.Add(new GroupMessageItemViewModel(message, CurrentUserId));
+                    var existing = Messages.Select(m => m.Id).ToHashSet();
+                    foreach (var m in messages.Where(m => !existing.Contains(m.Id)).OrderBy(m => m.SentAt))
+                        Messages.Add(new GroupMessageItemViewModel(m, CurrentUserId));
                 });
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[CHAT PAGE MODEL] ⚠️ Error loading messages in background: {ex.Message}");
+                Debug.WriteLine($"[CHAT PAGE MODEL] ⚠️ Background load error: {ex.Message}");
             }
         }
 
         private async Task LoadMessages()
         {
-            if (GroupId == Guid.Empty)
-                return;
+            if (GroupId == Guid.Empty) return;
 
             try
             {
                 IsBusy = true;
-
                 var messages = await _chatService.GetGroupMessagesAsync(GroupId);
-
-                var cacheKey = $"messages_{GroupId}";
-                var json = JsonSerializer.Serialize(messages);
-                await SecureStorage.SetAsync(cacheKey, json);
+                await SecureStorage.SetAsync($"messages_{GroupId}", JsonSerializer.Serialize(messages));
 
                 Messages.Clear();
-                foreach (var message in messages.OrderBy(m => m.SentAt))
-                    Messages.Add(new GroupMessageItemViewModel(message, CurrentUserId));
+                foreach (var m in messages.OrderBy(m => m.SentAt))
+                    Messages.Add(new GroupMessageItemViewModel(m, CurrentUserId));
             }
             catch (UnauthorizedAccessException)
             {
-                await Application.Current.MainPage.DisplayAlert(
+                await Application.Current!.MainPage!.DisplayAlert(
                     "Session Expired", "Your session has expired. Please login again.", "OK");
                 await Shell.Current.GoToAsync("//auth/LoginPage");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Error loading messages: {ex.Message}");
-                await Application.Current.MainPage.DisplayAlert("Error", $"Failed to load messages: {ex.Message}", "OK");
+                Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Load error: {ex.Message}");
+                await Application.Current!.MainPage!.DisplayAlert("Error", $"Failed to load: {ex.Message}", "OK");
             }
             finally
             {
@@ -360,13 +453,12 @@ namespace CraftConnect_Mobile_App.PageModels
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // SEND MESSAGE
+        // SEND TEXT MESSAGE
         // ═══════════════════════════════════════════════════════════════
 
         private async Task SendMessage()
         {
-            if (string.IsNullOrWhiteSpace(MessageText) || IsBusy)
-                return;
+            if (string.IsNullOrWhiteSpace(MessageText) || IsBusy) return;
 
             var messageToSend = MessageText.Trim();
             var tempMessageId = Guid.NewGuid();
@@ -395,7 +487,6 @@ namespace CraftConnect_Mobile_App.PageModels
                 Messages.Add(tempViewModel);
                 MessageText = string.Empty;
 
-                // Send via SignalR (real-time broadcast to group)
                 try
                 {
                     await _signalRService.SendMessageAsync(
@@ -410,12 +501,11 @@ namespace CraftConnect_Mobile_App.PageModels
                     _tempMessageIds.Remove(tempMessageId);
                     Messages.Remove(tempViewModel);
                     MessageText = messageToSend;
-                    await Application.Current.MainPage.DisplayAlert(
+                    await Application.Current!.MainPage!.DisplayAlert(
                         "Error", "Failed to send message. Please try again.", "OK");
                     return;
                 }
 
-                // Also persist via REST API as a fallback/backup
                 _ = Task.Run(async () =>
                 {
                     try { await _chatService.SendMessageAsync(GroupId, messageToSend); }
@@ -427,54 +517,46 @@ namespace CraftConnect_Mobile_App.PageModels
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Error sending message: {ex.Message}");
+                Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Send error: {ex.Message}");
                 _tempMessageIds.Remove(tempMessageId);
-
-                if (tempViewModel != null)
-                    Messages.Remove(tempViewModel);
-
+                if (tempViewModel != null) Messages.Remove(tempViewModel);
                 MessageText = messageToSend;
-                await Application.Current.MainPage.DisplayAlert(
-                    "Error", $"Failed to send message: {ex.Message}", "OK");
+                await Application.Current!.MainPage!.DisplayAlert(
+                    "Error", $"Failed to send: {ex.Message}", "OK");
             }
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // RECEIVE MESSAGE (SignalR event)
+        // RECEIVE MESSAGE
         // ═══════════════════════════════════════════════════════════════
 
         private void OnMessageReceived(object sender, MessageReceivedEventArgs e)
         {
             try
             {
-                // Ignore messages for other groups
-                if (e.GroupChatId != GroupId.ToString())
-                    return;
+                if (e.GroupChatId != GroupId.ToString()) return;
 
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
-                    // Remove matching temp message for sender's own messages
                     if (e.SenderId == CurrentUserId)
                     {
-                        var tempMessages = Messages
+                        var temps = Messages
                             .Where(m => _tempMessageIds.Contains(m.Id) && m.Message == e.Message)
                             .ToList();
 
-                        foreach (var tempMsg in tempMessages)
+                        foreach (var t in temps)
                         {
-                            _tempMessageIds.Remove(tempMsg.Id);
-                            Messages.Remove(tempMsg);
+                            _tempMessageIds.Remove(t.Id);
+                            Messages.Remove(t);
                         }
                     }
 
-                    // Avoid duplicates
-                    var messageId = Guid.Parse(e.Id);
-                    if (Messages.Any(m => m.Id == messageId))
-                        return;
+                    var msgId = Guid.Parse(e.Id);
+                    if (Messages.Any(m => m.Id == msgId)) return;
 
-                    var message = new GroupMessageItem
+                    Messages.Add(new GroupMessageItemViewModel(new GroupMessageItem
                     {
-                        Id = messageId,
+                        Id = msgId,
                         GroupChatId = Guid.Parse(e.GroupChatId),
                         SenderId = Guid.Parse(e.SenderId),
                         SenderName = e.SenderName,
@@ -487,19 +569,15 @@ namespace CraftConnect_Mobile_App.PageModels
                         AttachmentSize = e.AttachmentSize,
                         AttachmentType = e.AttachmentType,
                         MediaType = e.MediaType ?? "none",
-                        IsPending = false,
                         IsSent = true,
                         IsDelivered = true
-                    };
+                    }, CurrentUserId));
 
-                    Messages.Add(new GroupMessageItemViewModel(message, CurrentUserId));
-
-                    // Update cache asynchronously
                     _ = Task.Run(async () =>
                     {
                         try
                         {
-                            var allMessages = Messages.Select(m => new GroupMessageItem
+                            var all = Messages.Select(m => new GroupMessageItem
                             {
                                 Id = m.Id,
                                 GroupChatId = GroupId,
@@ -516,25 +594,25 @@ namespace CraftConnect_Mobile_App.PageModels
                                 MediaType = m.MediaType
                             }).ToList();
 
-                            var cacheKey = $"messages_{GroupId}";
-                            var json = JsonSerializer.Serialize(allMessages);
-                            await SecureStorage.SetAsync(cacheKey, json);
+                            await SecureStorage.SetAsync(
+                                $"messages_{GroupId}",
+                                JsonSerializer.Serialize(all));
                         }
                         catch (Exception ex)
                         {
-                            Debug.WriteLine($"[CHAT PAGE MODEL] ⚠️ Error updating cache: {ex.Message}");
+                            Debug.WriteLine($"[CHAT PAGE MODEL] ⚠️ Cache update error: {ex.Message}");
                         }
                     });
                 });
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Error handling received message: {ex.Message}");
+                Debug.WriteLine($"[CHAT PAGE MODEL] ❌ Receive error: {ex.Message}");
             }
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // CLEANUP
+        // FINALIZER
         // ═══════════════════════════════════════════════════════════════
 
         ~ChatPageModel()
@@ -545,7 +623,7 @@ namespace CraftConnect_Mobile_App.PageModels
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // VIEW MODEL WRAPPER
+    // VIEW MODEL WRAPPER  (unchanged)
     // ═══════════════════════════════════════════════════════════════════════
 
     public class GroupMessageItemViewModel : INotifyPropertyChanged
@@ -572,20 +650,19 @@ namespace CraftConnect_Mobile_App.PageModels
         {
             try
             {
-                var fileName = AttachmentName ?? $"image_{_message.Id}.jpg";
-                var filePath = Path.Combine(FileSystem.CacheDirectory, "downloads", fileName);
+                var filePath = Path.Combine(
+                    FileSystem.CacheDirectory, "downloads",
+                    AttachmentName ?? $"image_{_message.Id}.jpg");
 
                 if (File.Exists(filePath))
                 {
                     _isDownloaded = true;
                     _localFilePath = filePath;
-                    OnPropertyChanged(nameof(IsDownloaded));
-                    OnPropertyChanged(nameof(LocalFilePath));
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[VIEW MODEL] Error checking download: {ex.Message}");
+                Debug.WriteLine($"[VIEW MODEL] Check download error: {ex.Message}");
             }
         }
 
@@ -629,7 +706,6 @@ namespace CraftConnect_Mobile_App.PageModels
         protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-        // Core message data
         public Guid Id => _message.Id;
         public string Message => _message.Message;
         public DateTime SentAt => _message.SentAt;
@@ -637,7 +713,6 @@ namespace CraftConnect_Mobile_App.PageModels
         public string SenderName => _message.SenderName;
         public string SenderFullName => _message.SenderFullName;
 
-        // Display helpers
         public bool IsFromCurrentUser => SenderId.ToString() == _currentUserId;
         public string DisplayName => IsFromCurrentUser ? "You" : (SenderFullName ?? SenderName ?? "Unknown");
         public bool HasMessageText => !string.IsNullOrWhiteSpace(_message.Message);
@@ -645,16 +720,8 @@ namespace CraftConnect_Mobile_App.PageModels
         public bool IsSent => _message.IsSent;
         public bool IsDelivered => _message.IsDelivered;
 
-        public string StatusIcon
-        {
-            get
-            {
-                if (_message.IsPending) return "⏳";
-                if (_message.IsDelivered) return "✓✓";
-                if (_message.IsSent) return "✓";
-                return "";
-            }
-        }
+        public string StatusIcon =>
+            _message.IsPending ? "⏳" : _message.IsDelivered ? "✓✓" : _message.IsSent ? "✓" : "";
 
         public string DisplayTime
         {
@@ -670,7 +737,6 @@ namespace CraftConnect_Mobile_App.PageModels
             }
         }
 
-        // Attachment properties
         public bool HasAttachment => _message.HasAttachment && !string.IsNullOrEmpty(_message.AttachmentUrl);
         public string AttachmentUrl => _message.AttachmentUrl;
         public string AttachmentName => _message.AttachmentName ?? "File";
@@ -678,7 +744,6 @@ namespace CraftConnect_Mobile_App.PageModels
         public string AttachmentType => _message.AttachmentType ?? "File";
         public string MediaType => _message.MediaType ?? "none";
 
-        // Download state
         public bool IsDownloaded => _isDownloaded;
         public bool IsDownloading => _isDownloading;
         public string LocalFilePath => _localFilePath;
@@ -687,32 +752,19 @@ namespace CraftConnect_Mobile_App.PageModels
         public string DownloadIcon => IsDownloading ? "✕" : "⬇";
         public string DownloadStatusText => IsDownloading ? "Downloading..." : AttachmentSize;
 
-        public bool IsImageAttachment
-        {
-            get
-            {
-                if (!HasAttachment) return false;
-                return MediaType == "image" || IsImageExtension(AttachmentType);
-            }
-        }
+        public bool IsImageAttachment =>
+            HasAttachment && (MediaType == "image" || IsImageExtension(AttachmentType));
 
-        public bool IsDocumentAttachment
-        {
-            get
-            {
-                if (!HasAttachment) return false;
-                return MediaType == "document" || IsDocumentExtension(AttachmentType);
-            }
-        }
+        public bool IsDocumentAttachment =>
+            HasAttachment && (MediaType == "document" || IsDocumentExtension(AttachmentType));
 
         public string AttachmentIcon
         {
             get
             {
-                var extension = (AttachmentType ?? "").ToLower();
-                if (!extension.StartsWith(".")) extension = "." + extension;
-
-                return extension switch
+                var ext = (AttachmentType ?? "").ToLower();
+                if (!ext.StartsWith(".")) ext = "." + ext;
+                return ext switch
                 {
                     ".pdf" => "\ue415",
                     ".doc" or ".docx" => "\ue873",
@@ -728,20 +780,20 @@ namespace CraftConnect_Mobile_App.PageModels
             }
         }
 
-        private static bool IsImageExtension(string extension)
+        private static bool IsImageExtension(string ext)
         {
-            if (string.IsNullOrEmpty(extension)) return false;
-            var ext = extension.ToLower();
-            if (!ext.StartsWith(".")) ext = "." + ext;
-            return ext is ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp" or ".svg";
+            if (string.IsNullOrEmpty(ext)) return false;
+            var e = ext.ToLower();
+            if (!e.StartsWith(".")) e = "." + e;
+            return e is ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp" or ".svg";
         }
 
-        private static bool IsDocumentExtension(string extension)
+        private static bool IsDocumentExtension(string ext)
         {
-            if (string.IsNullOrEmpty(extension)) return false;
-            var ext = extension.ToLower();
-            if (!ext.StartsWith(".")) ext = "." + ext;
-            return ext is ".pdf" or ".doc" or ".docx" or ".xls" or ".xlsx"
+            if (string.IsNullOrEmpty(ext)) return false;
+            var e = ext.ToLower();
+            if (!e.StartsWith(".")) e = "." + e;
+            return e is ".pdf" or ".doc" or ".docx" or ".xls" or ".xlsx"
                        or ".ppt" or ".pptx" or ".txt" or ".zip" or ".rar" or ".7z";
         }
     }

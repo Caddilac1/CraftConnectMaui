@@ -1,5 +1,4 @@
-﻿using System.Net.Http.Json;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Diagnostics;
 using CraftConnect_Mobile_App.Models;
@@ -9,22 +8,33 @@ namespace CraftConnect_Mobile_App.Services
     public class UserFeedService : IUserFeedService
     {
         private readonly HttpClient _httpClient;
-        private const string BaseUrl = "https://192.168.8.181:7023"; // Match your API URL
         private readonly JsonSerializerOptions _jsonOptions;
 
-        public UserFeedService()
+        public UserFeedService(ApiConfig config)
         {
-            var handler = new HttpClientHandler();
-
-#if DEBUG
-            // Allow self-signed certificates in development
-            handler.ServerCertificateCustomValidationCallback =
-                (message, cert, chain, errors) => true;
+#if ANDROID
+            var handler = new Xamarin.Android.Net.AndroidMessageHandler
+            {
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
+                {
+                    Debug.WriteLine($"[USER FEED SSL] Host: {message.RequestUri.Host}, Errors: {errors}");
+                    return true;
+                }
+            };
+#else
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
+                {
+                    Debug.WriteLine($"[USER FEED SSL] Host: {message.RequestUri.Host}, Errors: {errors}");
+                    return true;
+                }
+            };
 #endif
 
             _httpClient = new HttpClient(handler)
             {
-                BaseAddress = new Uri(BaseUrl),
+                BaseAddress = new Uri(config.BaseUrl.TrimEnd('/')),
                 Timeout = TimeSpan.FromSeconds(30)
             };
 
@@ -34,12 +44,13 @@ namespace CraftConnect_Mobile_App.Services
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
 
-            Debug.WriteLine($"[USER FEED SERVICE] Initialized with BaseUrl: {BaseUrl}");
+            Debug.WriteLine($"[USER FEED SERVICE] Initialized with BaseUrl: {config.BaseUrl}");
         }
 
-        /// <summary>
-        /// Get token from SecureStorage and set it in the HTTP client
-        /// </summary>
+        // ═══════════════════════════════════════════════════════════════
+        // AUTH HEADER
+        // ═══════════════════════════════════════════════════════════════
+
         private async Task<bool> SetAuthHeaderAsync()
         {
             try
@@ -65,6 +76,10 @@ namespace CraftConnect_Mobile_App.Services
             }
         }
 
+        // ═══════════════════════════════════════════════════════════════
+        // GET FEEDS
+        // ═══════════════════════════════════════════════════════════════
+
         public async Task<(List<UserFeedDto> feeds, int totalCount, int totalPages)> GetUserFeedsAsync(
             string? status = null,
             string? category = null,
@@ -85,14 +100,12 @@ namespace CraftConnect_Mobile_App.Services
                 Debug.WriteLine($"[USER FEED SERVICE] 📡 Fetching feeds: /api/userfeeds{queryString}");
 
                 var response = await _httpClient.GetAsync($"/api/userfeeds{queryString}");
-
                 Debug.WriteLine($"[USER FEED SERVICE] 📥 Response status: {response.StatusCode}");
 
                 if (!response.IsSuccessStatusCode)
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
-                    Debug.WriteLine($"[USER FEED SERVICE] ❌ API Error: {response.StatusCode}");
-                    Debug.WriteLine($"[USER FEED SERVICE] Error content: {errorContent}");
+                    Debug.WriteLine($"[USER FEED SERVICE] ❌ API Error: {response.StatusCode} - {errorContent}");
                     return (new List<UserFeedDto>(), 0, 0);
                 }
 
@@ -105,45 +118,10 @@ namespace CraftConnect_Mobile_App.Services
                 if (apiResponse?.Success == true && apiResponse.Feeds != null)
                 {
                     Debug.WriteLine($"[USER FEED SERVICE] ✅ Successfully fetched {apiResponse.Feeds.Count} feeds");
-
-                    // Map the feeds to include flattened user properties
-                    var mappedFeeds = apiResponse.Feeds.Select(f => new UserFeedDto
-                    {
-                        Id = f.Id,
-                        UserId = f.UserId,
-                        Title = f.Title,
-                        Slug = f.Slug,
-                        Description = f.Description,
-                        JobCategory = f.JobCategory,
-                        InvoiceImage = f.InvoiceImage,
-                        Location = f.Location,
-                        PreferredStartDate = f.PreferredStartDate,
-                        Deadline = f.Deadline,
-                        Status = f.Status,
-                        Priority = f.Priority,
-                        ViewsCount = f.ViewsCount,
-                        CommentsCount = f.CommentsCount,
-                        LikesCount = f.LikesCount,
-                        DislikesCount = f.DislikesCount,
-                        ReportsCount = f.ReportsCount,
-                        CreatedAt = f.CreatedAt,
-                        UpdatedAt = f.UpdatedAt,
-                        IsActive = f.IsActive,
-                        IsFeatured = f.IsFeatured,
-                        IsFlagged = f.IsFlagged,
-                        StatusDisplay = f.StatusDisplay,
-                        PriorityDisplay = f.PriorityDisplay,
-                        IsExpired = f.IsExpired,
-                        User = f.User,
-                        UserFullName = f.User?.FullName ?? string.Empty,
-                        UserProfileImage = f.User?.ProfilePicture ?? string.Empty,
-                        UserPhoneNumber = f.User?.PhoneNumber ?? string.Empty
-                    }).ToList();
-
-                    return (mappedFeeds, apiResponse.TotalCount, apiResponse.TotalPages);
+                    return (apiResponse.Feeds.Select(MapToUserFeedDto).ToList(), apiResponse.TotalCount, apiResponse.TotalPages);
                 }
 
-                Debug.WriteLine($"[USER FEED SERVICE] ⚠️ API returned success=false or no feeds");
+                Debug.WriteLine("[USER FEED SERVICE] ⚠️ API returned success=false or no feeds");
                 return (new List<UserFeedDto>(), 0, 0);
             }
             catch (HttpRequestException ex)
@@ -159,10 +137,13 @@ namespace CraftConnect_Mobile_App.Services
             catch (Exception ex)
             {
                 Debug.WriteLine($"[USER FEED SERVICE] ❌ Unexpected error: {ex.Message}");
-                Debug.WriteLine($"[USER FEED SERVICE] StackTrace: {ex.StackTrace}");
                 return (new List<UserFeedDto>(), 0, 0);
             }
         }
+
+        // ═══════════════════════════════════════════════════════════════
+        // GET FEED BY ID
+        // ═══════════════════════════════════════════════════════════════
 
         public async Task<UserFeedDto?> GetUserFeedByIdAsync(Guid id)
         {
@@ -171,7 +152,6 @@ namespace CraftConnect_Mobile_App.Services
                 Debug.WriteLine($"[USER FEED SERVICE] 📡 Fetching feed: {id}");
 
                 var response = await _httpClient.GetAsync($"/api/userfeeds/{id}");
-
                 Debug.WriteLine($"[USER FEED SERVICE] Response status: {response.StatusCode}");
 
                 if (!response.IsSuccessStatusCode)
@@ -186,41 +166,8 @@ namespace CraftConnect_Mobile_App.Services
 
                 if (apiResponse?.Success == true && apiResponse.Feed != null)
                 {
-                    var f = apiResponse.Feed;
-                    Debug.WriteLine($"[USER FEED SERVICE] ✅ Successfully fetched feed: {f.Title}");
-
-                    return new UserFeedDto
-                    {
-                        Id = f.Id,
-                        UserId = f.UserId,
-                        Title = f.Title,
-                        Slug = f.Slug,
-                        Description = f.Description,
-                        JobCategory = f.JobCategory,
-                        InvoiceImage = f.InvoiceImage,
-                        Location = f.Location,
-                        PreferredStartDate = f.PreferredStartDate,
-                        Deadline = f.Deadline,
-                        Status = f.Status,
-                        Priority = f.Priority,
-                        ViewsCount = f.ViewsCount,
-                        CommentsCount = f.CommentsCount,
-                        LikesCount = f.LikesCount,
-                        DislikesCount = f.DislikesCount,
-                        ReportsCount = f.ReportsCount,
-                        CreatedAt = f.CreatedAt,
-                        UpdatedAt = f.UpdatedAt,
-                        IsActive = f.IsActive,
-                        IsFeatured = f.IsFeatured,
-                        IsFlagged = f.IsFlagged,
-                        StatusDisplay = f.StatusDisplay,
-                        PriorityDisplay = f.PriorityDisplay,
-                        IsExpired = f.IsExpired,
-                        User = f.User,
-                        UserFullName = f.User?.FullName ?? string.Empty,
-                        UserProfileImage = f.User?.ProfilePicture ?? string.Empty,
-                        UserPhoneNumber = f.User?.PhoneNumber ?? string.Empty
-                    };
+                    Debug.WriteLine($"[USER FEED SERVICE] ✅ Successfully fetched feed: {apiResponse.Feed.Title}");
+                    return MapToUserFeedDto(apiResponse.Feed);
                 }
 
                 return null;
@@ -232,6 +179,10 @@ namespace CraftConnect_Mobile_App.Services
             }
         }
 
+        // ═══════════════════════════════════════════════════════════════
+        // GET MY FEEDS
+        // ═══════════════════════════════════════════════════════════════
+
         public async Task<List<UserFeedDto>> GetMyFeedsAsync()
         {
             try
@@ -239,12 +190,9 @@ namespace CraftConnect_Mobile_App.Services
                 Debug.WriteLine("[USER FEED SERVICE] 📡 Fetching my feeds...");
 
                 if (!await SetAuthHeaderAsync())
-                {
                     throw new UnauthorizedAccessException("Not authenticated. Please login first.");
-                }
 
                 var response = await _httpClient.GetAsync("/api/userfeeds/my-feeds");
-
                 Debug.WriteLine($"[USER FEED SERVICE] Response status: {response.StatusCode}");
 
                 if (!response.IsSuccessStatusCode)
@@ -272,16 +220,17 @@ namespace CraftConnect_Mobile_App.Services
 
                 return new List<UserFeedDto>();
             }
-            catch (UnauthorizedAccessException)
-            {
-                throw;
-            }
+            catch (UnauthorizedAccessException) { throw; }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[USER FEED SERVICE] ❌ Error fetching my feeds: {ex.Message}");
                 return new List<UserFeedDto>();
             }
         }
+
+        // ═══════════════════════════════════════════════════════════════
+        // GET FEATURED FEEDS
+        // ═══════════════════════════════════════════════════════════════
 
         public async Task<List<UserFeedDto>> GetFeaturedFeedsAsync(int limit = 10)
         {
@@ -290,7 +239,6 @@ namespace CraftConnect_Mobile_App.Services
                 Debug.WriteLine($"[USER FEED SERVICE] 📡 Fetching featured feeds (limit: {limit})...");
 
                 var response = await _httpClient.GetAsync($"/api/userfeeds/featured?limit={limit}");
-
                 Debug.WriteLine($"[USER FEED SERVICE] 📥 Response status: {response.StatusCode}");
 
                 if (!response.IsSuccessStatusCode)
@@ -301,16 +249,13 @@ namespace CraftConnect_Mobile_App.Services
                 }
 
                 var json = await response.Content.ReadAsStringAsync();
-                Debug.WriteLine($"[USER FEED SERVICE] 📄 Response preview: {json.Substring(0, Math.Min(300, json.Length))}...");
-
                 var apiResponse = JsonSerializer.Deserialize<GetFeaturedFeedsResponse>(json, _jsonOptions);
 
                 if (apiResponse?.Success == true && apiResponse.Feeds != null)
                 {
                     Debug.WriteLine($"[USER FEED SERVICE] ✅ Successfully fetched {apiResponse.Feeds.Count} featured feeds");
 
-                    // Map the featured feeds (they have less fields)
-                    var mappedFeeds = apiResponse.Feeds.Select(f => new UserFeedDto
+                    return apiResponse.Feeds.Select(f => new UserFeedDto
                     {
                         Id = f.Id,
                         Title = f.Title,
@@ -331,20 +276,21 @@ namespace CraftConnect_Mobile_App.Services
                         UserProfileImage = f.User?.ProfilePicture ?? string.Empty,
                         IsFeatured = true
                     }).ToList();
-
-                    return mappedFeeds;
                 }
 
-                Debug.WriteLine($"[USER FEED SERVICE] ⚠️ No featured feeds returned");
+                Debug.WriteLine("[USER FEED SERVICE] ⚠️ No featured feeds returned");
                 return new List<UserFeedDto>();
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[USER FEED SERVICE] ❌ Error fetching featured feeds: {ex.Message}");
-                Debug.WriteLine($"[USER FEED SERVICE] StackTrace: {ex.StackTrace}");
                 return new List<UserFeedDto>();
             }
         }
+
+        // ═══════════════════════════════════════════════════════════════
+        // GET CATEGORIES
+        // ═══════════════════════════════════════════════════════════════
 
         public async Task<List<string>> GetCategoriesAsync()
         {
@@ -378,6 +324,10 @@ namespace CraftConnect_Mobile_App.Services
             }
         }
 
+        // ═══════════════════════════════════════════════════════════════
+        // CREATE / UPDATE / DELETE / LIKE
+        // ═══════════════════════════════════════════════════════════════
+
         public async Task<UserFeedDto?> CreateUserFeedAsync(CreateUserFeedDto feed)
         {
             try
@@ -385,13 +335,10 @@ namespace CraftConnect_Mobile_App.Services
                 Debug.WriteLine("[USER FEED SERVICE] 📤 Creating new feed...");
 
                 if (!await SetAuthHeaderAsync())
-                {
                     throw new UnauthorizedAccessException("Not authenticated. Please login first.");
-                }
 
                 var json = JsonSerializer.Serialize(feed, _jsonOptions);
                 var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-
                 var response = await _httpClient.PostAsync("/api/userfeeds", content);
 
                 if (!response.IsSuccessStatusCode)
@@ -413,17 +360,13 @@ namespace CraftConnect_Mobile_App.Services
 
                 if (apiResponse?.Success == true && apiResponse.FeedId != Guid.Empty)
                 {
-                    Debug.WriteLine($"[USER FEED SERVICE] ✅ Feed created successfully: {apiResponse.FeedId}");
-                    // Fetch the created feed
+                    Debug.WriteLine($"[USER FEED SERVICE] ✅ Feed created: {apiResponse.FeedId}");
                     return await GetUserFeedByIdAsync(apiResponse.FeedId);
                 }
 
                 return null;
             }
-            catch (UnauthorizedAccessException)
-            {
-                throw;
-            }
+            catch (UnauthorizedAccessException) { throw; }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[USER FEED SERVICE] ❌ Error creating feed: {ex.Message}");
@@ -438,13 +381,10 @@ namespace CraftConnect_Mobile_App.Services
                 Debug.WriteLine($"[USER FEED SERVICE] 📤 Updating feed: {id}");
 
                 if (!await SetAuthHeaderAsync())
-                {
                     throw new UnauthorizedAccessException("Not authenticated. Please login first.");
-                }
 
                 var json = JsonSerializer.Serialize(feed, _jsonOptions);
                 var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-
                 var response = await _httpClient.PutAsync($"/api/userfeeds/{id}", content);
 
                 if (response.IsSuccessStatusCode)
@@ -464,10 +404,7 @@ namespace CraftConnect_Mobile_App.Services
 
                 return false;
             }
-            catch (UnauthorizedAccessException)
-            {
-                throw;
-            }
+            catch (UnauthorizedAccessException) { throw; }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[USER FEED SERVICE] ❌ Error updating feed: {ex.Message}");
@@ -482,9 +419,7 @@ namespace CraftConnect_Mobile_App.Services
                 Debug.WriteLine($"[USER FEED SERVICE] 🗑️ Deleting feed: {id}");
 
                 if (!await SetAuthHeaderAsync())
-                {
                     throw new UnauthorizedAccessException("Not authenticated. Please login first.");
-                }
 
                 var response = await _httpClient.DeleteAsync($"/api/userfeeds/{id}");
 
@@ -505,10 +440,7 @@ namespace CraftConnect_Mobile_App.Services
 
                 return false;
             }
-            catch (UnauthorizedAccessException)
-            {
-                throw;
-            }
+            catch (UnauthorizedAccessException) { throw; }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[USER FEED SERVICE] ❌ Error deleting feed: {ex.Message}");
@@ -523,9 +455,7 @@ namespace CraftConnect_Mobile_App.Services
                 Debug.WriteLine($"[USER FEED SERVICE] 👍 Liking feed: {id}");
 
                 if (!await SetAuthHeaderAsync())
-                {
                     throw new UnauthorizedAccessException("Not authenticated. Please login first.");
-                }
 
                 var response = await _httpClient.PostAsync($"/api/userfeeds/{id}/like", null);
 
@@ -546,10 +476,7 @@ namespace CraftConnect_Mobile_App.Services
 
                 return false;
             }
-            catch (UnauthorizedAccessException)
-            {
-                throw;
-            }
+            catch (UnauthorizedAccessException) { throw; }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[USER FEED SERVICE] ❌ Error liking feed: {ex.Message}");
@@ -557,31 +484,28 @@ namespace CraftConnect_Mobile_App.Services
             }
         }
 
-        /// <summary>
-        /// Test endpoint to verify feed API is working
-        /// </summary>
+        // ═══════════════════════════════════════════════════════════════
+        // TEST CONNECTION
+        // ═══════════════════════════════════════════════════════════════
+
         public async Task<bool> TestFeedApiAsync()
         {
             try
             {
-                Debug.WriteLine($"[USER FEED SERVICE] Testing connection to: {BaseUrl}/api/userfeeds/categories");
-
+                Debug.WriteLine($"[USER FEED SERVICE] Testing connection to: {_httpClient.BaseAddress}api/userfeeds/categories");
                 var response = await _httpClient.GetAsync("/api/userfeeds/categories");
-
                 Debug.WriteLine($"[USER FEED SERVICE] Test response status: {response.StatusCode}");
 
                 if (response.IsSuccessStatusCode)
                 {
                     var content = await response.Content.ReadAsStringAsync();
-                    Debug.WriteLine($"[USER FEED SERVICE] ✅ Test success! Response: {content.Substring(0, Math.Min(200, content.Length))}...");
+                    Debug.WriteLine($"[USER FEED SERVICE] ✅ Test success: {content.Substring(0, Math.Min(200, content.Length))}...");
                     return true;
                 }
-                else
-                {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    Debug.WriteLine($"[USER FEED SERVICE] ❌ Test failed! Error: {errorContent}");
-                    return false;
-                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Debug.WriteLine($"[USER FEED SERVICE] ❌ Test failed: {errorContent}");
+                return false;
             }
             catch (Exception ex)
             {
@@ -590,7 +514,46 @@ namespace CraftConnect_Mobile_App.Services
             }
         }
 
-        #region Response Models
+        // ═══════════════════════════════════════════════════════════════
+        // PRIVATE HELPER
+        // ═══════════════════════════════════════════════════════════════
+
+        private static UserFeedDto MapToUserFeedDto(FeedResponseDto f) => new()
+        {
+            Id = f.Id,
+            UserId = f.UserId,
+            Title = f.Title,
+            Slug = f.Slug,
+            Description = f.Description,
+            JobCategory = f.JobCategory,
+            InvoiceImage = f.InvoiceImage,
+            Location = f.Location,
+            PreferredStartDate = f.PreferredStartDate,
+            Deadline = f.Deadline,
+            Status = f.Status,
+            Priority = f.Priority,
+            ViewsCount = f.ViewsCount,
+            CommentsCount = f.CommentsCount,
+            LikesCount = f.LikesCount,
+            DislikesCount = f.DislikesCount,
+            ReportsCount = f.ReportsCount,
+            CreatedAt = f.CreatedAt,
+            UpdatedAt = f.UpdatedAt,
+            IsActive = f.IsActive,
+            IsFeatured = f.IsFeatured,
+            IsFlagged = f.IsFlagged,
+            StatusDisplay = f.StatusDisplay,
+            PriorityDisplay = f.PriorityDisplay,
+            IsExpired = f.IsExpired,
+            User = f.User,
+            UserFullName = f.User?.FullName ?? string.Empty,
+            UserProfileImage = f.User?.ProfilePicture ?? string.Empty,
+            UserPhoneNumber = f.User?.PhoneNumber ?? string.Empty
+        };
+
+        // ═══════════════════════════════════════════════════════════════
+        // RESPONSE MODELS
+        // ═══════════════════════════════════════════════════════════════
 
         private class GetFeedsResponse
         {
@@ -683,7 +646,5 @@ namespace CraftConnect_Mobile_App.Services
             public string FullName { get; set; } = string.Empty;
             public string ProfilePicture { get; set; } = string.Empty;
         }
-
-        #endregion
     }
 }

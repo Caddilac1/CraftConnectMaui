@@ -22,6 +22,12 @@ namespace CraftConnect_Mobile_App
             Routing.RegisterRoute("SettingsPage", typeof(SettingsPage));
             Routing.RegisterRoute("aifeedchat", typeof(AiFeedChatPage));
             Routing.RegisterRoute("ImageViewerPage", typeof(ImageViewerPage));
+            Routing.RegisterRoute("ProfileSettingsPage", typeof(Pages.ProfileSettingsPage));
+            Routing.RegisterRoute("EditProfilePage", typeof(Pages.EditProfilePage));
+            Routing.RegisterRoute("NotificationsSettingsPage", typeof(Pages.NotificationsSettingsPage));
+            Routing.RegisterRoute("PrivacySecurityPage", typeof(Pages.PrivacySecurityPage));
+            Routing.RegisterRoute("PaymentMethodsPage", typeof(Pages.PaymentMethodsPage));
+            Routing.RegisterRoute("HelpSupportPage", typeof(Pages.HelpSupportPage));
 
             // Note: LoginPage and GroupChatListPage don't need registration
             // because they're already defined in AppShell.xaml as ShellContent

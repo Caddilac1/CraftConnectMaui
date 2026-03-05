@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CraftConnect_Mobile_App.Pages.PrivacySecurityPage"
+             Title=""
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#F0F4F8">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Header -->
+        <Grid Grid.Row="0"
+              BackgroundColor="#1B2B3A"
+              Padding="16,52,16,20"
+              ColumnDefinitions="Auto,*,Auto">
+            <ImageButton Grid.Column="0"
+                         Source="chevron_left.svg"
+                         WidthRequest="24"
+                         HeightRequest="24"
+                         VerticalOptions="Center"
+                         BackgroundColor="Transparent"
+                         Clicked="OnBackClicked"/>
+            <Label Grid.Column="1"
+                   Text="Privacy &amp; Security"
+                   TextColor="White"
+                   FontSize="18"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"/>
+            <BoxView Grid.Column="2" WidthRequest="24"/>
+        </Grid>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="16" Padding="16,20,16,30">
+
+                <!-- CHANGE EMAIL -->
+                <VerticalStackLayout Spacing="0">
+                    <Label Text="EMAIL ADDRESS"
+                           TextColor="#8A9BAD"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           Margin="4,0,0,8"
+                           CharacterSpacing="1.2"/>
+
+                    <Frame BackgroundColor="White"
+                           CornerRadius="14"
+                           Padding="16"
+                           HasShadow="False"
+                           BorderColor="#E8EDF2">
+                        <VerticalStackLayout Spacing="16">
+
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Current Email"
+                                       TextColor="#8A9BAD"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       CharacterSpacing="0.5"/>
+                                <Label x:Name="CurrentEmailLabel"
+                                       Text="john.doe@craftconnect.com"
+                                       TextColor="#1B2B3A"
+                                       FontSize="15"/>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="New Email Address"
+                                       TextColor="#8A9BAD"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       CharacterSpacing="0.5"/>
+                                <Frame BackgroundColor="#F8FAFC"
+                                       CornerRadius="10"
+                                       Padding="12,0"
+                                       HasShadow="False"
+                                       BorderColor="#E8EDF2"
+                                       HeightRequest="48">
+                                    <Entry x:Name="NewEmailEntry"
+                                           Placeholder="Enter new email address"
+                                           PlaceholderColor="#A0B4C8"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           Keyboard="Email"
+                                           VerticalOptions="Center"
+                                           BackgroundColor="Transparent"/>
+                                </Frame>
+                            </VerticalStackLayout>
+
+                            <Frame BackgroundColor="#1B2B3A"
+                                   CornerRadius="10"
+                                   Padding="0"
+                                   HasShadow="False"
+                                   BorderColor="Transparent"
+                                   HeightRequest="48">
+                                <Grid>
+                                    <ActivityIndicator x:Name="EmailIndicator"
+                                                       IsRunning="False"
+                                                       IsVisible="False"
+                                                       Color="White"
+                                                       HorizontalOptions="Center"
+                                                       VerticalOptions="Center"/>
+                                    <Label x:Name="UpdateEmailLabel"
+                                           Text="Update Email"
+                                           TextColor="White"
+                                           FontSize="15"
+                                           FontAttributes="Bold"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"/>
+                                </Grid>
+                                <Frame.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnUpdateEmailClicked"/>
+                                </Frame.GestureRecognizers>
+                            </Frame>
+
+                        </VerticalStackLayout>
+                    </Frame>
+                </VerticalStackLayout>
+
+                <!-- CHANGE PASSWORD -->
+                <VerticalStackLayout Spacing="0">
+                    <Label Text="PASSWORD"
+                           TextColor="#8A9BAD"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           Margin="4,0,0,8"
+                           CharacterSpacing="1.2"/>
+
+                    <Frame BackgroundColor="White"
+                           CornerRadius="14"
+                           Padding="16"
+                           HasShadow="False"
+                           BorderColor="#E8EDF2">
+                        <VerticalStackLayout Spacing="16">
+
+                            <!-- Current Password -->
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Current Password"
+                                       TextColor="#8A9BAD"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       CharacterSpacing="0.5"/>
+                                <Frame BackgroundColor="#F8FAFC"
+                                       CornerRadius="10"
+                                       Padding="12,0"
+                                       HasShadow="False"
+                                       BorderColor="#E8EDF2"
+                                       HeightRequest="48">
+                                    <Entry x:Name="CurrentPasswordEntry"
+                                           Placeholder="Enter current password"
+                                           PlaceholderColor="#A0B4C8"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           IsPassword="True"
+                                           VerticalOptions="Center"
+                                           BackgroundColor="Transparent"/>
+                                </Frame>
+                            </VerticalStackLayout>
+
+                            <!-- New Password -->
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="New Password"
+                                       TextColor="#8A9BAD"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       CharacterSpacing="0.5"/>
+                                <Frame BackgroundColor="#F8FAFC"
+                                       CornerRadius="10"
+                                       Padding="12,0"
+                                       HasShadow="False"
+                                       BorderColor="#E8EDF2"
+                                       HeightRequest="48">
+                                    <Entry x:Name="NewPasswordEntry"
+                                           Placeholder="Min. 8 characters"
+                                           PlaceholderColor="#A0B4C8"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           IsPassword="True"
+                                           VerticalOptions="Center"
+                                           BackgroundColor="Transparent"/>
+                                </Frame>
+                            </VerticalStackLayout>
+
+                            <!-- Confirm Password -->
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Confirm New Password"
+                                       TextColor="#8A9BAD"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       CharacterSpacing="0.5"/>
+                                <Frame BackgroundColor="#F8FAFC"
+                                       CornerRadius="10"
+                                       Padding="12,0"
+                                       HasShadow="False"
+                                       BorderColor="#E8EDF2"
+                                       HeightRequest="48">
+                                    <Entry x:Name="ConfirmPasswordEntry"
+                                           Placeholder="Re-enter new password"
+                                           PlaceholderColor="#A0B4C8"
+                                           TextColor="#1B2B3A"
+                                           FontSize="15"
+                                           IsPassword="True"
+                                           VerticalOptions="Center"
+                                           BackgroundColor="Transparent"/>
+                                </Frame>
+                            </VerticalStackLayout>
+
+                            <!-- Password error -->
+                            <Label x:Name="PasswordErrorLabel"
+                                   TextColor="#EF4444"
+                                   FontSize="12"
+                                   IsVisible="False"/>
+
+                            <Frame BackgroundColor="#1B2B3A"
+                                   CornerRadius="10"
+                                   Padding="0"
+                                   HasShadow="False"
+                                   BorderColor="Transparent"
+                                   HeightRequest="48">
+                                <Grid>
+                                    <ActivityIndicator x:Name="PasswordIndicator"
+                                                       IsRunning="False"
+                                                       IsVisible="False"
+                                                       Color="White"
+                                                       HorizontalOptions="Center"
+                                                       VerticalOptions="Center"/>
+                                    <Label x:Name="ChangePasswordLabel"
+                                           Text="Change Password"
+                                           TextColor="White"
+                                           FontSize="15"
+                                           FontAttributes="Bold"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"/>
+                                </Grid>
+                                <Frame.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnChangePasswordClicked"/>
+                                </Frame.GestureRecognizers>
+                            </Frame>
+
+                        </VerticalStackLayout>
+                    </Frame>
+                </VerticalStackLayout>
+
+                <!-- DANGER ZONE -->
+                <VerticalStackLayout Spacing="0">
+                    <Label Text="DANGER ZONE"
+                           TextColor="#EF4444"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           Margin="4,0,0,8"
+                           CharacterSpacing="1.2"/>
+
+                    <Frame BackgroundColor="White"
+                           CornerRadius="14"
+                           Padding="0"
+                           HasShadow="False"
+                           BorderColor="#FECACA">
+                        <VerticalStackLayout Spacing="0">
+
+                            <Grid ColumnDefinitions="44,*,24"
+                                  Padding="16,14"
+                                  ColumnSpacing="12">
+                                <Frame Grid.Column="0"
+                                       BackgroundColor="#FEE2E2"
+                                       CornerRadius="10"
+                                       Padding="0"
+                                       HasShadow="False"
+                                       WidthRequest="36"
+                                       HeightRequest="36">
+                                    <Image Source="trash.svg"
+                                           WidthRequest="18"
+                                           HeightRequest="18"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"/>
+                                </Frame>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                    <Label Text="Delete Account"
+                                           TextColor="#EF4444"
+                                           FontSize="15"
+                                           FontAttributes="Bold"/>
+                                    <Label Text="Permanently remove your account and data"
+                                           TextColor="#F87171"
+                                           FontSize="12"/>
+                                </VerticalStackLayout>
+                                <Image Grid.Column="2"
+                                       Source="chevron_right.svg"
+                                       WidthRequest="16"
+                                       HeightRequest="16"
+                                       VerticalOptions="Center"/>
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnDeleteAccountClicked"/>
+                                </Grid.GestureRecognizers>
+                            </Grid>
+
+                        </VerticalStackLayout>
+                    </Frame>
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

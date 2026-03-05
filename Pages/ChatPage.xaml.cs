@@ -1,5 +1,6 @@
 ﻿using CraftConnect_Mobile_App.PageModels;
 using CraftConnect_Mobile_App.Services;
+using Plugin.Maui.Audio;
 using System.Diagnostics;
 using Microsoft.Maui.Controls;
 
@@ -7,28 +8,35 @@ namespace CraftConnect_Mobile_App.Pages
 {
     public partial class ChatPage : ContentPage
     {
-        private ChatPageModel _viewModel;
+        private readonly ChatPageModel _viewModel;
+        private readonly string _baseUrl;
+
+        // ── Audio recording fields ────────────────────────────────
+        private IAudioRecorder? _recorder;
+        private string? _recordingFilePath;
 
 #if ANDROID
         private bool _insetsApplied;
 #endif
 
-        public ChatPage(ChatPageModel viewModel)
+        public ChatPage(ChatPageModel viewModel, ApiConfig apiConfig)
         {
             InitializeComponent();
             _viewModel = viewModel;
+            _baseUrl = apiConfig.BaseUrl.TrimEnd('/');
             BindingContext = _viewModel;
 
-            Debug.WriteLine("[CHAT PAGE] Constructor - Page initialized");
+            Debug.WriteLine($"[CHAT PAGE] Constructor — BaseUrl: {_baseUrl}");
         }
+
+        // ══════════════════════════════════════════════════════════════
+        // ▌ LIFECYCLE
+        // ══════════════════════════════════════════════════════════════
 
         protected override async void OnAppearing()
         {
             base.OnAppearing();
-
             Debug.WriteLine("[CHAT PAGE] OnAppearing");
-            Debug.WriteLine($"[CHAT PAGE] GroupId: {_viewModel.GroupId}");
-            Debug.WriteLine($"[CHAT PAGE] GroupName: {_viewModel.GroupName}");
 
             try
             {
@@ -37,12 +45,7 @@ namespace CraftConnect_Mobile_App.Pages
             catch (Exception ex)
             {
                 Debug.WriteLine($"[CHAT PAGE] ❌ Error in OnAppearing: {ex.Message}");
-                Debug.WriteLine($"[CHAT PAGE] StackTrace: {ex.StackTrace}");
-
-                await DisplayAlert(
-                    "Error",
-                    "Failed to initialize chat. Please try again.",
-                    "OK");
+                await DisplayAlert("Error", "Failed to initialize chat. Please try again.", "OK");
             }
 
 #if ANDROID
@@ -55,6 +58,10 @@ namespace CraftConnect_Mobile_App.Pages
             base.OnDisappearing();
             Debug.WriteLine("[CHAT PAGE] OnDisappearing");
 
+            // Safety: stop any in-progress recording silently
+            if (_viewModel.IsRecording)
+                await StopRecordingAndDiscard();
+
             try
             {
                 await _viewModel.CleanupAsync();
@@ -65,16 +72,12 @@ namespace CraftConnect_Mobile_App.Pages
             }
 
 #if ANDROID
-            // Restore element padding
             if (_insetsApplied)
             {
                 var inputAreaVe = this.FindByName<VisualElement>("MessageInputArea");
                 if (inputAreaVe is Layout inputAreaLayout)
-                {
                     PageInsetManager.RestoreElementPadding(inputAreaLayout);
-                }
 
-                // Also restore page padding if we applied nav bar padding previously
                 PageInsetManager.RestorePagePadding(this);
                 _insetsApplied = false;
             }
@@ -86,21 +89,16 @@ namespace CraftConnect_Mobile_App.Pages
 #if ANDROID
             try
             {
-                // Use fully-qualified name to avoid requiring Android namespace at compile for other platforms
-                var insets = CraftConnect_Mobile_App.Platforms.Android.AndroidInsetService.GetInsets();
-
-                // If IME visible, apply IME inset to the input area; otherwise ensure nav bar padding is preserved
+                var insets      = CraftConnect_Mobile_App.Platforms.Android.AndroidInsetService.GetInsets();
                 var inputAreaVe = this.FindByName<VisualElement>("MessageInputArea");
 
                 if (inputAreaVe is Layout inputAreaLayout && insets.IsImeVisible && insets.ImeHeight > 0)
                 {
-                    // Apply IME inset to the input container only
                     PageInsetManager.ApplyInsetToElement(inputAreaLayout, insets.ImeHeight);
                     _insetsApplied = true;
                 }
                 else if (insets.NavigationBarHeight > 0)
                 {
-                    // Apply navigation bar as bottom padding to the whole page so content isn't hidden behind nav bar
                     PageInsetManager.ApplyInsetToPage(this, insets.NavigationBarHeight);
                     _insetsApplied = true;
                 }
@@ -112,112 +110,198 @@ namespace CraftConnect_Mobile_App.Pages
 #endif
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // DOWNLOAD & VIEW ATTACHMENT (WhatsApp style)
-        // ═══════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════
+        // ▌ SEND / MIC — central dispatcher
+        // ══════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// Handle download/cancel button click - Single button that toggles
+        /// Single handler for the combined send/mic button.
+        /// • Text present       → send the text message (via ViewModel command)
+        /// • No text, idle      → start recording
+        /// • No text, recording → stop + send voice note
         /// </summary>
+        private async void OnSendMicTapped(object sender, EventArgs e)
+        {
+            if (!string.IsNullOrWhiteSpace(_viewModel.MessageText))
+            {
+                // Normal text send — delegate to existing command
+                if (_viewModel.SendMessageCommand.CanExecute(null))
+                    _viewModel.SendMessageCommand.Execute(null);
+                return;
+            }
+
+            if (_viewModel.IsRecording)
+                await StopRecordingAndSend();
+            else
+                await StartRecording();
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // ▌ RECORDING HELPERS
+        // ══════════════════════════════════════════════════════════════
+
+        private async Task StartRecording()
+        {
+            var status = await Permissions.RequestAsync<Permissions.Microphone>();
+            if (status != PermissionStatus.Granted)
+            {
+                await DisplayAlert("Permission Required",
+                    "Microphone access is needed to record voice messages.", "OK");
+                return;
+            }
+
+            try
+            {
+                var fileName = $"voice_{DateTime.Now:yyyyMMdd_HHmmss}.m4a";
+                _recordingFilePath = Path.Combine(FileSystem.CacheDirectory, fileName);
+
+                _recorder = AudioManager.Current.CreateRecorder();
+                await _recorder.StartAsync(_recordingFilePath);
+
+                _viewModel.StartRecordingState();
+                _ = AnimateRecordingDot();   // fire-and-forget pulsing dot
+
+                Debug.WriteLine($"[CHAT PAGE] 🎙 Recording started → {_recordingFilePath}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CHAT PAGE] ❌ StartRecording error: {ex.Message}");
+                await DisplayAlert("Error", "Could not start recording. Please try again.", "OK");
+            }
+        }
+
+        private async Task StopRecordingAndSend()
+        {
+            try
+            {
+                if (_recorder == null) return;
+
+                await _recorder.StopAsync();
+                _viewModel.StopRecordingState();
+
+                Debug.WriteLine("[CHAT PAGE] ⏹ Recording stopped");
+
+                if (string.IsNullOrEmpty(_recordingFilePath) || !File.Exists(_recordingFilePath))
+                {
+                    await DisplayAlert("Error", "Recording file not found.", "OK");
+                    return;
+                }
+
+                await _viewModel.SendVoiceMessageAsync(_recordingFilePath);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CHAT PAGE] ❌ StopRecording error: {ex.Message}");
+                _viewModel.StopRecordingState();
+                await DisplayAlert("Error", "Failed to process recording. Please try again.", "OK");
+            }
+            finally
+            {
+                _recorder = null;
+                _recordingFilePath = null;
+            }
+        }
+
+        private async Task StopRecordingAndDiscard()
+        {
+            try
+            {
+                if (_recorder != null)
+                {
+                    await _recorder.StopAsync();
+                    _recorder = null;
+                }
+
+                if (!string.IsNullOrEmpty(_recordingFilePath) && File.Exists(_recordingFilePath))
+                    File.Delete(_recordingFilePath);
+
+                _recordingFilePath = null;
+                _viewModel.StopRecordingState();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CHAT PAGE] ❌ StopRecordingAndDiscard error: {ex.Message}");
+            }
+        }
+
+        /// <summary>Pulses the red dot opacity while recording is active.</summary>
+        private async Task AnimateRecordingDot()
+        {
+            while (_viewModel.IsRecording)
+            {
+                await RecordingDot.FadeTo(0.2, 500);
+                if (!_viewModel.IsRecording) break;
+                await RecordingDot.FadeTo(1.0, 500);
+            }
+            RecordingDot.Opacity = 1;
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // ▌ DOWNLOAD & VIEW ATTACHMENT
+        // ══════════════════════════════════════════════════════════════
+
         private async void OnDownloadAttachment(object sender, EventArgs e)
         {
             GroupMessageItemViewModel message = null;
 
             try
             {
-                // Try to get message from TapGestureRecognizer CommandParameter first
                 if (e is TappedEventArgs tappedArgs && tappedArgs.Parameter != null)
                 {
                     message = tappedArgs.Parameter as GroupMessageItemViewModel;
-                    Debug.WriteLine($"[CHAT PAGE] Got message from TappedEventArgs.Parameter");
+                    Debug.WriteLine("[CHAT PAGE] Got message from TappedEventArgs.Parameter");
                 }
 
-                // Fallback: Get from BindingContext
                 if (message == null && sender is Element element)
                 {
                     message = element.BindingContext as GroupMessageItemViewModel;
-                    Debug.WriteLine($"[CHAT PAGE] Got message from BindingContext");
+                    Debug.WriteLine("[CHAT PAGE] Got message from BindingContext");
                 }
 
                 if (message == null)
                 {
-                    Debug.WriteLine("[CHAT PAGE] ❌ Invalid attachment - message is null");
                     await DisplayAlert("Error", "Invalid attachment - could not find message", "OK");
                     return;
                 }
 
                 if (string.IsNullOrEmpty(message.AttachmentUrl))
                 {
-                    Debug.WriteLine($"[CHAT PAGE] ❌ Invalid attachment - URL is empty");
-                    Debug.WriteLine($"[CHAT PAGE] Message ID: {message.Id}");
-                    Debug.WriteLine($"[CHAT PAGE] Has Attachment: {message.HasAttachment}");
-                    Debug.WriteLine($"[CHAT PAGE] Is Image: {message.IsImageAttachment}");
-                    Debug.WriteLine($"[CHAT PAGE] Is Document: {message.IsDocumentAttachment}");
                     await DisplayAlert("Error", "Invalid attachment - no URL", "OK");
                     return;
                 }
 
-                // ✅ If already downloading, cancel it
                 if (message.IsDownloading)
                 {
-                    Debug.WriteLine($"[CHAT PAGE] ❌ Cancelling download for: {message.AttachmentName}");
                     message.CancelDownload();
                     return;
                 }
 
-                Debug.WriteLine($"[CHAT PAGE] 📥 Starting download: {message.AttachmentName}");
-                Debug.WriteLine($"[CHAT PAGE] Media Type: {message.MediaType}");
-                Debug.WriteLine($"[CHAT PAGE] Is Image: {message.IsImageAttachment}");
-                Debug.WriteLine($"[CHAT PAGE] Is Document: {message.IsDocumentAttachment}");
-                Debug.WriteLine($"[CHAT PAGE] Attachment URL: {message.AttachmentUrl}");
+                var downloadUrl = BuildAbsoluteUrl(message.AttachmentUrl);
+                Debug.WriteLine($"[CHAT PAGE] 📥 Downloading: {message.AttachmentName} → {downloadUrl}");
 
-                // Build absolute URL
-                string downloadUrl = GetAbsoluteUrl(message.AttachmentUrl);
-                Debug.WriteLine($"[CHAT PAGE] 🌐 Download URL: {downloadUrl}");
-
-                // Mark as downloading (button changes to red X with spinner)
                 message.MarkAsDownloading();
 
                 try
                 {
-                    // Create downloads directory
                     var downloadsDir = Path.Combine(FileSystem.CacheDirectory, "downloads");
                     Directory.CreateDirectory(downloadsDir);
 
-                    // Download file
                     var fileName = message.AttachmentName ?? $"file_{message.Id}{message.AttachmentType}";
                     var filePath = Path.Combine(downloadsDir, fileName);
-
-                    Debug.WriteLine($"[CHAT PAGE] 💾 Will save to: {filePath}");
 
                     using var httpClient = CreateHttpClient();
                     var fileBytes = await httpClient.GetByteArrayAsync(downloadUrl);
 
-                    Debug.WriteLine($"[CHAT PAGE] ✅ Downloaded {fileBytes.Length} bytes");
-
-                    // Check if download was cancelled
                     if (!message.IsDownloading)
                     {
-                        Debug.WriteLine($"[CHAT PAGE] Download was cancelled");
+                        Debug.WriteLine("[CHAT PAGE] Download cancelled — discarding bytes");
                         return;
                     }
 
                     await File.WriteAllBytesAsync(filePath, fileBytes);
-
-                    Debug.WriteLine($"[CHAT PAGE] ✅ Saved to: {filePath}");
-
-                    // Mark as downloaded - button disappears, clear image shows
                     message.MarkAsDownloaded(filePath);
 
-                    // ✅ NO ALERT FOR IMAGES - just silently download
-                    // User can tap the image to view it in full screen
-                    if (message.IsImageAttachment)
-                    {
-                        Debug.WriteLine($"[CHAT PAGE] ✅ Image downloaded silently");
-                        // No alert - user can just tap to view
-                    }
-                    // For documents, try to open
-                    else if (message.IsDocumentAttachment)
+                    if (message.IsDocumentAttachment)
                     {
                         try
                         {
@@ -226,139 +310,119 @@ namespace CraftConnect_Mobile_App.Pages
                                 File = new ReadOnlyFile(filePath),
                                 Title = "Open with"
                             });
-                            Debug.WriteLine($"[CHAT PAGE] ✅ Opened document successfully");
                         }
-                        catch (Exception openEx)
+                        catch
                         {
-                            Debug.WriteLine($"[CHAT PAGE] ⚠️ Could not open: {openEx.Message}");
-
-                            var share = await DisplayAlert(
-                                "Downloaded",
-                                "File downloaded successfully. Would you like to share it?",
-                                "Share",
-                                "OK");
+                            var share = await DisplayAlert("Downloaded",
+                                "File downloaded. Would you like to share it?", "Share", "OK");
 
                             if (share)
-                            {
                                 await Share.RequestAsync(new ShareFileRequest
                                 {
                                     Title = "Share file",
                                     File = new ShareFile(filePath)
                                 });
-                            }
                         }
                     }
                 }
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"[CHAT PAGE] ❌ Download error: {ex.Message}");
-                    Debug.WriteLine($"[CHAT PAGE] ❌ Stack trace: {ex.StackTrace}");
                     message?.CancelDownload();
                     await DisplayAlert("Error", $"Failed to download: {ex.Message}", "OK");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[CHAT PAGE] ❌ Error: {ex.Message}");
-                Debug.WriteLine($"[CHAT PAGE] ❌ Stack trace: {ex.StackTrace}");
+                Debug.WriteLine($"[CHAT PAGE] ❌ Outer error: {ex.Message}");
                 message?.CancelDownload();
                 await DisplayAlert("Error", "Failed to process attachment", "OK");
             }
         }
 
-        /// <summary>
-        /// Handle image tap - Opens downloaded image in full-screen viewer
-        /// </summary>
         private async void OnImageTapped(object sender, EventArgs e)
         {
             try
             {
-                var image = sender as Image;
-                var message = image?.BindingContext as GroupMessageItemViewModel;
+                var message = (sender as Image)?.BindingContext as GroupMessageItemViewModel;
 
-                if (message == null)
-                {
-                    Debug.WriteLine("[CHAT PAGE] ❌ Invalid message");
-                    return;
-                }
+                if (message == null) return;
 
-                // Only open if downloaded
                 if (!message.IsDownloaded)
                 {
-                    Debug.WriteLine("[CHAT PAGE] Image not downloaded yet");
                     await DisplayAlert("Not Downloaded", "Please download the image first", "OK");
                     return;
                 }
 
-                Debug.WriteLine($"[CHAT PAGE] 🖼️ Opening downloaded image: {message.LocalFilePath}");
-
-                // Navigate to full-screen viewer
-                var parameters = new Dictionary<string, object>
+                await Shell.Current.GoToAsync("ImageViewerPage", new Dictionary<string, object>
                 {
                     { "ImagePath", message.LocalFilePath },
-                    { "FileName", message.AttachmentName }
-                };
-
-                await Shell.Current.GoToAsync("ImageViewerPage", parameters);
+                    { "FileName",  message.AttachmentName }
+                });
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[CHAT PAGE] ❌ Error opening image: {ex.Message}");
+                Debug.WriteLine($"[CHAT PAGE] ❌ Image tap error: {ex.Message}");
                 await DisplayAlert("Error", "Failed to open image", "OK");
             }
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // HELPER METHODS
-        // ═══════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════
+        // ▌ HELPERS
+        // ══════════════════════════════════════════════════════════════
 
-        private string GetAbsoluteUrl(string url)
+        private string BuildAbsoluteUrl(string url)
         {
             if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                 url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-            {
                 return url;
-            }
 
-            var baseUrl = Preferences.Get("api_base_url", "https://192.168.188.1127023");
-            baseUrl = baseUrl.TrimEnd('/');
-            var relativePath = url.TrimStart('/');
-            return $"{baseUrl}/{relativePath}";
+            var absolute = $"{_baseUrl}/{url.TrimStart('/')}";
+            Debug.WriteLine($"[CHAT PAGE] Built absolute URL: {absolute}");
+            return absolute;
         }
 
-        private HttpClient CreateHttpClient()
+        private static HttpClient CreateHttpClient()
         {
-#if DEBUG
+#if ANDROID
+            var handler = new Xamarin.Android.Net.AndroidMessageHandler
+            {
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
+                {
+                    Debug.WriteLine($"[CHAT PAGE SSL] Host: {message.RequestUri.Host}, Errors: {errors}");
+                    return true;
+                }
+            };
+#else
             var handler = new HttpClientHandler
             {
-                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
+                {
+                    Debug.WriteLine($"[CHAT PAGE SSL] Host: {message.RequestUri.Host}, Errors: {errors}");
+                    return true;
+                }
             };
-            return new HttpClient(handler);
-#else
-            return new HttpClient();
 #endif
+            return new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // EXISTING EVENT HANDLERS
-        // ═══════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════
+        // ▌ UI EVENT HANDLERS
+        // ══════════════════════════════════════════════════════════════
 
         private async void OnBackButtonTapped(object sender, EventArgs e)
         {
-            Debug.WriteLine("[CHAT PAGE] Back button tapped");
+            if (_viewModel.IsRecording)
+                await StopRecordingAndDiscard();
+
             await Shell.Current.GoToAsync("..");
         }
 
-        private void OnEmojiButtonTapped(object sender, EventArgs e)
-        {
-            Debug.WriteLine("[CHAT PAGE] Emoji button tapped");
-            // TODO: Implement emoji picker
-        }
+        private void OnEmojiButtonTapped(object sender, EventArgs e) =>
+            Debug.WriteLine("[CHAT PAGE] Emoji tapped — TODO");
 
         private async void OnAttachmentButtonTapped(object sender, EventArgs e)
         {
-            Debug.WriteLine("[CHAT PAGE] Attachment button tapped");
-
             try
             {
                 var result = await FilePicker.PickAsync(new PickOptions
@@ -368,34 +432,23 @@ namespace CraftConnect_Mobile_App.Pages
                 });
 
                 if (result != null)
-                {
-                    Debug.WriteLine($"[CHAT PAGE] File selected: {result.FileName}");
-                    // TODO: Upload file and send message with attachment
-                    await DisplayAlert("Coming Soon", "File upload feature will be available soon!", "OK");
-                }
+                    await DisplayAlert("Coming Soon", "File upload will be available soon!", "OK");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[CHAT PAGE] ❌ Error picking file: {ex.Message}");
+                Debug.WriteLine($"[CHAT PAGE] ❌ File pick error: {ex.Message}");
             }
         }
 
         private async void OnCameraButtonTapped(object sender, EventArgs e)
         {
-            Debug.WriteLine("[CHAT PAGE] Camera button tapped");
-
             try
             {
                 if (MediaPicker.Default.IsCaptureSupported)
                 {
                     var photo = await MediaPicker.Default.CapturePhotoAsync();
-
                     if (photo != null)
-                    {
-                        Debug.WriteLine($"[CHAT PAGE] Photo captured: {photo.FileName}");
-                        // TODO: Upload photo and send message
-                        await DisplayAlert("Coming Soon", "Photo upload feature will be available soon!", "OK");
-                    }
+                        await DisplayAlert("Coming Soon", "Photo upload will be available soon!", "OK");
                 }
                 else
                 {
@@ -404,18 +457,14 @@ namespace CraftConnect_Mobile_App.Pages
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[CHAT PAGE] ❌ Error capturing photo: {ex.Message}");
+                Debug.WriteLine($"[CHAT PAGE] ❌ Camera error: {ex.Message}");
             }
         }
 
-        private void OnMessageEditorFocused(object sender, FocusEventArgs e)
-        {
-            Debug.WriteLine("[CHAT PAGE] Message editor focused");
-        }
+        private void OnMessageEditorFocused(object sender, FocusEventArgs e) =>
+            Debug.WriteLine("[CHAT PAGE] Editor focused");
 
-        private void OnMessageEditorUnfocused(object sender, FocusEventArgs e)
-        {
-            Debug.WriteLine("[CHAT PAGE] Message editor unfocused");
-        }
+        private void OnMessageEditorUnfocused(object sender, FocusEventArgs e) =>
+            Debug.WriteLine("[CHAT PAGE] Editor unfocused");
     }
 }

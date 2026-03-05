@@ -15,7 +15,7 @@ namespace CraftConnect_Mobile_App
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
-                .UseMauiCommunityToolkit()          // REQUIRED for Toolkit
+                .UseMauiCommunityToolkit()
                 .ConfigureFonts(fonts =>
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -32,25 +32,17 @@ namespace CraftConnect_Mobile_App
                 events.AddAndroid(android => android
                     .OnCreate((activity, bundle) =>
                     {
-                        // Remove gray navigation bar immediately on app start
                         if (activity?.Window != null)
                         {
                             try
                             {
-                                // Make navigation bar fully transparent
                                 activity.Window.SetNavigationBarColor(Android.Graphics.Color.Transparent);
-                                
-                                // Disable gray contrast enforcement (Android 10+)
-                                if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.Q)
-                                {
-                                    activity.Window.NavigationBarContrastEnforced = false;
-                                }
 
-                                // Enable edge-to-edge (Android 11+)
+                                if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.Q)
+                                    activity.Window.NavigationBarContrastEnforced = false;
+
                                 if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.R)
-                                {
                                     activity.Window.SetDecorFitsSystemWindows(false);
-                                }
 
                                 System.Diagnostics.Debug.WriteLine("[MauiProgram] ✅ Navigation bar transparency applied globally");
                             }
@@ -62,22 +54,19 @@ namespace CraftConnect_Mobile_App
                     })
                     .OnResume((activity) =>
                     {
-                        // Re-apply on resume to ensure it stays transparent
                         if (activity?.Window != null)
                         {
                             activity.Window.SetNavigationBarColor(Android.Graphics.Color.Transparent);
-                            
+
                             if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.Q)
-                            {
                                 activity.Window.NavigationBarContrastEnforced = false;
-                            }
                         }
                     }));
 #endif
             });
 
             // ========================================
-            // SERVICES - All as Singletons
+            // SERVICES
             // ========================================
             builder.Services.AddSingleton<ApiConfig>();
             builder.Services.AddSingleton<AuthService>(sp =>
@@ -86,13 +75,13 @@ namespace CraftConnect_Mobile_App
                 new ChatService(sp.GetRequiredService<ApiConfig>()));
             builder.Services.AddSingleton<IChatSignalRService, ChatSignalRService>(sp =>
                 new ChatSignalRService(sp.GetRequiredService<ApiConfig>()));
-            builder.Services.AddSingleton<IUserFeedService, UserFeedService>();
+            builder.Services.AddSingleton<IUserFeedService, UserFeedService>(sp =>
+                new UserFeedService(sp.GetRequiredService<ApiConfig>()));
             builder.Services.AddSingleton<INavigationService, NavigationService>();
             builder.Services.AddSingleton<IDialogService, DialogService>();
             builder.Services.AddSingleton<IUserService, UserService>();
             builder.Services.AddSingleton<AiFeedChatService>();
-
-
+            builder.Services.AddSingleton<ArtisanProposalService>();
 
             // ========================================
             // VIEWMODELS
@@ -105,9 +94,10 @@ namespace CraftConnect_Mobile_App
             builder.Services.AddTransient<SettingsPageViewModel>();
             builder.Services.AddTransient<AiFeedChatPageModel>();
             builder.Services.AddTransient<UpdatesFeedPageModel>();
+            builder.Services.AddTransient<CreateProposalPage>();
 
             // ========================================
-            // PAGES
+            // PAGES - Existing
             // ========================================
             builder.Services.AddTransient<LoginPage>();
             builder.Services.AddTransient<GroupChatListPage>();
@@ -117,6 +107,16 @@ namespace CraftConnect_Mobile_App
             builder.Services.AddTransient<AiFeedChatPage>();
             builder.Services.AddTransient<StorePage>();
             builder.Services.AddTransient<UpdatesFeedPage>();
+
+            // ========================================
+            // PAGES - Settings sub-pages
+            // ========================================
+            builder.Services.AddTransient<ProfileSettingsPage>();
+            builder.Services.AddTransient<EditProfilePage>();
+            builder.Services.AddTransient<NotificationsSettingsPage>();
+            builder.Services.AddTransient<PrivacySecurityPage>();
+            builder.Services.AddTransient<PaymentMethodsPage>();
+            builder.Services.AddTransient<HelpSupportPage>();
 
 #if DEBUG
             builder.Logging.AddDebug();

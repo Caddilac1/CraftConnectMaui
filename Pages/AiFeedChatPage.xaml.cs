@@ -1,4 +1,5 @@
 ﻿using CraftConnect_Mobile_App.PageModels;
+using Plugin.Maui.Audio;
 using System.Diagnostics;
 
 namespace CraftConnect_Mobile_App.Pages
@@ -7,6 +8,10 @@ namespace CraftConnect_Mobile_App.Pages
     {
         private readonly AiFeedChatPageModel _viewModel;
 
+        // ── Audio recording fields ────────────────────────────────
+        private IAudioRecorder? _recorder;
+        private string? _recordingFilePath;
+
         public AiFeedChatPage(AiFeedChatPageModel viewModel)
         {
             InitializeComponent();
@@ -14,6 +19,10 @@ namespace CraftConnect_Mobile_App.Pages
             BindingContext = _viewModel;
             Debug.WriteLine("[AI CHAT PAGE] Constructor - Page initialized");
         }
+
+        // ─────────────────────────────────────────────────────────
+        // Page lifecycle
+        // ─────────────────────────────────────────────────────────
 
         protected override async void OnAppearing()
         {
@@ -33,15 +42,27 @@ namespace CraftConnect_Mobile_App.Pages
             }
         }
 
-        protected override void OnDisappearing()
+        protected override async void OnDisappearing()
         {
             base.OnDisappearing();
             Debug.WriteLine("[AI CHAT PAGE] OnDisappearing");
+
+            // Safety: stop any in-progress recording if user navigates away
+            if (_viewModel.IsRecording)
+                await StopRecordingAndDiscard();
         }
+
+        // ─────────────────────────────────────────────────────────
+        // Navigation
+        // ─────────────────────────────────────────────────────────
 
         private async void OnBackButtonTapped(object sender, EventArgs e)
         {
             Debug.WriteLine("[AI CHAT PAGE] Back button tapped");
+
+            // Stop recording first if active
+            if (_viewModel.IsRecording)
+                await StopRecordingAndDiscard();
 
             var confirm = await DisplayAlert(
                 "Exit Chat",
@@ -50,25 +71,147 @@ namespace CraftConnect_Mobile_App.Pages
                 "No");
 
             if (confirm)
-            {
                 await Shell.Current.GoToAsync("..");
+        }
+
+        // ─────────────────────────────────────────────────────────
+        // Send / Mic tap — central dispatcher
+        // ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Single handler for the combined send/mic button.
+        /// • Text present  → send the text message
+        /// • No text, idle → start recording
+        /// • No text, recording → stop + send voice note
+        /// </summary>
+        private async void OnSendMicTapped(object sender, EventArgs e)
+        {
+            if (!string.IsNullOrWhiteSpace(_viewModel.MessageText))
+            {
+                // Normal text send
+                await _viewModel.SendMessageCommand.ExecuteAsync(null);
+                return;
+            }
+
+            if (_viewModel.IsRecording)
+                await StopRecordingAndSend();
+            else
+                await StartRecording();
+        }
+
+        // ─────────────────────────────────────────────────────────
+        // Recording helpers
+        // ─────────────────────────────────────────────────────────
+
+        private async Task StartRecording()
+        {
+            // Check / request microphone permission
+            var status = await Permissions.RequestAsync<Permissions.Microphone>();
+            if (status != PermissionStatus.Granted)
+            {
+                await DisplayAlert("Permission Required",
+                    "Microphone access is needed to record voice messages.", "OK");
+                return;
+            }
+
+            try
+            {
+                // Build a temp path for the audio file
+                var fileName = $"voice_{DateTime.Now:yyyyMMdd_HHmmss}.m4a";
+                _recordingFilePath = Path.Combine(FileSystem.CacheDirectory, fileName);
+
+                _recorder = AudioManager.Current.CreateRecorder();
+                await _recorder.StartAsync(_recordingFilePath);
+
+                _viewModel.StartRecordingState();
+                _ = AnimateRecordingDot();          // pulsing dot (fire-and-forget)
+
+                Debug.WriteLine($"[AI CHAT PAGE] 🎙 Recording started → {_recordingFilePath}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[AI CHAT PAGE] ❌ StartRecording error: {ex.Message}");
+                await DisplayAlert("Error", "Could not start recording. Please try again.", "OK");
             }
         }
 
-        private void OnEmojiButtonTapped(object sender, EventArgs e)
+        private async Task StopRecordingAndSend()
         {
-            Debug.WriteLine("[AI CHAT PAGE] Emoji button tapped");
-            DisplayAlert("Info", "Emoji picker coming soon!", "OK");
+            try
+            {
+                if (_recorder == null) return;
+
+                await _recorder.StopAsync();
+                _viewModel.StopRecordingState();
+
+                Debug.WriteLine("[AI CHAT PAGE] ⏹ Recording stopped");
+
+                if (string.IsNullOrEmpty(_recordingFilePath) || !File.Exists(_recordingFilePath))
+                {
+                    await DisplayAlert("Error", "Recording file not found.", "OK");
+                    return;
+                }
+
+                // Hand off to the view model for upload / transcription
+                await _viewModel.SendVoiceMessageAsync(_recordingFilePath);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[AI CHAT PAGE] ❌ StopRecording error: {ex.Message}");
+                _viewModel.StopRecordingState();
+                await DisplayAlert("Error", "Failed to process recording. Please try again.", "OK");
+            }
+            finally
+            {
+                _recorder = null;
+                _recordingFilePath = null;
+            }
         }
+
+        private async Task StopRecordingAndDiscard()
+        {
+            try
+            {
+                if (_recorder != null)
+                {
+                    await _recorder.StopAsync();
+                    _recorder = null;
+                }
+
+                if (!string.IsNullOrEmpty(_recordingFilePath) && File.Exists(_recordingFilePath))
+                    File.Delete(_recordingFilePath);
+
+                _recordingFilePath = null;
+                _viewModel.StopRecordingState();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[AI CHAT PAGE] ❌ StopRecordingAndDiscard error: {ex.Message}");
+            }
+        }
+
+        /// <summary>Pulsing opacity animation on the red dot while recording.</summary>
+        private async Task AnimateRecordingDot()
+        {
+            while (_viewModel.IsRecording)
+            {
+                await RecordingDot.FadeTo(0.2, 500);
+                if (!_viewModel.IsRecording) break;
+                await RecordingDot.FadeTo(1.0, 500);
+            }
+            RecordingDot.Opacity = 1;
+        }
+
+        // ─────────────────────────────────────────────────────────
+        // Attachment sheet
+        // ─────────────────────────────────────────────────────────
 
         private async void OnAttachmentButtonTapped(object sender, EventArgs e)
         {
             Debug.WriteLine("[AI CHAT PAGE] Attachment button tapped");
 
-            // Show the WhatsApp-style bottom sheet
             AttachmentOverlay.IsVisible = true;
 
-            // Animate the bottom sheet sliding up
             var sheet = AttachmentOverlay.Children[1] as VerticalStackLayout;
             if (sheet != null)
             {
@@ -77,18 +220,15 @@ namespace CraftConnect_Mobile_App.Pages
             }
         }
 
-        private async void OnDismissAttachmentSheet(object sender, EventArgs e)
-        {
+        private async void OnDismissAttachmentSheet(object sender, EventArgs e) =>
             await HideAttachmentSheet();
-        }
 
         private async Task HideAttachmentSheet()
         {
             var sheet = AttachmentOverlay.Children[1] as VerticalStackLayout;
             if (sheet != null)
-            {
                 await sheet.TranslateTo(0, 300, 200, Easing.CubicIn);
-            }
+
             AttachmentOverlay.IsVisible = false;
         }
 
@@ -116,6 +256,16 @@ namespace CraftConnect_Mobile_App.Pages
             await PickPhoto();
         }
 
+        private void OnEmojiButtonTapped(object sender, EventArgs e)
+        {
+            Debug.WriteLine("[AI CHAT PAGE] Emoji button tapped");
+            DisplayAlert("Info", "Emoji picker coming soon!", "OK");
+        }
+
+        // ─────────────────────────────────────────────────────────
+        // File / photo pickers (unchanged)
+        // ─────────────────────────────────────────────────────────
+
         private async Task PickDocument(string fileType)
         {
             try
@@ -123,9 +273,9 @@ namespace CraftConnect_Mobile_App.Pages
                 var customFileType = new FilePickerFileType(
                     new Dictionary<DevicePlatform, IEnumerable<string>>
                     {
-                        { DevicePlatform.iOS, new[] { "public.pdf", "public.image", "public.data" } },
+                        { DevicePlatform.iOS,    new[] { "public.pdf", "public.image", "public.data" } },
                         { DevicePlatform.Android, new[] { "application/pdf", "image/*", "*/*" } },
-                        { DevicePlatform.WinUI, new[] { ".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx" } }
+                        { DevicePlatform.WinUI,  new[] { ".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx" } }
                     }
                 );
 
@@ -136,7 +286,6 @@ namespace CraftConnect_Mobile_App.Pages
                 };
 
                 var file = await FilePicker.Default.PickAsync(options);
-
                 if (file != null)
                 {
                     await _viewModel.AttachFile(file, fileType);
@@ -157,7 +306,6 @@ namespace CraftConnect_Mobile_App.Pages
                 if (MediaPicker.Default.IsCaptureSupported)
                 {
                     var file = await MediaPicker.Default.CapturePhotoAsync();
-
                     if (file != null)
                     {
                         await _viewModel.AttachFile(file, "photo");
@@ -181,7 +329,6 @@ namespace CraftConnect_Mobile_App.Pages
             try
             {
                 var file = await MediaPicker.Default.PickPhotoAsync();
-
                 if (file != null)
                 {
                     await _viewModel.AttachFile(file, "photo");

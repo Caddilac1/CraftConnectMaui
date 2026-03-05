@@ -1,418 +1,695 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:CraftConnect_Mobile_App.Controls"
              x:Class="CraftConnect_Mobile_App.Pages.SettingsPage"
-             Title="Settings"
-             BackgroundColor="{StaticResource Gray50}">
+             Title=""
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#F0F4F8">
 
-    <ContentPage.Resources>
-        <ResourceDictionary>
+    <Grid RowDefinitions="*,Auto">
 
-            <Style x:Key="SectionHeaderStyle" TargetType="Label">
-                <Setter Property="TextColor" Value="{StaticResource Gray400}"/>
-                <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}"/>
-                <Setter Property="FontAttributes" Value="Bold"/>
-                <Setter Property="Margin" Value="20,20,20,10"/>
-                <Setter Property="TextTransform" Value="Uppercase"/>
-            </Style>
+        <ScrollView Grid.Row="0">
+            <VerticalStackLayout Spacing="0">
 
-            <Style x:Key="SettingItemStyle" TargetType="Frame">
-                <Setter Property="BackgroundColor" Value="{StaticResource White}"/>
-                <Setter Property="CornerRadius" Value="12"/>
-                <Setter Property="Padding" Value="16"/>
-                <Setter Property="Margin" Value="16,4"/>
-                <Setter Property="HasShadow" Value="False"/>
-                <Setter Property="BorderColor" Value="{StaticResource BorderLight}"/>
-            </Style>
+                <!-- ── Dark Header ── -->
+                <Grid BackgroundColor="#1B2B3A"
+                      Padding="20,60,20,40"
+                      RowDefinitions="Auto,Auto,Auto"
+                      RowSpacing="6">
 
-            <Style x:Key="SettingTitleStyle" TargetType="Label">
-                <Setter Property="TextColor" Value="{StaticResource TextPrimary}"/>
-                <Setter Property="FontSize" Value="{StaticResource FontSizeLarge}"/>
-                <Setter Property="FontAttributes" Value="Bold"/>
-            </Style>
+                    <!-- Avatar: overlapping frames — photo on top of initials -->
+                    <Grid Grid.Row="0"
+                          WidthRequest="90"
+                          HeightRequest="90"
+                          HorizontalOptions="Center">
 
-            <Style x:Key="SettingDescriptionStyle" TargetType="Label">
-                <Setter Property="TextColor" Value="{StaticResource TextSecondary}"/>
-                <Setter Property="FontSize" Value="{StaticResource FontSizeMedium}"/>
-                <Setter Property="Margin" Value="0,4,0,0"/>
-            </Style>
-        </ResourceDictionary>
-    </ContentPage.Resources>
+                        <!-- Initials frame (default, always behind) -->
+                        <Frame x:Name="AvatarInitialsFrame"
+                               WidthRequest="90"
+                               HeightRequest="90"
+                               CornerRadius="45"
+                               Padding="0"
+                               HasShadow="False"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               IsClippedToBounds="True">
+                            <Frame.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#4DA6E8" Offset="0"/>
+                                    <GradientStop Color="#2E6FD8" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Frame.Background>
+                            <Label x:Name="AvatarInitialsLabel"
+                                   Text="?"
+                                   TextColor="White"
+                                   FontSize="32"
+                                   FontAttributes="Bold"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"/>
+                        </Frame>
 
-    <ScrollView>
-        <VerticalStackLayout Spacing="8" Padding="0,10">
+                        <!-- Real photo frame (hidden until photo loaded) -->
+                        <Frame x:Name="AvatarPhotoFrame"
+                               WidthRequest="90"
+                               HeightRequest="90"
+                               CornerRadius="45"
+                               Padding="0"
+                               HasShadow="False"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               IsClippedToBounds="True"
+                               IsVisible="False">
+                            <Image x:Name="AvatarImage"
+                                   Aspect="AspectFill"
+                                   WidthRequest="90"
+                                   HeightRequest="90"/>
+                        </Frame>
 
-            <!-- Profile Section -->
-            <Label Text="PROFILE" Style="{StaticResource SectionHeaderStyle}"/>
+                        <!-- Camera badge bottom-right -->
+                        <Border WidthRequest="28"
+                                HeightRequest="28"
+                                StrokeThickness="2"
+                                HorizontalOptions="End"
+                                VerticalOptions="End">
+                            <Border.Stroke>
+                                <SolidColorBrush Color="#1B2B3A"/>
+                            </Border.Stroke>
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="14"/>
+                            </Border.StrokeShape>
+                            <Border.Background>
+                                <SolidColorBrush Color="#2DC98E"/>
+                            </Border.Background>
+                            <Label Text="📷"
+                                   FontSize="12"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnChangePhotoClicked"/>
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </Border>
 
-            <Frame Style="{StaticResource SettingItemStyle}">
-                <Grid ColumnDefinitions="60,*,Auto" ColumnSpacing="12">
-                    <Frame Grid.Column="0" 
-                           WidthRequest="60" 
-                           HeightRequest="60" 
-                           CornerRadius="30" 
+                    </Grid>
+
+                    <Label Grid.Row="1"
+                           x:Name="UserNameLabel"
+                           Text="User"
+                           TextColor="White"
+                           FontSize="20"
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"/>
+
+                    <Label Grid.Row="2"
+                           x:Name="UserEmailLabel"
+                           Text=""
+                           TextColor="#A0B4C8"
+                           FontSize="14"
+                           HorizontalOptions="Center"/>
+                </Grid>
+
+                <!-- ── Content Area ── -->
+                <VerticalStackLayout Spacing="16" Padding="16,20,16,30">
+
+                    <!-- ACCOUNT Section -->
+                    <VerticalStackLayout Spacing="0">
+                        <Label Text="ACCOUNT"
+                               TextColor="#8A9BAD"
+                               FontSize="12"
+                               FontAttributes="Bold"
+                               Margin="4,0,0,8"
+                               CharacterSpacing="1.2"/>
+
+                        <Frame BackgroundColor="White"
+                               CornerRadius="14"
+                               Padding="0"
+                               HasShadow="False"
+                               BorderColor="#E8EDF2">
+                            <VerticalStackLayout Spacing="0">
+
+                                <!-- Profile Settings -->
+                                <Grid ColumnDefinitions="44,*,24"
+                                      Padding="16,14"
+                                      ColumnSpacing="12">
+                                    <Frame Grid.Column="0"
+                                           BackgroundColor="#EBF3FB"
+                                           CornerRadius="10"
+                                           Padding="0"
+                                           HasShadow="False"
+                                           WidthRequest="36"
+                                           HeightRequest="36">
+                                        <Image Source="person.png"
+                                               WidthRequest="18"
+                                               HeightRequest="18"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"/>
+                                    </Frame>
+                                    <Label Grid.Column="1"
+                                           Text="Profile Settings"
+                                           FontSize="15"
+                                           TextColor="#1B2B3A"
+                                           VerticalOptions="Center"/>
+                                    <Image Grid.Column="2"
+                                           Source="chevron_right.png"
+                                           WidthRequest="16"
+                                           HeightRequest="16"
+                                           VerticalOptions="Center"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnProfileSettingsClicked"/>
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+
+                                <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
+
+                                <!-- Edit Profile -->
+                                <Grid ColumnDefinitions="44,*,24"
+                                      Padding="16,14"
+                                      ColumnSpacing="12">
+                                    <Frame Grid.Column="0"
+                                           BackgroundColor="#EBF3FB"
+                                           CornerRadius="10"
+                                           Padding="0"
+                                           HasShadow="False"
+                                           WidthRequest="36"
+                                           HeightRequest="36">
+                                        <Image Source="edit.png"
+                                               WidthRequest="18"
+                                               HeightRequest="18"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"/>
+                                    </Frame>
+                                    <Label Grid.Column="1"
+                                           Text="Edit Profile"
+                                           FontSize="15"
+                                           TextColor="#1B2B3A"
+                                           VerticalOptions="Center"/>
+                                    <Image Grid.Column="2"
+                                           Source="chevron_right.png"
+                                           WidthRequest="16"
+                                           HeightRequest="16"
+                                           VerticalOptions="Center"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnEditProfileClicked"/>
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+
+                                <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
+
+                                <!-- Notifications -->
+                                <Grid ColumnDefinitions="44,*,24"
+                                      Padding="16,14"
+                                      ColumnSpacing="12">
+                                    <Frame Grid.Column="0"
+                                           BackgroundColor="#EBF3FB"
+                                           CornerRadius="10"
+                                           Padding="0"
+                                           HasShadow="False"
+                                           WidthRequest="36"
+                                           HeightRequest="36">
+                                        <Image Source="bell.png"
+                                               WidthRequest="18"
+                                               HeightRequest="18"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"/>
+                                    </Frame>
+                                    <Label Grid.Column="1"
+                                           Text="Notifications"
+                                           FontSize="15"
+                                           TextColor="#1B2B3A"
+                                           VerticalOptions="Center"/>
+                                    <Image Grid.Column="2"
+                                           Source="chevron_right.png"
+                                           WidthRequest="16"
+                                           HeightRequest="16"
+                                           VerticalOptions="Center"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnNotificationsClicked"/>
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+
+                            </VerticalStackLayout>
+                        </Frame>
+                    </VerticalStackLayout>
+
+                    <!-- ARTISAN Section (hidden for non-artisans) -->
+                    <VerticalStackLayout x:Name="ArtisanSectionContainer" Spacing="0" IsVisible="False">
+                        <Label Text="ARTISAN"
+                               TextColor="#8A9BAD"
+                               FontSize="12"
+                               FontAttributes="Bold"
+                               Margin="4,0,0,8"
+                               CharacterSpacing="1.2"/>
+
+                        <Frame BackgroundColor="White"
+                               CornerRadius="14"
+                               Padding="0"
+                               HasShadow="False"
+                               BorderColor="#E8EDF2">
+                            <VerticalStackLayout Spacing="0">
+
+                                <!-- Business Profile -->
+                                <Grid ColumnDefinitions="44,*,24"
+                                      Padding="16,14"
+                                      ColumnSpacing="12">
+                                    <Frame Grid.Column="0"
+                                           BackgroundColor="#EBF3FB"
+                                           CornerRadius="10"
+                                           Padding="0"
+                                           HasShadow="False"
+                                           WidthRequest="36"
+                                           HeightRequest="36">
+                                        <Image Source="briefcase.png"
+                                               WidthRequest="18"
+                                               HeightRequest="18"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"/>
+                                    </Frame>
+                                    <Label Grid.Column="1"
+                                           Text="Business Profile"
+                                           FontSize="15"
+                                           TextColor="#1B2B3A"
+                                           VerticalOptions="Center"/>
+                                    <Image Grid.Column="2"
+                                           Source="chevron_right.png"
+                                           WidthRequest="16"
+                                           HeightRequest="16"
+                                           VerticalOptions="Center"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnEditBusinessClicked"/>
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+
+                                <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
+
+                                <!-- Availability -->
+                                <Grid ColumnDefinitions="44,*,Auto"
+                                      Padding="16,14"
+                                      ColumnSpacing="12">
+                                    <Frame Grid.Column="0"
+                                           BackgroundColor="#EBF3FB"
+                                           CornerRadius="10"
+                                           Padding="0"
+                                           HasShadow="False"
+                                           WidthRequest="36"
+                                           HeightRequest="36">
+                                        <Image Source="availability.png"
+                                               WidthRequest="18"
+                                               HeightRequest="18"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"/>
+                                    </Frame>
+                                    <Label Grid.Column="1"
+                                           Text="Availability"
+                                           FontSize="15"
+                                           TextColor="#1B2B3A"
+                                           VerticalOptions="Center"/>
+                                    <Switch x:Name="AvailabilitySwitch"
+                                            Grid.Column="2"
+                                            OnColor="#10B981"
+                                            ThumbColor="White"
+                                            IsToggled="True"
+                                            Toggled="OnAvailabilityToggled"/>
+                                </Grid>
+
+                            </VerticalStackLayout>
+                        </Frame>
+                    </VerticalStackLayout>
+
+                    <!-- ADMIN Section (hidden for non-admins) -->
+                    <VerticalStackLayout x:Name="AdminSectionContainer" Spacing="0" IsVisible="False">
+                        <Label Text="ADMINISTRATION"
+                               TextColor="#8A9BAD"
+                               FontSize="12"
+                               FontAttributes="Bold"
+                               Margin="4,0,0,8"
+                               CharacterSpacing="1.2"/>
+
+                        <Frame BackgroundColor="White"
+                               CornerRadius="14"
+                               Padding="0"
+                               HasShadow="False"
+                               BorderColor="#E8EDF2">
+                            <VerticalStackLayout Spacing="0">
+
+                                <!-- Manage Users -->
+                                <Grid ColumnDefinitions="44,*,24"
+                                      Padding="16,14"
+                                      ColumnSpacing="12">
+                                    <Frame Grid.Column="0"
+                                           BackgroundColor="#EBF3FB"
+                                           CornerRadius="10"
+                                           Padding="0"
+                                           HasShadow="False"
+                                           WidthRequest="36"
+                                           HeightRequest="36">
+                                        <Image Source="users.png"
+                                               WidthRequest="18"
+                                               HeightRequest="18"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"/>
+                                    </Frame>
+                                    <Label Grid.Column="1"
+                                           Text="Manage Users"
+                                           FontSize="15"
+                                           TextColor="#1B2B3A"
+                                           VerticalOptions="Center"/>
+                                    <Image Grid.Column="2"
+                                           Source="chevron_right.png"
+                                           WidthRequest="16"
+                                           HeightRequest="16"
+                                           VerticalOptions="Center"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnManageUsersClicked"/>
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+
+                                <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
+
+                                <!-- Reports -->
+                                <Grid ColumnDefinitions="44,*,24"
+                                      Padding="16,14"
+                                      ColumnSpacing="12">
+                                    <Frame Grid.Column="0"
+                                           BackgroundColor="#EBF3FB"
+                                           CornerRadius="10"
+                                           Padding="0"
+                                           HasShadow="False"
+                                           WidthRequest="36"
+                                           HeightRequest="36">
+                                        <Image Source="chart.png"
+                                               WidthRequest="18"
+                                               HeightRequest="18"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"/>
+                                    </Frame>
+                                    <Label Grid.Column="1"
+                                           Text="View Reports"
+                                           FontSize="15"
+                                           TextColor="#1B2B3A"
+                                           VerticalOptions="Center"/>
+                                    <Image Grid.Column="2"
+                                           Source="chevron_right.png"
+                                           WidthRequest="16"
+                                           HeightRequest="16"
+                                           VerticalOptions="Center"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnViewReportsClicked"/>
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+
+                                <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
+
+                                <!-- Verifications -->
+                                <Grid ColumnDefinitions="44,*,24"
+                                      Padding="16,14"
+                                      ColumnSpacing="12">
+                                    <Frame Grid.Column="0"
+                                           BackgroundColor="#EBF3FB"
+                                           CornerRadius="10"
+                                           Padding="0"
+                                           HasShadow="False"
+                                           WidthRequest="36"
+                                           HeightRequest="36">
+                                        <Image Source="shield_check.png"
+                                               WidthRequest="18"
+                                               HeightRequest="18"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"/>
+                                    </Frame>
+                                    <Label Grid.Column="1"
+                                           Text="Artisan Verifications"
+                                           FontSize="15"
+                                           TextColor="#1B2B3A"
+                                           VerticalOptions="Center"/>
+                                    <Image Grid.Column="2"
+                                           Source="chevron_right.png"
+                                           WidthRequest="16"
+                                           HeightRequest="16"
+                                           VerticalOptions="Center"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnVerificationsClicked"/>
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+
+                            </VerticalStackLayout>
+                        </Frame>
+                    </VerticalStackLayout>
+
+                    <!-- SECURITY Section -->
+                    <VerticalStackLayout Spacing="0">
+                        <Label Text="SECURITY"
+                               TextColor="#8A9BAD"
+                               FontSize="12"
+                               FontAttributes="Bold"
+                               Margin="4,0,0,8"
+                               CharacterSpacing="1.2"/>
+
+                        <Frame BackgroundColor="White"
+                               CornerRadius="14"
+                               Padding="0"
+                               HasShadow="False"
+                               BorderColor="#E8EDF2">
+                            <VerticalStackLayout Spacing="0">
+
+                                <!-- Privacy & Security -->
+                                <Grid ColumnDefinitions="44,*,24"
+                                      Padding="16,14"
+                                      ColumnSpacing="12">
+                                    <Frame Grid.Column="0"
+                                           BackgroundColor="#EBF3FB"
+                                           CornerRadius="10"
+                                           Padding="0"
+                                           HasShadow="False"
+                                           WidthRequest="36"
+                                           HeightRequest="36">
+                                        <Image Source="lock.png"
+                                               WidthRequest="18"
+                                               HeightRequest="18"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"/>
+                                    </Frame>
+                                    <Label Grid.Column="1"
+                                           Text="Privacy &amp; Security"
+                                           FontSize="15"
+                                           TextColor="#1B2B3A"
+                                           VerticalOptions="Center"/>
+                                    <Image Grid.Column="2"
+                                           Source="chevron_right.png"
+                                           WidthRequest="16"
+                                           HeightRequest="16"
+                                           VerticalOptions="Center"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnPrivacySecurityClicked"/>
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+
+                                <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
+
+                                <!-- Payment Methods -->
+                                <Grid ColumnDefinitions="44,*,24"
+                                      Padding="16,14"
+                                      ColumnSpacing="12">
+                                    <Frame Grid.Column="0"
+                                           BackgroundColor="#EBF3FB"
+                                           CornerRadius="10"
+                                           Padding="0"
+                                           HasShadow="False"
+                                           WidthRequest="36"
+                                           HeightRequest="36">
+                                        <Image Source="card.png"
+                                               WidthRequest="18"
+                                               HeightRequest="18"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"/>
+                                    </Frame>
+                                    <Label Grid.Column="1"
+                                           Text="Payment Methods"
+                                           FontSize="15"
+                                           TextColor="#1B2B3A"
+                                           VerticalOptions="Center"/>
+                                    <Image Grid.Column="2"
+                                           Source="chevron_right.png"
+                                           WidthRequest="16"
+                                           HeightRequest="16"
+                                           VerticalOptions="Center"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnPaymentMethodsClicked"/>
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+
+                            </VerticalStackLayout>
+                        </Frame>
+                    </VerticalStackLayout>
+
+                    <!-- SUPPORT Section -->
+                    <VerticalStackLayout Spacing="0">
+                        <Label Text="SUPPORT"
+                               TextColor="#8A9BAD"
+                               FontSize="12"
+                               FontAttributes="Bold"
+                               Margin="4,0,0,8"
+                               CharacterSpacing="1.2"/>
+
+                        <Frame BackgroundColor="White"
+                               CornerRadius="14"
+                               Padding="0"
+                               HasShadow="False"
+                               BorderColor="#E8EDF2">
+                            <VerticalStackLayout Spacing="0">
+
+                                <!-- Help & Support -->
+                                <Grid ColumnDefinitions="44,*,24"
+                                      Padding="16,14"
+                                      ColumnSpacing="12">
+                                    <Frame Grid.Column="0"
+                                           BackgroundColor="#EBF3FB"
+                                           CornerRadius="10"
+                                           Padding="0"
+                                           HasShadow="False"
+                                           WidthRequest="36"
+                                           HeightRequest="36">
+                                        <Image Source="help_circle.png"
+                                               WidthRequest="18"
+                                               HeightRequest="18"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"/>
+                                    </Frame>
+                                    <Label Grid.Column="1"
+                                           Text="Help &amp; Support"
+                                           FontSize="15"
+                                           TextColor="#1B2B3A"
+                                           VerticalOptions="Center"/>
+                                    <Image Grid.Column="2"
+                                           Source="chevron_right.png"
+                                           WidthRequest="16"
+                                           HeightRequest="16"
+                                           VerticalOptions="Center"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnHelpClicked"/>
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+
+                                <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
+
+                                <!-- Terms -->
+                                <Grid ColumnDefinitions="44,*,24"
+                                      Padding="16,14"
+                                      ColumnSpacing="12">
+                                    <Frame Grid.Column="0"
+                                           BackgroundColor="#EBF3FB"
+                                           CornerRadius="10"
+                                           Padding="0"
+                                           HasShadow="False"
+                                           WidthRequest="36"
+                                           HeightRequest="36">
+                                        <Image Source="document.png"
+                                               WidthRequest="18"
+                                               HeightRequest="18"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"/>
+                                    </Frame>
+                                    <Label Grid.Column="1"
+                                           Text="Terms &amp; Conditions"
+                                           FontSize="15"
+                                           TextColor="#1B2B3A"
+                                           VerticalOptions="Center"/>
+                                    <Image Grid.Column="2"
+                                           Source="chevron_right.png"
+                                           WidthRequest="16"
+                                           HeightRequest="16"
+                                           VerticalOptions="Center"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnTermsClicked"/>
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+
+                                <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
+
+                                <!-- About -->
+                                <Grid ColumnDefinitions="44,*,24"
+                                      Padding="16,14"
+                                      ColumnSpacing="12">
+                                    <Frame Grid.Column="0"
+                                           BackgroundColor="#EBF3FB"
+                                           CornerRadius="10"
+                                           Padding="0"
+                                           HasShadow="False"
+                                           WidthRequest="36"
+                                           HeightRequest="36">
+                                        <Image Source="info.png"
+                                               WidthRequest="18"
+                                               HeightRequest="18"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"/>
+                                    </Frame>
+                                    <Label Grid.Column="1"
+                                           Text="About"
+                                           FontSize="15"
+                                           TextColor="#1B2B3A"
+                                           VerticalOptions="Center"/>
+                                    <Image Grid.Column="2"
+                                           Source="chevron_right.png"
+                                           WidthRequest="16"
+                                           HeightRequest="16"
+                                           VerticalOptions="Center"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnAboutClicked"/>
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+
+                            </VerticalStackLayout>
+                        </Frame>
+                    </VerticalStackLayout>
+
+                    <!-- Logout Button -->
+                    <Frame BackgroundColor="#FEF2F2"
+                           CornerRadius="14"
                            Padding="0"
-                           IsClippedToBounds="True"
-                           BackgroundColor="{StaticResource Gray200}">
-                        <Image x:Name="ProfileImage"
-                               Source="dotnet_bot.png"
-                               Aspect="AspectFill"/>
+                           HasShadow="False"
+                           BorderColor="#FECACA"
+                           Margin="0,4,0,0">
+                        <Grid ColumnDefinitions="Auto,*"
+                              Padding="20,16"
+                              ColumnSpacing="12">
+                            <Image Grid.Column="0"
+                                   Source="logout.png"
+                                   WidthRequest="20"
+                                   HeightRequest="20"
+                                   VerticalOptions="Center"/>
+                            <Label Grid.Column="1"
+                                   Text="Logout"
+                                   TextColor="#EF4444"
+                                   FontSize="16"
+                                   FontAttributes="Bold"
+                                   VerticalOptions="Center"
+                                   HorizontalOptions="Center"/>
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnLogoutClicked"/>
+                            </Grid.GestureRecognizers>
+                        </Grid>
                     </Frame>
 
-                    <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
-                        <Label x:Name="UserNameLabel" 
-                               Text="John Doe" 
-                               Style="{StaticResource SettingTitleStyle}"/>
-                        <Label x:Name="UserEmailLabel" 
-                               Text="john.doe@example.com" 
-                               Style="{StaticResource SettingDescriptionStyle}"/>
-                        <Label x:Name="UserRoleLabel" 
-                               Text="Artisan" 
-                               TextColor="{StaticResource WhatsAppLightGreen}"
-                               FontSize="{StaticResource FontSizeSmall}"
-                               FontAttributes="Bold"
-                               Margin="0,4,0,0"/>
-                    </VerticalStackLayout>
+                    <!-- Delete Account -->
+                    <Label Text="Delete Account"
+                           TextColor="#EF4444"
+                           FontSize="13"
+                           HorizontalOptions="Center"
+                           Margin="0,4,0,16"
+                           TextDecorations="Underline">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnDeleteAccountClicked"/>
+                        </Label.GestureRecognizers>
+                    </Label>
 
-                    <ImageButton Grid.Column="2"
-                                 Source="chevron_right.png"
-                                 WidthRequest="24"
-                                 HeightRequest="24"
-                                 VerticalOptions="Center"
-                                 Clicked="OnEditProfileClicked"/>
-                </Grid>
-            </Frame>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
 
-            <!-- Account Settings -->
-            <Label Text="ACCOUNT" Style="{StaticResource SectionHeaderStyle}"/>
+        <!-- Bottom Nav Bar pinned at bottom -->
+        <controls:BottomNavBar Grid.Row="1"
+                               ActiveTab="Settings"
+                               VerticalOptions="End"/>
 
-            <Frame Style="{StaticResource SettingItemStyle}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
-                        <Label Text="Email Address" Style="{StaticResource SettingTitleStyle}"/>
-                        <Label x:Name="EmailLabel" 
-                               Text="john.doe@example.com" 
-                               Style="{StaticResource SettingDescriptionStyle}"/>
-                    </VerticalStackLayout>
-                    <ImageButton Grid.Column="1"
-                                 Source="edit.png"
-                                 WidthRequest="24"
-                                 HeightRequest="24"
-                                 VerticalOptions="Center"
-                                 Clicked="OnEditEmailClicked"/>
-                </Grid>
-            </Frame>
-
-            <Frame Style="{StaticResource SettingItemStyle}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
-                        <Label Text="Phone Number" Style="{StaticResource SettingTitleStyle}"/>
-                        <Label x:Name="PhoneLabel" 
-                               Text="+233 24 123 4567" 
-                               Style="{StaticResource SettingDescriptionStyle}"/>
-                    </VerticalStackLayout>
-                    <ImageButton Grid.Column="1"
-                                 Source="edit.png"
-                                 WidthRequest="24"
-                                 HeightRequest="24"
-                                 VerticalOptions="Center"
-                                 Clicked="OnEditPhoneClicked"/>
-                </Grid>
-            </Frame>
-
-            <Frame Style="{StaticResource SettingItemStyle}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <Label Text="Change Password" 
-                           Style="{StaticResource SettingTitleStyle}"
-                           VerticalOptions="Center"/>
-                    <ImageButton Grid.Column="1"
-                                 Source="chevron_right.png"
-                                 WidthRequest="24"
-                                 HeightRequest="24"
-                                 VerticalOptions="Center"
-                                 Clicked="OnChangePasswordClicked"/>
-                </Grid>
-            </Frame>
-
-            <!-- Artisan-Specific Settings (Visibility controlled in code-behind) -->
-            <Label x:Name="ArtisanSectionHeader" 
-                   Text="ARTISAN PROFILE" 
-                   Style="{StaticResource SectionHeaderStyle}"
-                   IsVisible="False"/>
-
-            <Frame x:Name="BusinessProfileFrame" 
-                   Style="{StaticResource SettingItemStyle}"
-                   IsVisible="False">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
-                        <Label Text="Business Profile" Style="{StaticResource SettingTitleStyle}"/>
-                        <Label x:Name="BusinessNameLabel" 
-                               Text="Artisan Services Ltd." 
-                               Style="{StaticResource SettingDescriptionStyle}"/>
-                    </VerticalStackLayout>
-                    <ImageButton Grid.Column="1"
-                                 Source="chevron_right.png"
-                                 WidthRequest="24"
-                                 HeightRequest="24"
-                                 VerticalOptions="Center"
-                                 Clicked="OnEditBusinessClicked"/>
-                </Grid>
-            </Frame>
-
-            <Frame x:Name="SpecializationFrame" 
-                   Style="{StaticResource SettingItemStyle}"
-                   IsVisible="False">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
-                        <Label Text="Specialization" Style="{StaticResource SettingTitleStyle}"/>
-                        <Label x:Name="SpecializationLabel" 
-                               Text="Carpentry, Plumbing" 
-                               Style="{StaticResource SettingDescriptionStyle}"/>
-                    </VerticalStackLayout>
-                    <ImageButton Grid.Column="1"
-                                 Source="edit.png"
-                                 WidthRequest="24"
-                                 HeightRequest="24"
-                                 VerticalOptions="Center"
-                                 Clicked="OnEditSpecializationClicked"/>
-                </Grid>
-            </Frame>
-
-            <Frame x:Name="AvailabilityFrame" 
-                   Style="{StaticResource SettingItemStyle}"
-                   IsVisible="False">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
-                        <Label Text="Availability Status" Style="{StaticResource SettingTitleStyle}"/>
-                        <Label x:Name="AvailabilityLabel" 
-                               Text="Available" 
-                               TextColor="{StaticResource AccentColor}"
-                               Style="{StaticResource SettingDescriptionStyle}"/>
-                    </VerticalStackLayout>
-                    <Switch x:Name="AvailabilitySwitch"
-                            Grid.Column="1"
-                            OnColor="{StaticResource WhatsAppLightGreen}"
-                            ThumbColor="White"
-                            IsToggled="True"
-                            Toggled="OnAvailabilityToggled"/>
-                </Grid>
-            </Frame>
-
-            <!-- Admin-Specific Settings -->
-            <Label x:Name="AdminSectionHeader" 
-                   Text="ADMINISTRATION" 
-                   Style="{StaticResource SectionHeaderStyle}"
-                   IsVisible="False"/>
-
-            <Frame x:Name="ManageUsersFrame" 
-                   Style="{StaticResource SettingItemStyle}"
-                   IsVisible="False">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <Label Text="Manage Users" 
-                           Style="{StaticResource SettingTitleStyle}"
-                           VerticalOptions="Center"/>
-                    <ImageButton Grid.Column="1"
-                                 Source="chevron_right.png"
-                                 WidthRequest="24"
-                                 HeightRequest="24"
-                                 VerticalOptions="Center"
-                                 Clicked="OnManageUsersClicked"/>
-                </Grid>
-            </Frame>
-
-            <Frame x:Name="SystemReportsFrame" 
-                   Style="{StaticResource SettingItemStyle}"
-                   IsVisible="False">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <Label Text="View Reports" 
-                           Style="{StaticResource SettingTitleStyle}"
-                           VerticalOptions="Center"/>
-                    <ImageButton Grid.Column="1"
-                                 Source="chevron_right.png"
-                                 WidthRequest="24"
-                                 HeightRequest="24"
-                                 VerticalOptions="Center"
-                                 Clicked="OnViewReportsClicked"/>
-                </Grid>
-            </Frame>
-
-            <Frame x:Name="VerificationFrame" 
-                   Style="{StaticResource SettingItemStyle}"
-                   IsVisible="False">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <Label Text="Artisan Verifications" 
-                           Style="{StaticResource SettingTitleStyle}"
-                           VerticalOptions="Center"/>
-                    <ImageButton Grid.Column="1"
-                                 Source="chevron_right.png"
-                                 WidthRequest="24"
-                                 HeightRequest="24"
-                                 VerticalOptions="Center"
-                                 Clicked="OnVerificationsClicked"/>
-                </Grid>
-            </Frame>
-
-            <!-- Preferences -->
-            <Label Text="PREFERENCES" Style="{StaticResource SectionHeaderStyle}"/>
-
-            <Frame Style="{StaticResource SettingItemStyle}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
-                        <Label Text="Push Notifications" Style="{StaticResource SettingTitleStyle}"/>
-                        <Label Text="Receive updates and alerts" 
-                               Style="{StaticResource SettingDescriptionStyle}"/>
-                    </VerticalStackLayout>
-                    <Switch x:Name="NotificationsSwitch"
-                            Grid.Column="1"
-                            OnColor="{StaticResource WhatsAppLightGreen}"
-                            ThumbColor="White"
-                            IsToggled="True"
-                            Toggled="OnNotificationsToggled"/>
-                </Grid>
-            </Frame>
-
-            <Frame Style="{StaticResource SettingItemStyle}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
-                        <Label Text="Email Notifications" Style="{StaticResource SettingTitleStyle}"/>
-                        <Label Text="Get updates via email" 
-                               Style="{StaticResource SettingDescriptionStyle}"/>
-                    </VerticalStackLayout>
-                    <Switch x:Name="EmailNotificationsSwitch"
-                            Grid.Column="1"
-                            OnColor="{StaticResource WhatsAppLightGreen}"
-                            ThumbColor="White"
-                            IsToggled="True"
-                            Toggled="OnEmailNotificationsToggled"/>
-                </Grid>
-            </Frame>
-
-            <Frame Style="{StaticResource SettingItemStyle}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <Label Text="Language" 
-                           Style="{StaticResource SettingTitleStyle}"
-                           VerticalOptions="Center"/>
-                    <HorizontalStackLayout Grid.Column="1" Spacing="8">
-                        <Label Text="English" 
-                               TextColor="{StaticResource TextSecondary}"
-                               VerticalOptions="Center"
-                               FontSize="{StaticResource FontSizeMedium}"/>
-                        <ImageButton Source="chevron_right.png"
-                                     WidthRequest="24"
-                                     HeightRequest="24"
-                                     VerticalOptions="Center"
-                                     Clicked="OnLanguageClicked"/>
-                    </HorizontalStackLayout>
-                </Grid>
-            </Frame>
-
-            <!-- Support & Legal -->
-            <Label Text="SUPPORT &amp; LEGAL" Style="{StaticResource SectionHeaderStyle}"/>
-
-            <Frame Style="{StaticResource SettingItemStyle}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <Label Text="Help &amp; Support" 
-                           Style="{StaticResource SettingTitleStyle}"
-                           VerticalOptions="Center"/>
-                    <ImageButton Grid.Column="1"
-                                 Source="chevron_right.png"
-                                 WidthRequest="24"
-                                 HeightRequest="24"
-                                 VerticalOptions="Center"
-                                 Clicked="OnHelpClicked"/>
-                </Grid>
-            </Frame>
-
-            <Frame Style="{StaticResource SettingItemStyle}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <Label Text="Terms &amp; Conditions" 
-                           Style="{StaticResource SettingTitleStyle}"
-                           VerticalOptions="Center"/>
-                    <ImageButton Grid.Column="1"
-                                 Source="chevron_right.png"
-                                 WidthRequest="24"
-                                 HeightRequest="24"
-                                 VerticalOptions="Center"
-                                 Clicked="OnTermsClicked"/>
-                </Grid>
-            </Frame>
-
-            <Frame Style="{StaticResource SettingItemStyle}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <Label Text="Privacy Policy" 
-                           Style="{StaticResource SettingTitleStyle}"
-                           VerticalOptions="Center"/>
-                    <ImageButton Grid.Column="1"
-                                 Source="chevron_right.png"
-                                 WidthRequest="24"
-                                 HeightRequest="24"
-                                 VerticalOptions="Center"
-                                 Clicked="OnPrivacyClicked"/>
-                </Grid>
-            </Frame>
-
-            <Frame Style="{StaticResource SettingItemStyle}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <Label Text="About" 
-                           Style="{StaticResource SettingTitleStyle}"
-                           VerticalOptions="Center"/>
-                    <HorizontalStackLayout Grid.Column="1" Spacing="8">
-                        <Label Text="v1.0.0" 
-                               TextColor="{StaticResource Gray400}"
-                               VerticalOptions="Center"
-                               FontSize="14"/>
-                        <ImageButton Source="chevron_right.png"
-                                     WidthRequest="24"
-                                     HeightRequest="24"
-                                     VerticalOptions="Center"
-                                     Clicked="OnAboutClicked"/>
-                    </HorizontalStackLayout>
-                </Grid>
-            </Frame>
-
-            <!-- Danger Zone -->
-            <Label Text="ACCOUNT ACTIONS" Style="{StaticResource SectionHeaderStyle}"/>
-
-            <Frame Style="{StaticResource SettingItemStyle}" 
-                   BorderColor="{StaticResource Danger}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <Label Text="Logout" 
-                           TextColor="{StaticResource Danger}"
-                           FontSize="{StaticResource FontSizeLarge}"
-                           FontAttributes="Bold"
-                           VerticalOptions="Center"/>
-                    <ImageButton Grid.Column="1"
-                                 Source="logout.png"
-                                 WidthRequest="24"
-                                 HeightRequest="24"
-                                 VerticalOptions="Center"
-                                 Clicked="OnLogoutClicked"/>
-                </Grid>
-            </Frame>
-
-            <Frame Style="{StaticResource SettingItemStyle}" 
-                   BorderColor="{StaticResource Danger}"
-                   Margin="16,4,16,20">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
-                        <Label Text="Delete Account" 
-                               TextColor="{StaticResource Danger}"
-                               FontSize="{StaticResource FontSizeLarge}"
-                               FontAttributes="Bold"/>
-                        <Label Text="Permanently delete your account and data" 
-                               TextColor="{StaticResource Danger}"
-                               FontSize="{StaticResource FontSizeSmall}"
-                               Margin="0,4,0,0"/>
-                    </VerticalStackLayout>
-                    <ImageButton Grid.Column="1"
-                                 Source="trash.png"
-                                 WidthRequest="24"
-                                 HeightRequest="24"
-                                 VerticalOptions="Center"
-                                 Clicked="OnDeleteAccountClicked"/>
-                </Grid>
-            </Frame>
-
-        </VerticalStackLayout>
-    </ScrollView>
+    </Grid>
 </ContentPage>
