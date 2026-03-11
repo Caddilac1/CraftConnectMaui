@@ -39,7 +39,13 @@ namespace CraftConnect_Mobile_App.PageModels
             MainActionCommand = new Command(async () => await MainActionAsync(), () => !IsBusy);
             ToggleAuthModeCommand = new Command(ToggleAuthMode);
             TogglePasswordVisibilityCommand = new Command(() => IsPasswordVisible = !IsPasswordVisible);
-            NavigateToSignUpCommand = new Command(async () => await Shell.Current.GoToAsync("RegisterPage"));
+
+            // ── FIX: navigate to RegisterPage using the correct route ────────
+            // Routing.RegisterRoute(nameof(Pages.RegisterPage), typeof(Pages.RegisterPage))
+            // must be called in AppShell.xaml.cs or MauiProgram.cs for this to resolve.
+            NavigateToSignUpCommand = new Command(async () =>
+                await Shell.Current.GoToAsync(nameof(Pages.RegisterPage)));
+
             ForgotPasswordCommand = new Command(async () => await Shell.Current.GoToAsync("ForgotPasswordPage"));
             RefreshCaptchaCommand = new Command(async () => await LoadCaptchaAsync());
             TestConnectionCommand = new Command(async () => await _authService.TestConnectionAsync());
