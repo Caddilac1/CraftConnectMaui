@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CraftConnect_Mobile_App.Services;
 using CraftConnect_Mobile_App.Models;
+using CraftConnect_Mobile_App.Controls;
 
 namespace CraftConnect_Mobile_App.Pages
 {
@@ -21,6 +22,18 @@ namespace CraftConnect_Mobile_App.Pages
             InitializeComponent();
             _authService = authService;
             _userService = userService;
+        }
+
+        // FIX #3: Sync the nav bar highlight every time this page is navigated to,
+        // including via the back button or deep links.
+        protected override void OnNavigatedTo(NavigatedToEventArgs args)
+        {
+            base.OnNavigatedTo(args);
+
+            // Find the BottomNavBar in this page's visual tree and sync it.
+            // The key "Settings" maps to the "Profile" tab in the nav bar.
+            var navBar = this.FindByName<BottomNavBar>("BottomNav");
+            navBar?.SyncTab("Settings");
         }
 
         protected override async void OnAppearing()
@@ -53,14 +66,10 @@ namespace CraftConnect_Mobile_App.Pages
                 {
                     UserNameLabel.Text = _currentUser.FullName ?? "User";
                     UserEmailLabel.Text = _currentUser.Email ?? "";
-
-                    // Initials fallback
                     AvatarInitialsLabel.Text = GetInitials(_currentUser.FullName);
 
-                    // ── Load real profile photo if available ──────────
                     if (!string.IsNullOrWhiteSpace(_currentUser.ProfileImageUrl))
                         ShowProfilePhoto(_currentUser.ProfileImageUrl);
-                    // ─────────────────────────────────────────────────
 
                     _primaryRole = role;
 
@@ -105,8 +114,6 @@ namespace CraftConnect_Mobile_App.Pages
             AvatarInitialsFrame.IsVisible = true;
         }
 
-        // ── Change photo (tap the 📷 badge) ──────────────────────────
-
         private async void OnChangePhotoClicked(object sender, EventArgs e)
         {
             try
@@ -119,9 +126,7 @@ namespace CraftConnect_Mobile_App.Pages
                 if (result != null)
                 {
                     ShowProfilePhoto(result.FullPath);
-
                     // TODO: upload result.OpenReadAsync() to your API
-                    // and save the returned URL to _currentUser.ProfilePhotoUrl
                 }
             }
             catch (Exception ex)
@@ -129,8 +134,6 @@ namespace CraftConnect_Mobile_App.Pages
                 System.Diagnostics.Debug.WriteLine($"[SETTINGS] Photo pick error: {ex.Message}");
             }
         }
-
-        // ─────────────────────────────────────────────────────────────
 
         private string GetInitials(string fullName)
         {

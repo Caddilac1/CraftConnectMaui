@@ -23,21 +23,20 @@
             <Color x:Key="BorderColor">#D8CFC4</Color>
             <Color x:Key="CardColor">#FFFFFF</Color>
             <Color x:Key="SageLight">#EAF4EA</Color>
+            <Color x:Key="PrefilledBg">#F0EDE8</Color>
+            <Color x:Key="PrefilledText">#5A5248</Color>
+            <Color x:Key="PrefilledBorderColor">#C8BFB4</Color>
 
-            <!-- ── Converters ────────────────────────────────────────── -->
-            <converters:BoolToColorConverter x:Key="StarColor"
-                TrueColor="#E0A020" FalseColor="#D8CFC4"/>
-            <converters:BoolToColorConverter x:Key="AvailColor"
-                TrueColor="#5A6E52" FalseColor="#8A8078"/>
-            <converters:BoolToColorConverter x:Key="BusyColor"
-                TrueColor="#B45309" FalseColor="#D8CFC4"/>
+            <!-- ── Converters ──────────────────────────────────────── -->
             <converters:InverseBoolConverter   x:Key="InverseBool"/>
-            <converters:ProgressWidthConverter x:Key="ProgressWidth" MaxWidth="260"/>
             <converters:BoolToStringConverter  x:Key="SaveBtnText"
-                TrueValue="Save &amp; Continue"
+                TrueValue="Save &amp; Continue to Proposal"
                 FalseValue="Save Changes"/>
+            <converters:BoolToStringConverter  x:Key="PageTitleText"
+                TrueValue="Become an Artisan"
+                FalseValue="Update Artisan Profile"/>
 
-            <!-- ── Styles ────────────────────────────────────────────── -->
+            <!-- ── Card ───────────────────────────────────────────── -->
             <Style x:Key="CardStyle" TargetType="Border">
                 <Setter Property="BackgroundColor" Value="{StaticResource CardColor}"/>
                 <Setter Property="Stroke"          Value="{StaticResource BorderColor}"/>
@@ -51,6 +50,7 @@
                 </Setter>
             </Style>
 
+            <!-- ── Section label ──────────────────────────────────── -->
             <Style x:Key="SectionLabel" TargetType="Label">
                 <Setter Property="FontFamily"      Value="DMSerifDisplay"/>
                 <Setter Property="FontSize"        Value="18"/>
@@ -58,6 +58,7 @@
                 <Setter Property="VerticalOptions" Value="Center"/>
             </Style>
 
+            <!-- ── Field label ────────────────────────────────────── -->
             <Style x:Key="FieldLabel" TargetType="Label">
                 <Setter Property="FontSize"         Value="11"/>
                 <Setter Property="FontAttributes"   Value="Bold"/>
@@ -67,6 +68,7 @@
                 <Setter Property="Margin"           Value="0,0,0,4"/>
             </Style>
 
+            <!-- ── Normal entry ───────────────────────────────────── -->
             <Style x:Key="FieldEntry" TargetType="Entry">
                 <Setter Property="BackgroundColor"  Value="{StaticResource Parchment}"/>
                 <Setter Property="TextColor"        Value="{StaticResource Ink}"/>
@@ -75,6 +77,16 @@
                 <Setter Property="Margin"           Value="0"/>
             </Style>
 
+            <!-- ── Pre-filled entry ───────────────────────────────── -->
+            <Style x:Key="PrefilledEntry" TargetType="Entry">
+                <Setter Property="BackgroundColor"  Value="{StaticResource PrefilledBg}"/>
+                <Setter Property="TextColor"        Value="{StaticResource PrefilledText}"/>
+                <Setter Property="PlaceholderColor" Value="{StaticResource WarmGrey}"/>
+                <Setter Property="FontSize"         Value="14"/>
+                <Setter Property="Margin"           Value="0"/>
+            </Style>
+
+            <!-- ── Editor ─────────────────────────────────────────── -->
             <Style x:Key="FieldEditor" TargetType="Editor">
                 <Setter Property="BackgroundColor"      Value="{StaticResource Parchment}"/>
                 <Setter Property="TextColor"            Value="{StaticResource Ink}"/>
@@ -84,6 +96,7 @@
                 <Setter Property="MinimumHeightRequest" Value="90"/>
             </Style>
 
+            <!-- ── Normal border ──────────────────────────────────── -->
             <Style x:Key="FieldBorder" TargetType="Border">
                 <Setter Property="BackgroundColor" Value="{StaticResource Parchment}"/>
                 <Setter Property="Stroke"          Value="{StaticResource BorderColor}"/>
@@ -92,6 +105,16 @@
                 <Setter Property="Padding"         Value="4,2"/>
             </Style>
 
+            <!-- ── Pre-filled border ──────────────────────────────── -->
+            <Style x:Key="PrefilledFieldBorder" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="{StaticResource PrefilledBg}"/>
+                <Setter Property="Stroke"          Value="{StaticResource PrefilledBorderColor}"/>
+                <Setter Property="StrokeThickness" Value="1.5"/>
+                <Setter Property="StrokeShape"     Value="RoundRectangle 8"/>
+                <Setter Property="Padding"         Value="4,2"/>
+            </Style>
+
+            <!-- ── Buttons ────────────────────────────────────────── -->
             <Style x:Key="PrimaryBtn" TargetType="Button">
                 <Setter Property="BackgroundColor" Value="{StaticResource Copper}"/>
                 <Setter Property="TextColor"       Value="White"/>
@@ -121,21 +144,12 @@
                 <Setter Property="TextColor" Value="{StaticResource WarmGrey}"/>
                 <Setter Property="Margin"    Value="0,4,0,0"/>
             </Style>
-
-            <Style x:Key="ReadonlyNote" TargetType="Label">
-                <Setter Property="FontSize"        Value="10"/>
-                <Setter Property="TextColor"       Value="{StaticResource WarmGrey}"/>
-                <Setter Property="BackgroundColor" Value="{StaticResource Cream}"/>
-                <Setter Property="Padding"         Value="6,2"/>
-                <Setter Property="Margin"          Value="6,0,0,0"/>
-                <Setter Property="VerticalOptions" Value="Center"/>
-            </Style>
         </ResourceDictionary>
     </ContentPage.Resources>
 
     <Grid>
         <ScrollView>
-            <VerticalStackLayout Spacing="0" Padding="16,0,16,40">
+            <VerticalStackLayout Spacing="0" Padding="16,0,16,48">
 
                 <!-- ══ PROPOSAL-REDIRECT BANNER ══════════════════════ -->
                 <Border IsVisible="{Binding IsProposalRedirect}"
@@ -154,18 +168,16 @@
                                    HorizontalOptions="Center" VerticalOptions="Center"/>
                         </Border>
                         <VerticalStackLayout Spacing="4" HorizontalOptions="FillAndExpand">
-                            <Label Text="Complete your Artisan Profile first"
+                            <Label Text="One more step before submitting your proposal"
                                    FontAttributes="Bold" FontSize="14"
                                    TextColor="{StaticResource CopperDim}"/>
                             <Label FontSize="13" TextColor="{StaticResource Ink}"
                                    LineBreakMode="WordWrap">
                                 <Label.FormattedText>
                                     <FormattedString>
-                                        <Span Text="Fill in the required fields — especially "/>
-                                        <Span Text="Business Name" FontAttributes="Italic"/>
-                                        <Span Text=" and "/>
-                                        <Span Text="Trade / Specialization" FontAttributes="Italic"/>
-                                        <Span Text=" — then tap "/>
+                                        <Span Text="Your personal details are pre-filled — just complete the "/>
+                                        <Span Text="Business Information" FontAttributes="Italic"/>
+                                        <Span Text=" section below and tap "/>
                                         <Span Text="Save &amp; Continue" FontAttributes="Bold"/>
                                         <Span Text=" to return to your proposal."/>
                                     </FormattedString>
@@ -181,306 +193,258 @@
                            FontSize="10" FontAttributes="Bold"
                            CharacterSpacing="2" TextTransform="Uppercase"
                            TextColor="{StaticResource Copper}"/>
-                    <Label FontFamily="DMSerifDisplay" FontSize="32"
-                           TextColor="{StaticResource Ink}">
-                        <Label.FormattedText>
-                            <FormattedString>
-                                <Span Text="Your "/>
-                                <Span Text="Artisan" FontFamily="DMSerifDisplayItalic"
-                                      TextColor="{StaticResource Copper}"/>
-                                <Span Text=" Profile"/>
-                            </FormattedString>
-                        </Label.FormattedText>
-                    </Label>
+                    <Label Text="{Binding IsNewArtisanProfile, Converter={StaticResource PageTitleText}}"
+                           FontFamily="DMSerifDisplay" FontSize="30"
+                           TextColor="{StaticResource Ink}"/>
                 </VerticalStackLayout>
 
-                <!-- ══ AVATAR BLOCK ═══════════════════════════════════ -->
+                <!-- ══ USER CARD (pre-fill preview) ══════════════════ -->
                 <Border Style="{StaticResource CardStyle}" Margin="0,0,0,20">
-                    <HorizontalStackLayout Spacing="20">
-                        <Grid WidthRequest="80" HeightRequest="80">
-                            <!-- Avatar ring -->
-                            <Border StrokeShape="RoundRectangle 40"
-                                    Stroke="{StaticResource CopperLight}"
-                                    StrokeThickness="3"
-                                    BackgroundColor="{StaticResource Cream}"
-                                    WidthRequest="80" HeightRequest="80">
-                                <!-- Grid lets Label + Image share the same cell -->
-                                <Grid>
-                                    <Label Text="{Binding Initials}"
-                                           IsVisible="{Binding HasProfilePicture,
-                                               Converter={StaticResource InverseBool}}"
-                                           FontFamily="DMSerifDisplay" FontSize="28"
-                                           TextColor="{StaticResource Copper}"
-                                           HorizontalOptions="Center"
-                                           VerticalOptions="Center"/>
-                                    <Image Source="{Binding ProfilePictureUrl}"
-                                           IsVisible="{Binding HasProfilePicture}"
-                                           Aspect="AspectFill"/>
-                                </Grid>
-                            </Border>
-                            <!-- Edit badge -->
-                            <Border BackgroundColor="{StaticResource Copper}"
-                                    StrokeShape="RoundRectangle 12"
-                                    StrokeThickness="2" Stroke="White"
-                                    WidthRequest="26" HeightRequest="26"
-                                    HorizontalOptions="End" VerticalOptions="End">
-                                <Border.GestureRecognizers>
-                                    <TapGestureRecognizer Command="{Binding PickAvatarCommand}"/>
-                                </Border.GestureRecognizers>
-                                <Label Text="✎" FontSize="13" TextColor="White"
-                                       HorizontalOptions="Center" VerticalOptions="Center"/>
-                            </Border>
-                        </Grid>
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
 
-                        <VerticalStackLayout Spacing="2" VerticalOptions="Center"
-                                             HorizontalOptions="FillAndExpand">
+                        <!-- Avatar -->
+                        <Border Grid.Column="0"
+                                StrokeShape="RoundRectangle 32"
+                                Stroke="{StaticResource CopperLight}"
+                                StrokeThickness="2.5"
+                                BackgroundColor="{StaticResource Cream}"
+                                WidthRequest="58" HeightRequest="58">
+                            <Grid>
+                                <Label Text="{Binding Initials}"
+                                       IsVisible="{Binding HasProfilePicture, Converter={StaticResource InverseBool}}"
+                                       FontFamily="DMSerifDisplay" FontSize="22"
+                                       TextColor="{StaticResource Copper}"
+                                       HorizontalOptions="Center" VerticalOptions="Center"/>
+                                <Image Source="{Binding ProfilePictureUrl}"
+                                       IsVisible="{Binding HasProfilePicture}"
+                                       Aspect="AspectFill"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Name + email + phone -->
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                             <Label Text="{Binding DisplayName}"
-                                   FontFamily="DMSerifDisplay" FontSize="20"
+                                   FontFamily="DMSerifDisplay" FontSize="17"
                                    TextColor="{StaticResource Ink}"/>
-                            <Label TextColor="{StaticResource WarmGrey}" FontSize="12">
+                            <Label TextColor="{StaticResource WarmGrey}" FontSize="12"
+                                   LineBreakMode="TailTruncation">
                                 <Label.FormattedText>
                                     <FormattedString>
                                         <Span Text="{Binding Email}"/>
                                         <Span Text=" · "/>
-                                        <Span Text="{Binding DisplayCity}"/>
+                                        <Span Text="{Binding PhoneNumber}"/>
                                     </FormattedString>
                                 </Label.FormattedText>
                             </Label>
-                            <Border IsVisible="{Binding ArtisanIsVerified}"
-                                    BackgroundColor="{StaticResource SageLight}"
-                                    StrokeThickness="0"
-                                    StrokeShape="RoundRectangle 99"
-                                    Padding="8,3" HorizontalOptions="Start">
-                                <Label Text="✓  Verified Artisan"
-                                       FontSize="11" FontAttributes="Bold"
-                                       TextColor="{StaticResource Sage}"/>
-                            </Border>
                         </VerticalStackLayout>
-                    </HorizontalStackLayout>
+
+                        <!-- "Details pre-filled" badge -->
+                        <Border Grid.Column="2"
+                                BackgroundColor="{StaticResource SageLight}"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 99"
+                                Padding="8,4" VerticalOptions="Center">
+                            <Label Text="✓  Details pre-filled"
+                                   FontSize="10" FontAttributes="Bold"
+                                   TextColor="{StaticResource Sage}"/>
+                        </Border>
+
+                    </Grid>
                 </Border>
 
-                <!-- ══ PROGRESS BAR ═══════════════════════════════════ -->
-                <Border Style="{StaticResource CardStyle}" Margin="0,0,0,20">
-                    <HorizontalStackLayout Spacing="16">
-                        <VerticalStackLayout Spacing="6" HorizontalOptions="FillAndExpand">
-                            <Label Text="Profile Completion"
-                                   FontAttributes="Bold" FontSize="13"
-                                   TextColor="{StaticResource Ink}"/>
-                            <Border BackgroundColor="{StaticResource Cream}"
-                                    StrokeShape="RoundRectangle 99"
-                                    StrokeThickness="0"
-                                    HeightRequest="6">
-                                <Grid HorizontalOptions="Fill">
-                                    <BoxView BackgroundColor="{StaticResource CopperLight}"
-                                             CornerRadius="99" HeightRequest="6"
-                                             HorizontalOptions="Start"
-                                             WidthRequest="{Binding ProfileCompletion,
-                                                 Converter={StaticResource ProgressWidth}}"/>
-                                </Grid>
-                            </Border>
-                        </VerticalStackLayout>
-                        <Label Text="{Binding ProfileCompletionText}"
-                               FontFamily="DMSerifDisplay" FontSize="26"
-                               TextColor="{StaticResource Copper}"
-                               VerticalOptions="Center"/>
-                    </HorizontalStackLayout>
-                </Border>
+                <!-- ══ STEPS INDICATOR ════════════════════════════════ -->
+                <Border Stroke="{StaticResource BorderColor}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 12"
+                        BackgroundColor="{StaticResource CardColor}"
+                        Margin="0,0,0,28"
+                        Padding="0">
+                    <Grid ColumnDefinitions="*,*,*">
 
-                <!-- ══ STATS ROW ══════════════════════════════════════ -->
-                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12" Margin="0,0,0,24">
-                    <Border Grid.Column="0" Style="{StaticResource CardStyle}">
-                        <VerticalStackLayout Spacing="4">
-                            <Label Text="{Binding ArtisanCompletedProjects}"
-                                   FontFamily="DMSerifDisplay" FontSize="28"
-                                   TextColor="{StaticResource Ink}"/>
-                            <Label Text="PROJECTS" Style="{StaticResource Hint}"/>
-                        </VerticalStackLayout>
-                    </Border>
-                    <Border Grid.Column="1" Style="{StaticResource CardStyle}">
-                        <VerticalStackLayout Spacing="4">
-                            <Label Text="{Binding ArtisanTotalViews}"
-                                   FontFamily="DMSerifDisplay" FontSize="28"
-                                   TextColor="{StaticResource Ink}"/>
-                            <Label Text="VIEWS" Style="{StaticResource Hint}"/>
-                        </VerticalStackLayout>
-                    </Border>
-                    <Border Grid.Column="2" Style="{StaticResource CardStyle}">
-                        <VerticalStackLayout Spacing="4">
-                            <HorizontalStackLayout Spacing="2">
-                                <Label Text="★" FontSize="16"
-                                       TextColor="{Binding Star1On, Converter={StaticResource StarColor}}"/>
-                                <Label Text="★" FontSize="16"
-                                       TextColor="{Binding Star2On, Converter={StaticResource StarColor}}"/>
-                                <Label Text="★" FontSize="16"
-                                       TextColor="{Binding Star3On, Converter={StaticResource StarColor}}"/>
-                                <Label Text="★" FontSize="16"
-                                       TextColor="{Binding Star4On, Converter={StaticResource StarColor}}"/>
-                                <Label Text="★" FontSize="16"
-                                       TextColor="{Binding Star5On, Converter={StaticResource StarColor}}"/>
-                                <Label Text="{Binding RatingText}"
+                        <!-- Step 1 — done -->
+                        <Border Grid.Column="0"
+                                BackgroundColor="#EAF4EA"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 0"
+                                Padding="12,14">
+                            <HorizontalStackLayout Spacing="8">
+                                <Border BackgroundColor="{StaticResource Sage}"
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 11"
+                                        WidthRequest="22" HeightRequest="22">
+                                    <Label Text="✓" FontSize="11" FontAttributes="Bold"
+                                           TextColor="White"
+                                           HorizontalOptions="Center" VerticalOptions="Center"/>
+                                </Border>
+                                <Label Text="Account Created"
                                        FontSize="12" FontAttributes="Bold"
-                                       TextColor="{StaticResource Ink}"
-                                       VerticalOptions="Center" Margin="4,0,0,0"/>
+                                       TextColor="{StaticResource Sage}"
+                                       VerticalOptions="Center"/>
                             </HorizontalStackLayout>
-                            <Label Text="AVG RATING" Style="{StaticResource Hint}"/>
-                        </VerticalStackLayout>
-                    </Border>
-                </Grid>
+                        </Border>
 
-                <!-- ══ SECTION 1 — ACCOUNT INFORMATION ══════════════ -->
+                        <!-- Step 2 — active -->
+                        <Border Grid.Column="1"
+                                BackgroundColor="#FDF4EC"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 0"
+                                Padding="12,14">
+                            <HorizontalStackLayout Spacing="8">
+                                <Border BackgroundColor="{StaticResource Copper}"
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 11"
+                                        WidthRequest="22" HeightRequest="22">
+                                    <Label Text="2" FontSize="11" FontAttributes="Bold"
+                                           TextColor="White"
+                                           HorizontalOptions="Center" VerticalOptions="Center"/>
+                                </Border>
+                                <Label Text="Business Details"
+                                       FontSize="12" FontAttributes="Bold"
+                                       TextColor="{StaticResource CopperDim}"
+                                       VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                        </Border>
+
+                        <!-- Step 3 — future -->
+                        <Border Grid.Column="2"
+                                BackgroundColor="{StaticResource CardColor}"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 0"
+                                Padding="12,14">
+                            <HorizontalStackLayout Spacing="8">
+                                <Border BackgroundColor="{StaticResource Cream}"
+                                        Stroke="{StaticResource BorderColor}"
+                                        StrokeThickness="1.5"
+                                        StrokeShape="RoundRectangle 11"
+                                        WidthRequest="22" HeightRequest="22">
+                                    <Label Text="3" FontSize="11"
+                                           TextColor="{StaticResource WarmGrey}"
+                                           HorizontalOptions="Center" VerticalOptions="Center"/>
+                                </Border>
+                                <Label Text="Start Bidding"
+                                       FontSize="12"
+                                       TextColor="{StaticResource WarmGrey}"
+                                       VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                        </Border>
+
+                    </Grid>
+                </Border>
+
+                <!-- ════════════════════════════════════════════════════
+                     SECTION 1 — PERSONAL DETAILS  (pre-filled)
+                ════════════════════════════════════════════════════════ -->
                 <VerticalStackLayout Spacing="12" Margin="0,0,0,28">
+
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                         <Border Grid.Column="0"
                                 BackgroundColor="{StaticResource Cream}"
                                 StrokeShape="RoundRectangle 8" StrokeThickness="0"
-                                WidthRequest="36" HeightRequest="36" Padding="9">
-                            <Label Text="👤" FontSize="16"
+                                WidthRequest="34" HeightRequest="34" Padding="8">
+                            <Label Text="👤" FontSize="15"
                                    HorizontalOptions="Center" VerticalOptions="Center"/>
                         </Border>
-                        <Label Grid.Column="1" Text="Account Information"
-                               Style="{StaticResource SectionLabel}"/>
+                        <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                            <Label Text="Personal Details"
+                                   Style="{StaticResource SectionLabel}"/>
+                            <Label Text="— pre-filled from your account"
+                                   FontSize="11" FontAttributes="Italic"
+                                   TextColor="{StaticResource WarmGrey}"/>
+                        </VerticalStackLayout>
                     </Grid>
+
                     <Border Style="{StaticResource CardStyle}">
                         <VerticalStackLayout Spacing="16">
+
+                            <!-- Full Name -->
                             <VerticalStackLayout Spacing="0">
-                                <Label Text="Email" Style="{StaticResource FieldLabel}"/>
-                                <Border Style="{StaticResource FieldBorder}">
-                                    <Entry Text="{Binding Email}" Keyboard="Email"
-                                           Style="{StaticResource FieldEntry}"
-                                           Placeholder="your@email.com"/>
-                                </Border>
-                            </VerticalStackLayout>
-                            <VerticalStackLayout Spacing="0">
-                                <Label Text="Phone Number" Style="{StaticResource FieldLabel}"/>
-                                <Border Style="{StaticResource FieldBorder}">
-                                    <Entry Text="{Binding PhoneNumber}" Keyboard="Telephone"
-                                           Style="{StaticResource FieldEntry}"
-                                           Placeholder="+233…"/>
-                                </Border>
-                            </VerticalStackLayout>
-                            <VerticalStackLayout Spacing="0">
-                                <Label Text="Full Name" Style="{StaticResource FieldLabel}"/>
-                                <Border Style="{StaticResource FieldBorder}">
+                                <HorizontalStackLayout Spacing="0" Margin="0,0,0,4">
+                                    <Label Text="FULL NAME"
+                                           FontSize="11" FontAttributes="Bold"
+                                           TextColor="{StaticResource Ink}"
+                                           CharacterSpacing="1.2"/>
+                                    <Border BackgroundColor="{StaticResource SageLight}"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 4"
+                                            Padding="6,2" Margin="8,0,0,0">
+                                        <Label Text="pre-filled" FontSize="9"
+                                               FontAttributes="Bold"
+                                               TextColor="{StaticResource Sage}"/>
+                                    </Border>
+                                </HorizontalStackLayout>
+                                <Border Style="{StaticResource PrefilledFieldBorder}">
                                     <Entry Text="{Binding FullName}"
-                                           Style="{StaticResource FieldEntry}"
+                                           Style="{StaticResource PrefilledEntry}"
                                            Placeholder="Your full name"/>
                                 </Border>
                             </VerticalStackLayout>
+
+                            <!-- Phone Number -->
                             <VerticalStackLayout Spacing="0">
-                                <Label Text="Profile Picture URL" Style="{StaticResource FieldLabel}"/>
-                                <Border Style="{StaticResource FieldBorder}">
-                                    <Entry Text="{Binding ProfilePictureUrl}" Keyboard="Url"
-                                           Style="{StaticResource FieldEntry}"
-                                           Placeholder="https://…"/>
+                                <HorizontalStackLayout Spacing="0" Margin="0,0,0,4">
+                                    <Label Text="PHONE NUMBER"
+                                           FontSize="11" FontAttributes="Bold"
+                                           TextColor="{StaticResource Ink}"
+                                           CharacterSpacing="1.2"/>
+                                    <Border BackgroundColor="{StaticResource SageLight}"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 4"
+                                            Padding="6,2" Margin="8,0,0,0">
+                                        <Label Text="pre-filled" FontSize="9"
+                                               FontAttributes="Bold"
+                                               TextColor="{StaticResource Sage}"/>
+                                    </Border>
+                                </HorizontalStackLayout>
+                                <Border Style="{StaticResource PrefilledFieldBorder}">
+                                    <Entry Text="{Binding PhoneNumber}"
+                                           Keyboard="Telephone"
+                                           Style="{StaticResource PrefilledEntry}"
+                                           Placeholder="+233…"/>
                                 </Border>
                             </VerticalStackLayout>
-                        </VerticalStackLayout>
-                    </Border>
-                </VerticalStackLayout>
 
-                <!-- ══ SECTION 2 — PERSONAL INFORMATION ═════════════ -->
-                <VerticalStackLayout Spacing="12" Margin="0,0,0,28">
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                        <Border Grid.Column="0"
-                                BackgroundColor="{StaticResource Cream}"
-                                StrokeShape="RoundRectangle 8" StrokeThickness="0"
-                                WidthRequest="36" HeightRequest="36" Padding="9">
-                            <Label Text="📍" FontSize="16"
-                                   HorizontalOptions="Center" VerticalOptions="Center"/>
-                        </Border>
-                        <Label Grid.Column="1" Text="Personal Information"
-                               Style="{StaticResource SectionLabel}"/>
-                    </Grid>
-                    <Border Style="{StaticResource CardStyle}">
-                        <VerticalStackLayout Spacing="16">
+                            <!-- Personal Address -->
                             <VerticalStackLayout Spacing="0">
-                                <Label Text="Street Address" Style="{StaticResource FieldLabel}"/>
-                                <Border Style="{StaticResource FieldBorder}">
+                                <HorizontalStackLayout Spacing="0" Margin="0,0,0,4">
+                                    <Label Text="PERSONAL ADDRESS"
+                                           FontSize="11" FontAttributes="Bold"
+                                           TextColor="{StaticResource Ink}"
+                                           CharacterSpacing="1.2"/>
+                                    <Border BackgroundColor="{StaticResource SageLight}"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 4"
+                                            Padding="6,2" Margin="8,0,0,0">
+                                        <Label Text="pre-filled" FontSize="9"
+                                               FontAttributes="Bold"
+                                               TextColor="{StaticResource Sage}"/>
+                                    </Border>
+                                </HorizontalStackLayout>
+                                <Border Style="{StaticResource PrefilledFieldBorder}">
                                     <Entry Text="{Binding Address}"
-                                           Style="{StaticResource FieldEntry}"
-                                           Placeholder="Street address"/>
+                                           Style="{StaticResource PrefilledEntry}"
+                                           Placeholder="Your home / personal address"/>
                                 </Border>
                             </VerticalStackLayout>
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                                <VerticalStackLayout Grid.Column="0" Spacing="0">
-                                    <Label Text="City" Style="{StaticResource FieldLabel}"/>
-                                    <Border Style="{StaticResource FieldBorder}">
-                                        <Entry Text="{Binding City}"
-                                               Style="{StaticResource FieldEntry}"
-                                               Placeholder="e.g. Accra"/>
-                                    </Border>
-                                </VerticalStackLayout>
-                                <VerticalStackLayout Grid.Column="1" Spacing="0">
-                                    <Label Text="State / Region" Style="{StaticResource FieldLabel}"/>
-                                    <Border Style="{StaticResource FieldBorder}">
-                                        <Entry Text="{Binding State}"
-                                               Style="{StaticResource FieldEntry}"
-                                               Placeholder="e.g. Greater Accra"/>
-                                    </Border>
-                                </VerticalStackLayout>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                                <VerticalStackLayout Grid.Column="0" Spacing="0">
-                                    <Label Text="Country" Style="{StaticResource FieldLabel}"/>
-                                    <Border Style="{StaticResource FieldBorder}">
-                                        <Entry Text="{Binding Country}"
-                                               Style="{StaticResource FieldEntry}"
-                                               Placeholder="e.g. Ghana"/>
-                                    </Border>
-                                </VerticalStackLayout>
-                                <VerticalStackLayout Grid.Column="1" Spacing="0">
-                                    <Label Text="Postal Code" Style="{StaticResource FieldLabel}"/>
-                                    <Border Style="{StaticResource FieldBorder}">
-                                        <Entry Text="{Binding PostalCode}"
-                                               Style="{StaticResource FieldEntry}"
-                                               Placeholder="e.g. GA-123"/>
-                                    </Border>
-                                </VerticalStackLayout>
-                            </Grid>
-                            <VerticalStackLayout Spacing="0">
-                                <Label Text="Preferred Language" Style="{StaticResource FieldLabel}"/>
-                                <Border Style="{StaticResource FieldBorder}">
-                                    <Picker Title="— Select —"
-                                            ItemsSource="{Binding LanguageOptions}"
-                                            SelectedItem="{Binding PreferredLanguage}"
-                                            TextColor="{StaticResource Ink}"
-                                            TitleColor="{StaticResource WarmGrey}"/>
-                                </Border>
-                            </VerticalStackLayout>
-                            <VerticalStackLayout Spacing="0">
-                                <Label Text="Timezone" Style="{StaticResource FieldLabel}"/>
-                                <Border Style="{StaticResource FieldBorder}">
-                                    <Picker Title="— Select —"
-                                            ItemsSource="{Binding TimezoneOptions}"
-                                            SelectedItem="{Binding Timezone}"
-                                            TextColor="{StaticResource Ink}"
-                                            TitleColor="{StaticResource WarmGrey}"/>
-                                </Border>
-                            </VerticalStackLayout>
-                            <VerticalStackLayout Spacing="0">
-                                <Label Text="Bio" Style="{StaticResource FieldLabel}"/>
-                                <Border Style="{StaticResource FieldBorder}">
-                                    <Editor Text="{Binding Bio}"
-                                            Style="{StaticResource FieldEditor}"
-                                            Placeholder="A short personal bio…"/>
-                                </Border>
-                            </VerticalStackLayout>
+
                         </VerticalStackLayout>
                     </Border>
                 </VerticalStackLayout>
 
-                <!-- ══ SECTION 3 — ARTISAN BUSINESS DETAILS ══════════ -->
+                <!-- ════════════════════════════════════════════════════
+                     SECTION 2 — BUSINESS INFORMATION
+                ════════════════════════════════════════════════════════ -->
                 <VerticalStackLayout Spacing="12" Margin="0,0,0,28">
+
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                         <Border Grid.Column="0"
                                 BackgroundColor="{StaticResource Cream}"
                                 StrokeShape="RoundRectangle 8" StrokeThickness="0"
-                                WidthRequest="36" HeightRequest="36" Padding="9">
-                            <Label Text="🔧" FontSize="16"
+                                WidthRequest="34" HeightRequest="34" Padding="8">
+                            <Label Text="🏢" FontSize="15"
                                    HorizontalOptions="Center" VerticalOptions="Center"/>
                         </Border>
                         <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
-                            <Label Text="Artisan Business Details"
+                            <Label Text="Business Information"
                                    Style="{StaticResource SectionLabel}"/>
                             <Label Text="(new — fill to activate)"
                                    IsVisible="{Binding IsNewArtisanProfile}"
@@ -492,419 +456,246 @@
                     <Border Style="{StaticResource CardStyle}">
                         <VerticalStackLayout Spacing="16">
 
-                            <!-- Business Name / Trade -->
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                                <VerticalStackLayout Grid.Column="0" Spacing="0">
-                                    <Label Style="{StaticResource FieldLabel}">
-                                        <Label.FormattedText>
-                                            <FormattedString>
-                                                <Span Text="Business Name "/>
-                                                <Span Text="*" TextColor="{StaticResource Copper}"/>
-                                            </FormattedString>
-                                        </Label.FormattedText>
-                                    </Label>
-                                    <Border Style="{StaticResource FieldBorder}">
-                                        <Entry Text="{Binding BusinessName}"
-                                               Style="{StaticResource FieldEntry}"
-                                               Placeholder="Your trading name"/>
-                                    </Border>
-                                </VerticalStackLayout>
-                                <VerticalStackLayout Grid.Column="1" Spacing="0">
-                                    <Label Style="{StaticResource FieldLabel}">
-                                        <Label.FormattedText>
-                                            <FormattedString>
-                                                <Span Text="Trade / Specialization "/>
-                                                <Span Text="*" TextColor="{StaticResource Copper}"/>
-                                            </FormattedString>
-                                        </Label.FormattedText>
-                                    </Label>
-                                    <Border Style="{StaticResource FieldBorder}">
-                                        <Picker Title="— Select your trade —"
-                                                ItemsSource="{Binding TradeOptions}"
-                                                SelectedItem="{Binding Specialization}"
-                                                TextColor="{StaticResource Ink}"
-                                                TitleColor="{StaticResource WarmGrey}"/>
-                                    </Border>
-                                </VerticalStackLayout>
-                            </Grid>
-
-                            <!-- Years / Level -->
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                                <VerticalStackLayout Grid.Column="0" Spacing="0">
-                                    <Label Text="Years of Experience" Style="{StaticResource FieldLabel}"/>
-                                    <Border Style="{StaticResource FieldBorder}">
-                                        <Entry Text="{Binding YearsOfExperience}" Keyboard="Numeric"
-                                               Style="{StaticResource FieldEntry}"
-                                               Placeholder="e.g. 5"/>
-                                    </Border>
-                                </VerticalStackLayout>
-                                <VerticalStackLayout Grid.Column="1" Spacing="0">
-                                    <Label Text="Experience Level" Style="{StaticResource FieldLabel}"/>
-                                    <Border Style="{StaticResource FieldBorder}">
-                                        <Picker Title="— Select level —"
-                                                ItemsSource="{Binding ExperienceLevelOptions}"
-                                                SelectedItem="{Binding ExperienceLevel}"
-                                                TextColor="{StaticResource Ink}"
-                                                TitleColor="{StaticResource WarmGrey}"/>
-                                    </Border>
-                                </VerticalStackLayout>
-                            </Grid>
-
-                            <!-- Rate / Radius -->
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                                <VerticalStackLayout Grid.Column="0" Spacing="0">
-                                    <Label Text="Hourly Rate (GHS)" Style="{StaticResource FieldLabel}"/>
-                                    <Border Style="{StaticResource FieldBorder}">
-                                        <HorizontalStackLayout>
-                                            <Label Text="₵" VerticalOptions="Center"
-                                                   TextColor="{StaticResource WarmGrey}"
-                                                   FontSize="14" Margin="8,0,0,0"/>
-                                            <Entry Text="{Binding HourlyRate}" Keyboard="Numeric"
-                                                   Style="{StaticResource FieldEntry}"
-                                                   Placeholder="0.00"
-                                                   HorizontalOptions="FillAndExpand"/>
-                                        </HorizontalStackLayout>
-                                    </Border>
-                                </VerticalStackLayout>
-                                <VerticalStackLayout Grid.Column="1" Spacing="0">
-                                    <Label Text="Service Radius (km)" Style="{StaticResource FieldLabel}"/>
-                                    <Border Style="{StaticResource FieldBorder}">
-                                        <Entry Text="{Binding ServiceRadius}" Keyboard="Numeric"
-                                               Style="{StaticResource FieldEntry}"
-                                               Placeholder="e.g. 25"/>
-                                    </Border>
-                                </VerticalStackLayout>
-                            </Grid>
-
-                            <!-- Availability Status -->
-                            <VerticalStackLayout Spacing="8">
-                                <Label Text="Availability Status" Style="{StaticResource FieldLabel}"/>
-                                <HorizontalStackLayout Spacing="10">
-
-                                    <!-- Available -->
-                                    <Border StrokeShape="RoundRectangle 8"
-                                            StrokeThickness="1.5"
-                                            Padding="12,10"
-                                            HorizontalOptions="FillAndExpand">
-                                        <Border.Stroke>
-                                            <SolidColorBrush Color="{Binding IsAvailable,
-                                                Converter={StaticResource AvailColor}}"/>
-                                        </Border.Stroke>
-                                        <Border.GestureRecognizers>
-                                            <TapGestureRecognizer
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}},
-                                                                  Path=BindingContext.SetAvailableCommand}"/>
-                                        </Border.GestureRecognizers>
-                                        <HorizontalStackLayout Spacing="6" HorizontalOptions="Center">
-                                            <BoxView WidthRequest="8" HeightRequest="8"
-                                                     CornerRadius="4" VerticalOptions="Center"
-                                                     Color="{Binding IsAvailable,
-                                                         Converter={StaticResource AvailColor}}"/>
-                                            <Label Text="Available" FontSize="13"
-                                                   TextColor="{Binding IsAvailable,
-                                                       Converter={StaticResource AvailColor}}"/>
-                                        </HorizontalStackLayout>
-                                    </Border>
-
-                                    <!-- Busy -->
-                                    <Border StrokeShape="RoundRectangle 8"
-                                            StrokeThickness="1.5"
-                                            Padding="12,10"
-                                            HorizontalOptions="FillAndExpand">
-                                        <Border.Stroke>
-                                            <SolidColorBrush Color="{Binding IsBusy2,
-                                                Converter={StaticResource BusyColor}}"/>
-                                        </Border.Stroke>
-                                        <Border.GestureRecognizers>
-                                            <TapGestureRecognizer
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}},
-                                                                  Path=BindingContext.SetBusyCommand}"/>
-                                        </Border.GestureRecognizers>
-                                        <HorizontalStackLayout Spacing="6" HorizontalOptions="Center">
-                                            <BoxView WidthRequest="8" HeightRequest="8"
-                                                     CornerRadius="4" VerticalOptions="Center"
-                                                     Color="{Binding IsBusy2,
-                                                         Converter={StaticResource BusyColor}}"/>
-                                            <Label Text="Busy" FontSize="13"
-                                                   TextColor="{Binding IsBusy2,
-                                                       Converter={StaticResource BusyColor}}"/>
-                                        </HorizontalStackLayout>
-                                    </Border>
-
-                                    <!-- Unavailable -->
-                                    <Border StrokeShape="RoundRectangle 8"
-                                            StrokeThickness="1.5"
-                                            Stroke="{StaticResource BorderColor}"
-                                            Padding="12,10"
-                                            HorizontalOptions="FillAndExpand">
-                                        <Border.GestureRecognizers>
-                                            <TapGestureRecognizer
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}},
-                                                                  Path=BindingContext.SetUnavailableCommand}"/>
-                                        </Border.GestureRecognizers>
-                                        <HorizontalStackLayout Spacing="6" HorizontalOptions="Center">
-                                            <BoxView WidthRequest="8" HeightRequest="8"
-                                                     CornerRadius="4" VerticalOptions="Center"
-                                                     Color="{StaticResource WarmGrey}"/>
-                                            <Label Text="Unavailable" FontSize="13"
-                                                   TextColor="{StaticResource WarmGrey}"/>
-                                        </HorizontalStackLayout>
-                                    </Border>
-
-                                </HorizontalStackLayout>
-                            </VerticalStackLayout>
-
-                            <!-- License / Certification -->
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                                <VerticalStackLayout Grid.Column="0" Spacing="0">
-                                    <Label Text="License Number" Style="{StaticResource FieldLabel}"/>
-                                    <Border Style="{StaticResource FieldBorder}">
-                                        <Entry Text="{Binding LicenseNumber}"
-                                               Style="{StaticResource FieldEntry}"
-                                               Placeholder="Trade licence no."/>
-                                    </Border>
-                                </VerticalStackLayout>
-                                <VerticalStackLayout Grid.Column="1" Spacing="0">
-                                    <Label Text="Certification" Style="{StaticResource FieldLabel}"/>
-                                    <Border Style="{StaticResource FieldBorder}">
-                                        <Entry Text="{Binding Certification}"
-                                               Style="{StaticResource FieldEntry}"
-                                               Placeholder="e.g. City &amp; Guilds Level 3"/>
-                                    </Border>
-                                </VerticalStackLayout>
-                            </Grid>
-
-                            <!-- Business Reg / Tax ID -->
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                                <VerticalStackLayout Grid.Column="0" Spacing="0">
-                                    <Label Text="Business Registration No." Style="{StaticResource FieldLabel}"/>
-                                    <Border Style="{StaticResource FieldBorder}">
-                                        <Entry Text="{Binding BusinessRegistration}"
-                                               Style="{StaticResource FieldEntry}"
-                                               Placeholder="Registrar-General ref."/>
-                                    </Border>
-                                </VerticalStackLayout>
-                                <VerticalStackLayout Grid.Column="1" Spacing="0">
-                                    <Label Text="Tax ID (TIN)" Style="{StaticResource FieldLabel}"/>
-                                    <Border Style="{StaticResource FieldBorder}">
-                                        <Entry Text="{Binding TaxId}"
-                                               Style="{StaticResource FieldEntry}"
-                                               Placeholder="GRA Tax Identification Number"/>
-                                    </Border>
-                                </VerticalStackLayout>
-                            </Grid>
-
-                            <!-- Insurance -->
+                            <!-- Business Name * -->
                             <VerticalStackLayout Spacing="0">
-                                <Label Text="Insurance Details" Style="{StaticResource FieldLabel}"/>
+                                <Label Style="{StaticResource FieldLabel}">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="BUSINESS NAME "/>
+                                            <Span Text="*" TextColor="{StaticResource Copper}"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
                                 <Border Style="{StaticResource FieldBorder}">
-                                    <Editor Text="{Binding InsuranceDetails}"
-                                            Style="{StaticResource FieldEditor}"
-                                            Placeholder="Provider, policy number, coverage summary…"/>
-                                </Border>
-                            </VerticalStackLayout>
-
-                            <!-- Artisan Speciality -->
-                            <VerticalStackLayout Spacing="0">
-                                <Label Text="Artisan Speciality" Style="{StaticResource FieldLabel}"/>
-                                <Border Style="{StaticResource FieldBorder}">
-                                    <Entry Text="{Binding ArtisanSpeciality}"
+                                    <Entry Text="{Binding BusinessName}"
                                            Style="{StaticResource FieldEntry}"
-                                           Placeholder="e.g. Bespoke furniture, smart home wiring…"/>
+                                           Placeholder="Your trading / business name"/>
                                 </Border>
                             </VerticalStackLayout>
 
-                            <!-- Business Address -->
+                            <!-- Trade / Specialization * -->
                             <VerticalStackLayout Spacing="0">
-                                <Label Text="Business Address" Style="{StaticResource FieldLabel}"/>
+                                <Label Style="{StaticResource FieldLabel}">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="TRADE / SPECIALIZATION "/>
+                                            <Span Text="*" TextColor="{StaticResource Copper}"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
                                 <Border Style="{StaticResource FieldBorder}">
-                                    <Entry Text="{Binding BusinessAddress}"
-                                           Style="{StaticResource FieldEntry}"
-                                           Placeholder="Business physical address"/>
+                                    <Picker Title="— Select your trade —"
+                                            ItemsSource="{Binding TradeOptions}"
+                                            SelectedItem="{Binding Specialization}"
+                                            TextColor="{StaticResource Ink}"
+                                            TitleColor="{StaticResource WarmGrey}"/>
                                 </Border>
                             </VerticalStackLayout>
 
-                            <!-- Services Offered chips -->
-                            <VerticalStackLayout Spacing="6">
-                                <Label Text="Services Offered" Style="{StaticResource FieldLabel}"/>
-                                <FlexLayout BindableLayout.ItemsSource="{Binding ServicesOffered}"
-                                            Wrap="Wrap" Direction="Row"
-                                            AlignItems="Start" JustifyContent="Start">
-                                    <BindableLayout.ItemTemplate>
-                                        <DataTemplate x:DataType="x:String">
-                                            <Border BackgroundColor="{StaticResource Copper}"
-                                                    StrokeShape="RoundRectangle 99"
-                                                    StrokeThickness="0"
-                                                    Padding="10,5" Margin="0,4,6,0">
-                                                <HorizontalStackLayout Spacing="6">
-                                                    <Label Text="{Binding .}"
-                                                           FontSize="12" FontAttributes="Bold"
-                                                           TextColor="White"
-                                                           VerticalOptions="Center"/>
-                                                    <Label Text="✕" FontSize="11"
-                                                           TextColor="#CCFFFFFF"
-                                                           VerticalOptions="Center">
-                                                        <Label.GestureRecognizers>
-                                                            <TapGestureRecognizer
-                                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}},
-                                                                                  Path=BindingContext.RemoveServiceCommand}"
-                                                                CommandParameter="{Binding .}"/>
-                                                        </Label.GestureRecognizers>
-                                                    </Label>
-                                                </HorizontalStackLayout>
-                                            </Border>
-                                        </DataTemplate>
-                                    </BindableLayout.ItemTemplate>
-                                </FlexLayout>
-                                <Border Style="{StaticResource FieldBorder}">
-                                    <HorizontalStackLayout>
-                                        <Entry Text="{Binding NewServiceEntry}"
-                                               Style="{StaticResource FieldEntry}"
-                                               Placeholder="Type a service and press +"
-                                               HorizontalOptions="FillAndExpand"
-                                               ReturnCommand="{Binding AddServiceCommand}"/>
-                                        <Button Text="+"
-                                                Command="{Binding AddServiceCommand}"
-                                                BackgroundColor="{StaticResource Copper}"
-                                                TextColor="White" FontSize="18"
-                                                CornerRadius="6" Padding="12,0"
-                                                VerticalOptions="Center" Margin="4,0,0,0"/>
-                                    </HorizontalStackLayout>
-                                </Border>
-                                <Label Text="Tap + or press Enter to add a service."
-                                       Style="{StaticResource Hint}"/>
-                            </VerticalStackLayout>
-
-                            <!-- Professional Bio -->
+                            <!-- Business Description * (maps to ProfessionalBio) -->
                             <VerticalStackLayout Spacing="0">
-                                <Label Text="Professional Bio" Style="{StaticResource FieldLabel}"/>
+                                <Label Style="{StaticResource FieldLabel}">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="BUSINESS DESCRIPTION "/>
+                                            <Span Text="*" TextColor="{StaticResource Copper}"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
                                 <Border Style="{StaticResource FieldBorder}">
                                     <Editor Text="{Binding ProfessionalBio}"
                                             Style="{StaticResource FieldEditor}"
-                                            Placeholder="Your professional background and work philosophy…"/>
+                                            Placeholder="Describe your services, experience, and what makes you stand out…"/>
                                 </Border>
                             </VerticalStackLayout>
 
-                            <!-- About -->
+                            <!-- Business Address * -->
                             <VerticalStackLayout Spacing="0">
-                                <Label Text="About / Detailed Bio" Style="{StaticResource FieldLabel}"/>
+                                <Label Style="{StaticResource FieldLabel}">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="BUSINESS ADDRESS "/>
+                                            <Span Text="*" TextColor="{StaticResource Copper}"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
                                 <Border Style="{StaticResource FieldBorder}">
-                                    <Editor Text="{Binding About}"
-                                            Style="{StaticResource FieldEditor}"
-                                            Placeholder="Tell clients about your background, why they should choose you…"
-                                            MinimumHeightRequest="120"/>
+                                    <Entry Text="{Binding BusinessAddress}"
+                                           Style="{StaticResource FieldEntry}"
+                                           Placeholder="Physical address of your business"/>
                                 </Border>
-                                <Label Text="Aim for 80–200 words. A good bio improves proposal acceptance by ~40%."
-                                       Style="{StaticResource Hint}"/>
+                            </VerticalStackLayout>
+
+                            <!-- Business Phone -->
+                            <VerticalStackLayout Spacing="0">
+                                <Label Text="BUSINESS PHONE" Style="{StaticResource FieldLabel}"/>
+                                <Border Style="{StaticResource FieldBorder}">
+                                    <Entry Text="{Binding BusinessPhone}"
+                                           Keyboard="Telephone"
+                                           Style="{StaticResource FieldEntry}"
+                                           Placeholder="Business contact number"/>
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <!-- Business Email -->
+                            <VerticalStackLayout Spacing="0">
+                                <Label Text="BUSINESS EMAIL" Style="{StaticResource FieldLabel}"/>
+                                <Border Style="{StaticResource FieldBorder}">
+                                    <Entry Text="{Binding BusinessEmail}"
+                                           Keyboard="Email"
+                                           Style="{StaticResource FieldEntry}"
+                                           Placeholder="Business email address"/>
+                                </Border>
                             </VerticalStackLayout>
 
                         </VerticalStackLayout>
                     </Border>
                 </VerticalStackLayout>
 
-                <!-- ══ SECTION 4 — PLATFORM STATS ════════════════════ -->
-                <VerticalStackLayout Spacing="12" Margin="0,0,0,28"
-                                     IsVisible="{Binding IsNewArtisanProfile,
-                                         Converter={StaticResource InverseBool}}">
+                <!-- ════════════════════════════════════════════════════
+                     SECTION 3 — PRIMARY BUSINESS LOCATION
+                ════════════════════════════════════════════════════════ -->
+                <VerticalStackLayout Spacing="12" Margin="0,0,0,28">
+
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                         <Border Grid.Column="0"
                                 BackgroundColor="{StaticResource Cream}"
                                 StrokeShape="RoundRectangle 8" StrokeThickness="0"
-                                WidthRequest="36" HeightRequest="36" Padding="9">
-                            <Label Text="📊" FontSize="16"
+                                WidthRequest="34" HeightRequest="34" Padding="8">
+                            <Label Text="📍" FontSize="15"
                                    HorizontalOptions="Center" VerticalOptions="Center"/>
                         </Border>
-                        <Label Grid.Column="1" Text="Platform Stats"
+                        <Label Grid.Column="1"
+                               Text="Primary Business Location"
                                Style="{StaticResource SectionLabel}"/>
                     </Grid>
+
                     <Border Style="{StaticResource CardStyle}">
-                        <Grid ColumnDefinitions="*,*"
-                              RowDefinitions="Auto,Auto,Auto"
-                              ColumnSpacing="16" RowSpacing="16">
+                        <VerticalStackLayout Spacing="16">
 
-                            <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="0">
-                                <HorizontalStackLayout>
-                                    <Label Text="Avg Rating" Style="{StaticResource FieldLabel}"/>
-                                    <Label Text="platform-managed" Style="{StaticResource ReadonlyNote}"/>
-                                </HorizontalStackLayout>
+                            <!-- Location Name * -->
+                            <VerticalStackLayout Spacing="0">
+                                <Label Style="{StaticResource FieldLabel}">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="LOCATION NAME "/>
+                                            <Span Text="*" TextColor="{StaticResource Copper}"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
                                 <Border Style="{StaticResource FieldBorder}">
-                                    <Entry Text="{Binding RatingText}" IsReadOnly="True"
+                                    <Entry Text="{Binding LocationName}"
                                            Style="{StaticResource FieldEntry}"
-                                           BackgroundColor="{StaticResource Cream}"
-                                           TextColor="{StaticResource WarmGrey}"/>
+                                           Placeholder="e.g. Main Workshop, Downtown Office"/>
                                 </Border>
                             </VerticalStackLayout>
 
-                            <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="0">
-                                <HorizontalStackLayout>
-                                    <Label Text="Completed Projects" Style="{StaticResource FieldLabel}"/>
-                                    <Label Text="platform-managed" Style="{StaticResource ReadonlyNote}"/>
-                                </HorizontalStackLayout>
+                            <!-- Location Address * -->
+                            <VerticalStackLayout Spacing="0">
+                                <Label Style="{StaticResource FieldLabel}">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="LOCATION ADDRESS "/>
+                                            <Span Text="*" TextColor="{StaticResource Copper}"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
                                 <Border Style="{StaticResource FieldBorder}">
-                                    <Entry Text="{Binding ArtisanCompletedProjects}" IsReadOnly="True"
+                                    <Entry Text="{Binding LocationAddress}"
                                            Style="{StaticResource FieldEntry}"
-                                           BackgroundColor="{StaticResource Cream}"
-                                           TextColor="{StaticResource WarmGrey}"/>
+                                           Placeholder="Street address of this location"/>
                                 </Border>
                             </VerticalStackLayout>
 
-                            <VerticalStackLayout Grid.Row="1" Grid.Column="0" Spacing="0">
-                                <HorizontalStackLayout>
-                                    <Label Text="Profile Views" Style="{StaticResource FieldLabel}"/>
-                                    <Label Text="platform-managed" Style="{StaticResource ReadonlyNote}"/>
-                                </HorizontalStackLayout>
-                                <Border Style="{StaticResource FieldBorder}">
-                                    <Entry Text="{Binding ArtisanTotalViews}" IsReadOnly="True"
-                                           Style="{StaticResource FieldEntry}"
-                                           BackgroundColor="{StaticResource Cream}"
-                                           TextColor="{StaticResource WarmGrey}"/>
-                                </Border>
-                            </VerticalStackLayout>
+                            <!-- Town / City  +  Location Phone (side by side) -->
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="0">
+                                    <Label Style="{StaticResource FieldLabel}">
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="TOWN / CITY "/>
+                                                <Span Text="*" TextColor="{StaticResource Copper}"/>
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+                                    <Border Style="{StaticResource FieldBorder}">
+                                        <Entry Text="{Binding LocationTown}"
+                                               Style="{StaticResource FieldEntry}"
+                                               Placeholder="e.g. Accra"/>
+                                    </Border>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="1" Spacing="0">
+                                    <Label Text="LOCATION PHONE"
+                                           Style="{StaticResource FieldLabel}"/>
+                                    <Border Style="{StaticResource FieldBorder}">
+                                        <Entry Text="{Binding LocationPhone}"
+                                               Keyboard="Telephone"
+                                               Style="{StaticResource FieldEntry}"
+                                               Placeholder="Phone for this location"/>
+                                    </Border>
+                                </VerticalStackLayout>
+                            </Grid>
 
-                            <VerticalStackLayout Grid.Row="1" Grid.Column="1" Spacing="0">
-                                <HorizontalStackLayout>
-                                    <Label Text="Reliability Score" Style="{StaticResource FieldLabel}"/>
-                                    <Label Text="platform-managed" Style="{StaticResource ReadonlyNote}"/>
-                                </HorizontalStackLayout>
-                                <Border Style="{StaticResource FieldBorder}">
-                                    <Entry Text="{Binding OverallReliabilityScore,
-                                               StringFormat='{0:F0}%',
-                                               TargetNullValue='Not yet calculated'}"
-                                           IsReadOnly="True"
-                                           Style="{StaticResource FieldEntry}"
-                                           BackgroundColor="{StaticResource Cream}"
-                                           TextColor="{StaticResource WarmGrey}"/>
-                                </Border>
-                            </VerticalStackLayout>
-
-                            <VerticalStackLayout Grid.Row="2" Grid.Column="0" Spacing="0">
-                                <HorizontalStackLayout>
-                                    <Label Text="Total Transactions" Style="{StaticResource FieldLabel}"/>
-                                    <Label Text="platform-managed" Style="{StaticResource ReadonlyNote}"/>
-                                </HorizontalStackLayout>
-                                <Border Style="{StaticResource FieldBorder}">
-                                    <Entry Text="{Binding TotalTransactions}" IsReadOnly="True"
-                                           Style="{StaticResource FieldEntry}"
-                                           BackgroundColor="{StaticResource Cream}"
-                                           TextColor="{StaticResource WarmGrey}"/>
-                                </Border>
-                            </VerticalStackLayout>
-
-                        </Grid>
+                        </VerticalStackLayout>
                     </Border>
+
+                    <!-- Info box -->
+                    <Border BackgroundColor="#FDF4EC"
+                            Stroke="#E8C99A"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 10"
+                            Padding="16,14">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="As a verified artisan you'll be able to:"
+                                   FontSize="13" FontAttributes="Bold"
+                                   TextColor="{StaticResource CopperDim}"/>
+                            <VerticalStackLayout Spacing="5">
+                                <Label Style="{StaticResource Hint}">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="✦  " TextColor="{StaticResource Copper}"/>
+                                            <Span Text="Submit proposals and bid on jobs posted on CraftConnect"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                                <Label Style="{StaticResource Hint}">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="✦  " TextColor="{StaticResource Copper}"/>
+                                            <Span Text="Manage multiple locations and service areas"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                                <Label Style="{StaticResource Hint}">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="✦  " TextColor="{StaticResource Copper}"/>
+                                            <Span Text="Track completed projects and build your reputation"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                                <Label Style="{StaticResource Hint}">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="✦  " TextColor="{StaticResource Copper}"/>
+                                            <Span Text="Access performance analytics and client reviews"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+
                 </VerticalStackLayout>
 
                 <!-- ══ ACTIONS BAR ════════════════════════════════════ -->
                 <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12"
                       Padding="0,16,0,0">
-                    <Label Grid.Column="0" VerticalOptions="Center"
-                           TextColor="{StaticResource WarmGrey}" FontSize="13">
-                        <Label.FormattedText>
-                            <FormattedString>
-                                <Span Text="← "/>
-                                <Span Text="Back to Profile"/>
-                            </FormattedString>
-                        </Label.FormattedText>
+                    <Label Grid.Column="0"
+                           Text="← Back to Profile"
+                           VerticalOptions="Center"
+                           TextColor="{StaticResource WarmGrey}"
+                           FontSize="13">
                         <Label.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding CancelCommand}"/>
                         </Label.GestureRecognizers>
@@ -931,20 +722,20 @@
                            HorizontalOptions="Center"
                            VerticalOptions="Center"/>
 
-        <!-- Toast overlay -->
+        <!-- Toast -->
         <Border x:Name="ToastOverlay"
-        IsVisible="False"
-        BackgroundColor="#CC1A1612"
-        StrokeShape="RoundRectangle 12"
-        StrokeThickness="0"
-        Padding="20,12"
-        HorizontalOptions="Center"
-        VerticalOptions="End"
-        Margin="0,0,0,40">
+                IsVisible="False"
+                BackgroundColor="#CC1A1612"
+                StrokeShape="RoundRectangle 12"
+                StrokeThickness="0"
+                Padding="20,12"
+                HorizontalOptions="Center"
+                VerticalOptions="End"
+                Margin="0,0,0,40">
             <Label x:Name="ToastLabel"
-           TextColor="White"
-           FontSize="14"
-           HorizontalOptions="Center"/>
+                   TextColor="White"
+                   FontSize="14"
+                   HorizontalOptions="Center"/>
         </Border>
     </Grid>
 
@@ -954,4 +745,4 @@
                      Order="Primary" Priority="0"/>
     </ContentPage.ToolbarItems>
 
-</ContentPage> 
+</ContentPage>

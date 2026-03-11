@@ -4,22 +4,43 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:pages="clr-namespace:CraftConnect_Mobile_App.Pages"
-    Shell.FlyoutBehavior="Disabled">
+    Shell.FlyoutBehavior="Disabled"
+    Shell.TabBarIsVisible="False"
+    Shell.NavBarIsVisible="False"
+    Shell.BackgroundColor="Transparent">
 
-    <!-- Use TabBar for proper route hierarchy -->
-    <TabBar>
-        <!-- Login Page as a separate flyout item -->
-        <Tab Route="auth">
-            <ShellContent
-                Route="LoginPage"
-                ContentTemplate="{DataTemplate pages:LoginPage}" />
-        </Tab>
+    <!-- Auth -->
+    <ShellContent
+        Route="LoginPage"
+        Shell.NavBarIsVisible="False"
+        Shell.TabBarIsVisible="False"
+        Shell.BackgroundColor="Transparent"
+        ContentTemplate="{DataTemplate pages:LoginPage}"/>
 
-        <!-- Main app content -->
-        <Tab Route="main">
-            <ShellContent
-                Route="GroupChatListPage"
-                ContentTemplate="{DataTemplate pages:GroupChatListPage}" />
-        </Tab>
-    </TabBar>
+    <!-- Main app -->
+    <ShellContent
+        Route="GroupChatListPage"
+        Shell.NavBarIsVisible="False"
+        Shell.TabBarIsVisible="False"
+        Shell.BackgroundColor="Transparent"
+        ContentTemplate="{DataTemplate pages:GroupChatListPage}"/>
+    <ShellContent
+        Route="UpdatesFeedPage"
+        Shell.NavBarIsVisible="False"
+        Shell.TabBarIsVisible="False"
+        Shell.BackgroundColor="Transparent"
+        ContentTemplate="{DataTemplate pages:UpdatesFeedPage}"/>
+    <ShellContent
+        Route="StorePage"
+        Shell.NavBarIsVisible="False"
+        Shell.TabBarIsVisible="False"
+        Shell.BackgroundColor="Transparent"
+        ContentTemplate="{DataTemplate pages:StorePage}"/>
+    <ShellContent
+        Route="SettingsPage"
+        Shell.NavBarIsVisible="False"
+        Shell.TabBarIsVisible="False"
+        Shell.BackgroundColor="Transparent"
+        ContentTemplate="{DataTemplate pages:SettingsPage}"/>
+
 </Shell>

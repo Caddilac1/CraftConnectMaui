@@ -4,9 +4,9 @@
         android:allowBackup="true"
         android:icon="@mipmap/appicon"
         android:roundIcon="@mipmap/appicon_round"
-        android:supportsRtl="true">
+        android:supportsRtl="true"
+        android:theme="@style/Maui.MainTheme">
 	</application>
-
 	<uses-permission android:name="android.permission.INTERNET" />
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 	<uses-permission android:name="android.permission.RECORD_AUDIO" />

@@ -2,79 +2,66 @@
 using Android.Content.PM;
 using Android.OS;
 using Android.Views;
-using Microsoft.Maui;
 using AndroidX.Core.View;
 
 namespace CraftConnect_Mobile_App
 {
     [Activity(Theme = "@style/Maui.SplashTheme",
               MainLauncher = true,
-              ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | ConfigChanges.UiMode | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density)]
+              ConfigurationChanges = ConfigChanges.ScreenSize |
+                                     ConfigChanges.Orientation |
+                                     ConfigChanges.UiMode |
+                                     ConfigChanges.ScreenLayout |
+                                     ConfigChanges.SmallestScreenSize |
+                                     ConfigChanges.Density)]
     public class MainActivity : MauiAppCompatActivity
     {
         protected override void OnCreate(Bundle savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
 
-            // Ensure the window resizes when the soft keyboard appears so only the bottom area is pushed up
             try
             {
                 Window?.SetSoftInputMode(SoftInput.AdjustResize | SoftInput.StateHidden);
             }
             catch (System.Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[MainActivity] ❌ Error setting SoftInputMode: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine(
+                    $"[MainActivity] ❌ SoftInputMode error: {ex.Message}");
             }
 
-            // CRITICAL: Remove gray navigation bar or make it blend with app background
-            RemoveGrayNavigationBar();
+            ConfigureWindowInsets();
         }
 
-        private void RemoveGrayNavigationBar()
+        private void ConfigureWindowInsets()
         {
             if (Window == null) return;
 
             try
             {
-                // Make navigation bar match app background so the gray strip is not visible
-                // ChatPage background is #E8EAF6 - use the same color so the bar blends in
-                Window.SetNavigationBarColor(Android.Graphics.Color.ParseColor("#E8EAF6"));
-
-                // Also make status bar transparent so content can draw behind it
                 Window.SetStatusBarColor(Android.Graphics.Color.Transparent);
+                Window.SetNavigationBarColor(
+                    Android.Graphics.Color.ParseColor("#F2F4F7"));
 
-                if (Build.VERSION.SdkInt >= BuildVersionCodes.R)
-                {
-                    // Use system to fit system windows (do not draw behind bars)
-                    WindowCompat.SetDecorFitsSystemWindows(Window, true);
+                // Edge-to-edge — content draws behind system bars
+                WindowCompat.SetDecorFitsSystemWindows(Window, false);
 
-                    // Ensure the decor view itself uses fitsSystemWindows to avoid extra inset drawing
-                    Window.DecorView?.SetFitsSystemWindows(true);
+                // #1B2B3A matches LoginPage background — the FIRST page shown.
+                // Each subsequent page uses its own BoxView to fill the status
+                // bar area with the correct color for that page.
+                Window.DecorView.SetBackgroundColor(
+                    Android.Graphics.Color.ParseColor("#1B2B3A"));
 
-                    // Disable the gray scrim/contrast on supported versions
-                    if (Build.VERSION.SdkInt >= BuildVersionCodes.Q)
-                    {
-                        Window.NavigationBarContrastEnforced = false;
-                    }
-                }
-                else if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
-                {
-                    // For older versions, avoid immersive layout flags so nav bar stays normal
-                    var uiOptions = (int)Window.DecorView.SystemUiVisibility;
-                    // Clear LayoutFullscreen/LayoutHideNavigation if previously set
-                    uiOptions &= ~(int)SystemUiFlags.LayoutHideNavigation;
-                    uiOptions &= ~(int)SystemUiFlags.LayoutFullscreen;
-                    uiOptions |= (int)SystemUiFlags.LayoutStable;
-                    Window.DecorView.SystemUiVisibility = (StatusBarVisibility)uiOptions;
+                if (Build.VERSION.SdkInt >= BuildVersionCodes.Q)
+                    Window.NavigationBarContrastEnforced = false;
 
-                    Window.DecorView?.SetFitsSystemWindows(true);
-                }
-
-                System.Diagnostics.Debug.WriteLine("[MainActivity] ✅ Navigation bar color/fits applied");
+                System.Diagnostics.Debug.WriteLine(
+                    "[MainActivity] ✅ Window insets configured (edge-to-edge)");
             }
             catch (System.Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[MainActivity] ❌ Error setting navigation bar: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine(
+                    $"[MainActivity] ❌ Window insets error: {ex.Message}");
             }
         }
     }

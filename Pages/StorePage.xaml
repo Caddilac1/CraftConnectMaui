@@ -144,7 +144,6 @@
                     HorizontalScrollBarVisibility="Never"
                     Padding="16,12,16,8">
             <HorizontalStackLayout Spacing="10">
-                <!-- All Category -->
                 <Border BackgroundColor="#6366F1"
                         StrokeThickness="0"
                         Padding="20,10">
@@ -157,7 +156,6 @@
                            TextColor="White"/>
                 </Border>
 
-                <!-- Products Category -->
                 <Border BackgroundColor="#F3F4F6"
                         StrokeThickness="0"
                         Padding="20,10">
@@ -173,7 +171,6 @@
                            TextColor="#6B7280"/>
                 </Border>
 
-                <!-- Services Category -->
                 <Border BackgroundColor="#F3F4F6"
                         StrokeThickness="0"
                         Padding="20,10">
@@ -189,7 +186,6 @@
                            TextColor="#6B7280"/>
                 </Border>
 
-                <!-- Other categories -->
                 <Border BackgroundColor="#F3F4F6"
                         StrokeThickness="0"
                         Padding="20,10">
@@ -280,7 +276,6 @@
                                       RowSpacing="8"
                                       Padding="0">
 
-                                    <!-- Product/Service Image -->
                                     <Border Grid.Row="0"
                                             BackgroundColor="#F3F4F6"
                                             StrokeThickness="0">
@@ -292,7 +287,6 @@
                                                    Aspect="AspectFill"
                                                    HeightRequest="140"/>
 
-                                            <!-- Type Badge (Product/Service) -->
                                             <Border BackgroundColor="#1F2937"
                                                     StrokeThickness="0"
                                                     Padding="10,4"
@@ -308,7 +302,6 @@
                                                        TextColor="White"/>
                                             </Border>
 
-                                            <!-- Favorite Icon -->
                                             <Border BackgroundColor="#FFFFFF"
                                                     StrokeThickness="0"
                                                     WidthRequest="32"
@@ -328,7 +321,6 @@
                                         </Grid>
                                     </Border>
 
-                                    <!-- Item Name -->
                                     <Label Grid.Row="1"
                                            Text="{Binding Name}"
                                            FontSize="14"
@@ -338,7 +330,6 @@
                                            MaxLines="2"
                                            Margin="10,8,10,0"/>
 
-                                    <!-- Seller Name -->
                                     <Label Grid.Row="2"
                                            Text="{Binding SellerName}"
                                            FontSize="12"
@@ -346,24 +337,16 @@
                                            LineBreakMode="TailTruncation"
                                            Margin="10,0"/>
 
-                                    <!-- Rating -->
                                     <HorizontalStackLayout Grid.Row="3"
                                                           Spacing="4"
                                                           Margin="10,0">
-                                        <Label Text="⭐"
-                                               FontSize="12"
-                                               VerticalOptions="Center"/>
+                                        <Label Text="⭐" FontSize="12" VerticalOptions="Center"/>
                                         <Label Text="{Binding Rating, StringFormat='{0:F1}'}"
-                                               FontSize="12"
-                                               TextColor="#1F2937"
-                                               VerticalOptions="Center"/>
+                                               FontSize="12" TextColor="#1F2937" VerticalOptions="Center"/>
                                         <Label Text="{Binding ReviewCount, StringFormat='({0})'}"
-                                               FontSize="11"
-                                               TextColor="#9CA3AF"
-                                               VerticalOptions="Center"/>
+                                               FontSize="11" TextColor="#9CA3AF" VerticalOptions="Center"/>
                                     </HorizontalStackLayout>
 
-                                    <!-- Price -->
                                     <Label Grid.Row="4"
                                            Text="{Binding DisplayPrice}"
                                            FontSize="16"
@@ -371,7 +354,6 @@
                                            TextColor="#6366F1"
                                            Margin="10,4,10,0"/>
 
-                                    <!-- Action Button -->
                                     <Border Grid.Row="5"
                                             BackgroundColor="#6366F1"
                                             StrokeThickness="0"
@@ -399,8 +381,11 @@
         </RefreshView>
 
         <!-- ========================================
-             BOTTOM NAVIGATION - Reusable Component
+             BOTTOM NAVIGATION
              ======================================== -->
-        <controls:BottomNavBar Grid.Row="3" ActiveTab="Store"/>
+        <!-- CHANGE: added x:Name="BottomNav" -->
+        <controls:BottomNavBar x:Name="BottomNav"
+                               Grid.Row="3"
+                               ActiveTab="Store"/>
     </Grid>
 </ContentPage>

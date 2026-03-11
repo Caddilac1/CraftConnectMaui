@@ -20,9 +20,6 @@ namespace CraftConnect_Mobile_App.PageModels
 
         // ═══════════════════════════════════════════════════════════════
         // RETURN-CONTEXT
-        // Set by the page before calling InitialiseAsync.
-        // When ReturnFeedId is non-null, a successful save fires
-        // NavigateToProposalRequested instead of NavigateBackRequested.
         // ═══════════════════════════════════════════════════════════════
 
         public string? ReturnFeedId { get; set; }
@@ -36,29 +33,18 @@ namespace CraftConnect_Mobile_App.PageModels
         {
             _profileService = profileService;
 
-            // Commands
             PickAvatarCommand = new Command(async () => await PickAvatarAsync());
+            SaveCommand = new Command(async () => await SaveAsync(), () => !IsBusy);
+            CancelCommand = new Command(async () => await CancelAsync());
+
+            // kept for any legacy bindings that may still exist
             SetAvailableCommand = new Command(() => SetAvailability("Available"));
             SetBusyCommand = new Command(() => SetAvailability("Busy"));
             SetUnavailableCommand = new Command(() => SetAvailability("Unavailable"));
             AddServiceCommand = new Command(AddService);
             RemoveServiceCommand = new Command<string>(RemoveService);
-            SaveCommand = new Command(async () => await SaveAsync(), () => !IsBusy);
-            CancelCommand = new Command(async () => await CancelAsync());
 
-            // Default collections
             ServicesOffered = new ObservableCollection<string>();
-
-            LanguageOptions = new List<string>
-            {
-                "English", "Twi", "Ga", "Ewe", "Hausa", "French", "Other"
-            };
-
-            TimezoneOptions = new List<string>
-            {
-                "Africa/Accra", "Africa/Lagos", "Africa/Nairobi",
-                "Europe/London", "America/New_York", "America/Los_Angeles"
-            };
 
             TradeOptions = new List<string>
             {
@@ -68,6 +54,16 @@ namespace CraftConnect_Mobile_App.PageModels
                 "General Contractor", "Other"
             };
 
+            // kept so bindings in any other pages don't break
+            LanguageOptions = new List<string>
+            {
+                "English", "Twi", "Ga", "Ewe", "Hausa", "French", "Other"
+            };
+            TimezoneOptions = new List<string>
+            {
+                "Africa/Accra", "Africa/Lagos", "Africa/Nairobi",
+                "Europe/London", "America/New_York", "America/Los_Angeles"
+            };
             ExperienceLevelOptions = new List<string>
             {
                 "Beginner", "Intermediate", "Advanced", "Expert"
@@ -75,17 +71,15 @@ namespace CraftConnect_Mobile_App.PageModels
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // NAVIGATION / PROPOSAL-REDIRECT FLAG
+        // PROPOSAL-REDIRECT FLAG
         // ═══════════════════════════════════════════════════════════════
 
         private bool _isProposalRedirect;
         public bool IsProposalRedirect
         {
             get => _isProposalRedirect;
-            set { _isProposalRedirect = value; OnPropertyChanged(); OnPropertyChanged(nameof(SaveBtnText)); }
+            set { _isProposalRedirect = value; OnPropertyChanged(); }
         }
-
-        public string SaveBtnText => IsProposalRedirect ? "Save & Continue" : "Save Changes";
 
         // ═══════════════════════════════════════════════════════════════
         // PROFILE FLAGS
@@ -113,14 +107,8 @@ namespace CraftConnect_Mobile_App.PageModels
         public string ProfilePictureUrl
         {
             get => _profilePictureUrl;
-            set
-            {
-                _profilePictureUrl = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(HasProfilePicture));
-            }
+            set { _profilePictureUrl = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasProfilePicture)); }
         }
-
         public bool HasProfilePicture => !string.IsNullOrWhiteSpace(ProfilePictureUrl);
 
         private string _displayName;
@@ -137,6 +125,7 @@ namespace CraftConnect_Mobile_App.PageModels
             set { _initials = value; OnPropertyChanged(); }
         }
 
+        // kept for legacy avatar/display city bindings
         private string _displayCity;
         public string DisplayCity
         {
@@ -145,25 +134,19 @@ namespace CraftConnect_Mobile_App.PageModels
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // PROFILE COMPLETION
+        // PROFILE COMPLETION  (kept — used by RecalcCompletion)
         // ═══════════════════════════════════════════════════════════════
 
         private double _profileCompletion;
         public double ProfileCompletion
         {
             get => _profileCompletion;
-            set
-            {
-                _profileCompletion = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(ProfileCompletionText));
-            }
+            set { _profileCompletion = value; OnPropertyChanged(); OnPropertyChanged(nameof(ProfileCompletionText)); }
         }
-
         public string ProfileCompletionText => $"{ProfileCompletion:F0}%";
 
         // ═══════════════════════════════════════════════════════════════
-        // PLATFORM STATS
+        // PLATFORM STATS  (kept for any legacy stats card bindings)
         // ═══════════════════════════════════════════════════════════════
 
         private int _artisanCompletedProjects;
@@ -196,7 +179,6 @@ namespace CraftConnect_Mobile_App.PageModels
                 OnPropertyChanged(nameof(Star5On));
             }
         }
-
         public string RatingText => _averageRating > 0 ? $"{_averageRating:F1}" : "—";
         public bool Star1On => _averageRating >= 1;
         public bool Star2On => _averageRating >= 2;
@@ -219,7 +201,7 @@ namespace CraftConnect_Mobile_App.PageModels
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // SECTION 1 — ACCOUNT INFORMATION
+        // SECTION 1 — PERSONAL DETAILS  (pre-filled, still editable)
         // ═══════════════════════════════════════════════════════════════
 
         private string _email;
@@ -233,7 +215,7 @@ namespace CraftConnect_Mobile_App.PageModels
         public string PhoneNumber
         {
             get => _phoneNumber;
-            set { _phoneNumber = value; OnPropertyChanged(); }
+            set { _phoneNumber = value; OnPropertyChanged(); RecalcCompletion(); }
         }
 
         private string _fullName;
@@ -250,10 +232,6 @@ namespace CraftConnect_Mobile_App.PageModels
             }
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // SECTION 2 — PERSONAL INFORMATION
-        // ═══════════════════════════════════════════════════════════════
-
         private string _address;
         public string Address
         {
@@ -261,11 +239,15 @@ namespace CraftConnect_Mobile_App.PageModels
             set { _address = value; OnPropertyChanged(); RecalcCompletion(); }
         }
 
+        // ═══════════════════════════════════════════════════════════════
+        // EXTENDED PERSONAL INFO  (still available for other pages)
+        // ═══════════════════════════════════════════════════════════════
+
         private string _city;
         public string City
         {
             get => _city;
-            set { _city = value; OnPropertyChanged(); UpdateDisplayCity(); RecalcCompletion(); }
+            set { _city = value; OnPropertyChanged(); UpdateDisplayCity(); }
         }
 
         private string _state;
@@ -307,11 +289,11 @@ namespace CraftConnect_Mobile_App.PageModels
         public string Bio
         {
             get => _bio;
-            set { _bio = value; OnPropertyChanged(); RecalcCompletion(); }
+            set { _bio = value; OnPropertyChanged(); }
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // SECTION 3 — ARTISAN BUSINESS DETAILS
+        // SECTION 2 — BUSINESS INFORMATION
         // ═══════════════════════════════════════════════════════════════
 
         private string _businessName;
@@ -327,6 +309,70 @@ namespace CraftConnect_Mobile_App.PageModels
             get => _specialization;
             set { _specialization = value; OnPropertyChanged(); RecalcCompletion(); }
         }
+
+        private string _professionalBio;   // used as "Business Description" in the form
+        public string ProfessionalBio
+        {
+            get => _professionalBio;
+            set { _professionalBio = value; OnPropertyChanged(); RecalcCompletion(); }
+        }
+
+        private string _businessAddress;
+        public string BusinessAddress
+        {
+            get => _businessAddress;
+            set { _businessAddress = value; OnPropertyChanged(); RecalcCompletion(); }
+        }
+
+        private string _businessPhone;
+        public string BusinessPhone
+        {
+            get => _businessPhone;
+            set { _businessPhone = value; OnPropertyChanged(); }
+        }
+
+        private string _businessEmail;
+        public string BusinessEmail
+        {
+            get => _businessEmail;
+            set { _businessEmail = value; OnPropertyChanged(); }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // SECTION 3 — PRIMARY BUSINESS LOCATION
+        // ═══════════════════════════════════════════════════════════════
+
+        private string _locationName;
+        public string LocationName
+        {
+            get => _locationName;
+            set { _locationName = value; OnPropertyChanged(); RecalcCompletion(); }
+        }
+
+        private string _locationAddress;
+        public string LocationAddress
+        {
+            get => _locationAddress;
+            set { _locationAddress = value; OnPropertyChanged(); RecalcCompletion(); }
+        }
+
+        private string _locationTown;
+        public string LocationTown
+        {
+            get => _locationTown;
+            set { _locationTown = value; OnPropertyChanged(); RecalcCompletion(); }
+        }
+
+        private string _locationPhone;
+        public string LocationPhone
+        {
+            get => _locationPhone;
+            set { _locationPhone = value; OnPropertyChanged(); }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // EXTRA ARTISAN FIELDS  (kept — sent to API on update path)
+        // ═══════════════════════════════════════════════════════════════
 
         private string _yearsOfExperienceText;
         public string YearsOfExperience
@@ -356,8 +402,6 @@ namespace CraftConnect_Mobile_App.PageModels
             set { _serviceRadiusText = value; OnPropertyChanged(); }
         }
 
-        // ── Availability ──────────────────────────────────────────────
-
         private string _availabilityStatus = "Available";
         public string AvailabilityStatus
         {
@@ -370,11 +414,8 @@ namespace CraftConnect_Mobile_App.PageModels
                 OnPropertyChanged(nameof(IsBusy2));
             }
         }
-
         public bool IsAvailable => _availabilityStatus == "Available";
         public bool IsBusy2 => _availabilityStatus == "Busy";
-
-        // ── Credentials ───────────────────────────────────────────────
 
         private string _licenseNumber;
         public string LicenseNumber
@@ -418,14 +459,12 @@ namespace CraftConnect_Mobile_App.PageModels
             set { _artisanSpeciality = value; OnPropertyChanged(); }
         }
 
-        private string _businessAddress;
-        public string BusinessAddress
+        private string _about;
+        public string About
         {
-            get => _businessAddress;
-            set { _businessAddress = value; OnPropertyChanged(); }
+            get => _about;
+            set { _about = value; OnPropertyChanged(); }
         }
-
-        // ── Services Offered chips ────────────────────────────────────
 
         public ObservableCollection<string> ServicesOffered { get; }
 
@@ -436,29 +475,13 @@ namespace CraftConnect_Mobile_App.PageModels
             set { _newServiceEntry = value; OnPropertyChanged(); }
         }
 
-        // ── Bios ─────────────────────────────────────────────────────
-
-        private string _professionalBio;
-        public string ProfessionalBio
-        {
-            get => _professionalBio;
-            set { _professionalBio = value; OnPropertyChanged(); RecalcCompletion(); }
-        }
-
-        private string _about;
-        public string About
-        {
-            get => _about;
-            set { _about = value; OnPropertyChanged(); RecalcCompletion(); }
-        }
-
         // ═══════════════════════════════════════════════════════════════
-        // PICKER SOURCE LISTS
+        // PICKER LISTS
         // ═══════════════════════════════════════════════════════════════
 
+        public List<string> TradeOptions { get; }
         public List<string> LanguageOptions { get; }
         public List<string> TimezoneOptions { get; }
-        public List<string> TradeOptions { get; }
         public List<string> ExperienceLevelOptions { get; }
 
         // ═══════════════════════════════════════════════════════════════
@@ -494,28 +517,12 @@ namespace CraftConnect_Mobile_App.PageModels
         // EVENTS
         // ═══════════════════════════════════════════════════════════════
 
-        /// <summary>Display a transient toast message.</summary>
         public event Action<string> ShowToastRequested;
-
-        /// <summary>
-        /// Navigate back to the previous page.
-        /// Fired on cancel, or after a normal save with no return feed.
-        /// </summary>
         public event Action NavigateBackRequested;
-
-        /// <summary>
-        /// Navigate forward to CreateProposalPage pre-loaded with this feed ID.
-        /// Fired after a successful save when ReturnFeedId is set.
-        /// </summary>
         public event Action<string> NavigateToProposalRequested;
 
         // ═══════════════════════════════════════════════════════════════
         // INITIALISE FROM API
-        //
-        // FIX: Wrapped GetMyProfileAsync in its own try/catch so a
-        // NotFound (new user) or any network error is treated silently
-        // as "new profile" — no Error dialog is shown.
-        // The outer catch only handles truly unexpected exceptions.
         // ═══════════════════════════════════════════════════════════════
 
         public async Task InitialiseAsync(bool isProposalRedirect = false)
@@ -525,26 +532,18 @@ namespace CraftConnect_Mobile_App.PageModels
 
             try
             {
-                // ── Fetch profile, treating NotFound / any error as "new user" ──
                 MobileProfileDetails details = null;
                 try
                 {
                     details = await _profileService.GetMyProfileAsync();
                 }
-                catch (UnauthorizedAccessException)
-                {
-                    // Let the outer catch handle this specifically
-                    throw;
-                }
+                catch (UnauthorizedAccessException) { throw; }
                 catch (Exception fetchEx)
                 {
-                    // Network error, NotFound, or any other API failure:
-                    // just treat as a brand-new profile — don't show an error.
                     System.Diagnostics.Debug.WriteLine(
-                        $"[EditArtisanProfilePageModel] Profile fetch skipped (new user path): {fetchEx.Message}");
+                        $"[EditArtisanProfilePageModel] Profile fetch skipped: {fetchEx.Message}");
                 }
 
-                // ── If no data came back, this is a brand-new user ────────────
                 if (details == null
                     || (details.UserProfile == null && details.ArtisanProfile == null))
                 {
@@ -553,14 +552,14 @@ namespace CraftConnect_Mobile_App.PageModels
                     UpdateInitials();
                     UpdateDisplayCity();
                     RecalcCompletion();
-                    return; // Render a blank form — no toast, no error dialog
+                    return;
                 }
 
-                // ── Populate account fields ───────────────────────────────────
+                // ── Account fields ────────────────────────────────────
                 Email = details.Email;
                 PhoneNumber = details.PhoneNumber;
 
-                // ── Populate user profile fields ──────────────────────────────
+                // ── User profile → pre-fill personal section ──────────
                 var up = details.UserProfile;
                 if (up != null)
                 {
@@ -574,9 +573,20 @@ namespace CraftConnect_Mobile_App.PageModels
                     PreferredLanguage = up.PreferredLanguage;
                     Timezone = up.Timezone;
                     Bio = up.Bio;
+
+                    // Pre-fill location section from personal address data
+                    // so the user doesn't start with a blank Location card.
+                    if (string.IsNullOrWhiteSpace(LocationName))
+                        LocationName = "Main Workshop";
+                    if (string.IsNullOrWhiteSpace(LocationAddress))
+                        LocationAddress = up.Address;
+                    if (string.IsNullOrWhiteSpace(LocationTown))
+                        LocationTown = up.City;
+                    if (string.IsNullOrWhiteSpace(LocationPhone))
+                        LocationPhone = details.PhoneNumber;
                 }
 
-                // ── Populate artisan profile fields ───────────────────────────
+                // ── Artisan profile ───────────────────────────────────
                 var ap = details.ArtisanProfile;
                 if (ap != null)
                 {
@@ -598,6 +608,10 @@ namespace CraftConnect_Mobile_App.PageModels
                     ProfessionalBio = ap.ProfessionalBio;
                     About = ap.About;
 
+                    // Overwrite location pre-fill with saved artisan address if present
+                    if (!string.IsNullOrWhiteSpace(ap.BusinessAddress))
+                        LocationAddress = ap.BusinessAddress;
+
                     ServicesOffered.Clear();
                     if (!string.IsNullOrWhiteSpace(ap.ServicesOffered))
                         foreach (var s in ap.ServicesOffered.Split(',', StringSplitOptions.RemoveEmptyEntries))
@@ -605,7 +619,6 @@ namespace CraftConnect_Mobile_App.PageModels
                 }
                 else
                 {
-                    // User profile exists but no artisan profile yet
                     IsNewArtisanProfile = true;
                 }
 
@@ -620,9 +633,6 @@ namespace CraftConnect_Mobile_App.PageModels
             }
             catch (Exception ex)
             {
-                // Truly unexpected error — log it but show a gentle toast,
-                // NOT a system Error dialog, and still allow the user to
-                // fill in the form as if they are new.
                 System.Diagnostics.Debug.WriteLine(
                     $"[EditArtisanProfilePageModel] Unexpected init error: {ex.Message}");
                 IsNewArtisanProfile = true;
@@ -635,48 +645,14 @@ namespace CraftConnect_Mobile_App.PageModels
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // COMMAND IMPLEMENTATIONS
+        // SAVE
         // ═══════════════════════════════════════════════════════════════
-
-        private async Task PickAvatarAsync()
-        {
-            try
-            {
-                var result = await MediaPicker.Default.PickPhotoAsync(new MediaPickerOptions
-                {
-                    Title = "Select profile picture"
-                });
-
-                if (result != null)
-                    ProfilePictureUrl = result.FullPath;
-            }
-            catch (Exception ex)
-            {
-                ShowToastRequested?.Invoke($"Could not pick photo: {ex.Message}");
-            }
-        }
-
-        private void SetAvailability(string status) => AvailabilityStatus = status;
-
-        private void AddService()
-        {
-            var svc = NewServiceEntry?.Trim();
-            if (string.IsNullOrWhiteSpace(svc)) return;
-            if (!ServicesOffered.Contains(svc))
-                ServicesOffered.Add(svc);
-            NewServiceEntry = string.Empty;
-        }
-
-        private void RemoveService(string service)
-        {
-            if (service != null)
-                ServicesOffered.Remove(service);
-        }
 
         private async Task SaveAsync()
         {
             if (IsBusy) return;
 
+            // ── Validation ────────────────────────────────────────────
             if (string.IsNullOrWhiteSpace(BusinessName))
             {
                 ShowToastRequested?.Invoke("Business Name is required.");
@@ -685,6 +661,31 @@ namespace CraftConnect_Mobile_App.PageModels
             if (string.IsNullOrWhiteSpace(Specialization))
             {
                 ShowToastRequested?.Invoke("Trade / Specialization is required.");
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(ProfessionalBio))
+            {
+                ShowToastRequested?.Invoke("Business Description is required.");
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(BusinessAddress))
+            {
+                ShowToastRequested?.Invoke("Business Address is required.");
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(LocationName))
+            {
+                ShowToastRequested?.Invoke("Location Name is required.");
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(LocationAddress))
+            {
+                ShowToastRequested?.Invoke("Location Address is required.");
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(LocationTown))
+            {
+                ShowToastRequested?.Invoke("Town / City is required.");
                 return;
             }
 
@@ -700,33 +701,34 @@ namespace CraftConnect_Mobile_App.PageModels
 
                 if (IsNewArtisanProfile)
                 {
-                    var created = await _profileService.CreateArtisanProfileAsync(new CreateMobileArtisanProfile
-                    {
-                        BusinessName = BusinessName,
-                        Specialization = Specialization,
-                        YearsOfExperience = yearsInt,
-                        ExperienceLevel = ExperienceLevel ?? "Beginner",
-                        HourlyRate = rateDecimal > 0 ? rateDecimal : (decimal?)null,
-                        ServiceRadius = radiusInt > 0 ? radiusInt : (int?)null,
-                        AvailabilityStatus = AvailabilityStatus,
-                        LicenseNumber = LicenseNumber,
-                        Certification = Certification,
-                        BusinessRegistration = BusinessRegistration,
-                        TaxId = TaxId,
-                        InsuranceDetails = InsuranceDetails,
-                        ArtisanSpeciality = ArtisanSpeciality,
-                        BusinessAddress = BusinessAddress,
-                        ServicesOffered = string.Join(", ", ServicesOffered),
-                        ProfessionalBio = ProfessionalBio,
-                        About = About
-                    });
+                    var created = await _profileService.CreateArtisanProfileAsync(
+                        new CreateMobileArtisanProfile
+                        {
+                            BusinessName = BusinessName,
+                            Specialization = Specialization,
+                            YearsOfExperience = yearsInt,
+                            ExperienceLevel = ExperienceLevel ?? "Beginner",
+                            HourlyRate = rateDecimal > 0 ? rateDecimal : (decimal?)null,
+                            ServiceRadius = radiusInt > 0 ? radiusInt : (int?)null,
+                            AvailabilityStatus = AvailabilityStatus,
+                            LicenseNumber = LicenseNumber,
+                            Certification = Certification,
+                            BusinessRegistration = BusinessRegistration,
+                            TaxId = TaxId,
+                            InsuranceDetails = InsuranceDetails,
+                            ArtisanSpeciality = ArtisanSpeciality,
+                            BusinessAddress = BusinessAddress,
+                            ServicesOffered = string.Join(", ", ServicesOffered),
+                            ProfessionalBio = ProfessionalBio,
+                            About = About
+                        });
 
                     success = created != null;
                     if (success) IsNewArtisanProfile = false;
                 }
                 else
                 {
-                    var updatePayload = new UpdateMobileProfile
+                    success = await _profileService.UpdateProfileAsync(new UpdateMobileProfile
                     {
                         Email = Email,
                         PhoneNumber = PhoneNumber,
@@ -763,26 +765,21 @@ namespace CraftConnect_Mobile_App.PageModels
                             ProfessionalBio = ProfessionalBio,
                             About = About
                         }
-                    };
-
-                    success = await _profileService.UpdateProfileAsync(updatePayload);
+                    });
                 }
 
                 if (success)
                 {
                     RecalcCompletion();
 
-                    // ── Decide where to navigate after a successful save ───────
                     if (!string.IsNullOrWhiteSpace(ReturnFeedId))
                     {
-                        // Came from Send Proposal flow — forward to proposal form
                         ShowToastRequested?.Invoke("Profile saved! Opening proposal form…");
                         await Task.Delay(800);
                         NavigateToProposalRequested?.Invoke(ReturnFeedId);
                     }
                     else
                     {
-                        // Normal save — go back to wherever we came from
                         ShowToastRequested?.Invoke(IsProposalRedirect
                             ? "Profile saved! Returning to proposal…"
                             : "Profile saved successfully.");
@@ -809,6 +806,39 @@ namespace CraftConnect_Mobile_App.PageModels
             }
         }
 
+        // ═══════════════════════════════════════════════════════════════
+        // COMMAND HELPERS
+        // ═══════════════════════════════════════════════════════════════
+
+        private async Task PickAvatarAsync()
+        {
+            try
+            {
+                var result = await MediaPicker.Default.PickPhotoAsync(
+                    new MediaPickerOptions { Title = "Select profile picture" });
+                if (result != null) ProfilePictureUrl = result.FullPath;
+            }
+            catch (Exception ex)
+            {
+                ShowToastRequested?.Invoke($"Could not pick photo: {ex.Message}");
+            }
+        }
+
+        private void SetAvailability(string status) => AvailabilityStatus = status;
+
+        private void AddService()
+        {
+            var svc = NewServiceEntry?.Trim();
+            if (string.IsNullOrWhiteSpace(svc)) return;
+            if (!ServicesOffered.Contains(svc)) ServicesOffered.Add(svc);
+            NewServiceEntry = string.Empty;
+        }
+
+        private void RemoveService(string service)
+        {
+            if (service != null) ServicesOffered.Remove(service);
+        }
+
         private async Task CancelAsync()
         {
             NavigateBackRequested?.Invoke();
@@ -828,12 +858,7 @@ namespace CraftConnect_Mobile_App.PageModels
 
         private void UpdateInitials()
         {
-            if (string.IsNullOrWhiteSpace(FullName))
-            {
-                Initials = "?";
-                return;
-            }
-
+            if (string.IsNullOrWhiteSpace(FullName)) { Initials = "?"; return; }
             var parts = FullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
             Initials = parts.Length >= 2
                 ? $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant()
@@ -845,20 +870,20 @@ namespace CraftConnect_Mobile_App.PageModels
 
         private void RecalcCompletion()
         {
+            // Core required fields from the new 3-section form
             var fields = new[]
             {
                 !string.IsNullOrWhiteSpace(FullName),
                 !string.IsNullOrWhiteSpace(Email),
                 !string.IsNullOrWhiteSpace(PhoneNumber),
                 !string.IsNullOrWhiteSpace(Address),
-                !string.IsNullOrWhiteSpace(City),
-                !string.IsNullOrWhiteSpace(Bio),
                 !string.IsNullOrWhiteSpace(BusinessName),
                 !string.IsNullOrWhiteSpace(Specialization),
-                !string.IsNullOrWhiteSpace(HourlyRate),
                 !string.IsNullOrWhiteSpace(ProfessionalBio),
-                !string.IsNullOrWhiteSpace(About),
-                ServicesOffered.Count > 0
+                !string.IsNullOrWhiteSpace(BusinessAddress),
+                !string.IsNullOrWhiteSpace(LocationName),
+                !string.IsNullOrWhiteSpace(LocationAddress),
+                !string.IsNullOrWhiteSpace(LocationTown),
             };
 
             int filled = 0;

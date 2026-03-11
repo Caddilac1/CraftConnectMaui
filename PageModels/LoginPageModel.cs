@@ -277,7 +277,7 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 SuccessMessage = "Login successful!";
                 await Task.Delay(200);
-                await Shell.Current.GoToAsync("//main/GroupChatListPage");
+                await Shell.Current.GoToAsync("//GroupChatListPage");
             }
             else
             {

@@ -9,6 +9,7 @@ namespace CraftConnect_Mobile_App.Pages
         private int _currentScrollIndex = 0;
         private readonly List<BoxView> _indicatorDots = new();
         private bool _isScrolling = false;
+        private bool _initialized = false;
 
         public UpdatesFeedPage(UpdatesFeedPageModel viewModel)
         {
@@ -20,19 +21,28 @@ namespace CraftConnect_Mobile_App.Pages
             _viewModel.NavigateToEditProfile += OnNavigateToEditProfile;
         }
 
-        protected override async void OnAppearing()
+        protected override void OnNavigatedTo(NavigatedToEventArgs args)
+        {
+            base.OnNavigatedTo(args);
+            BottomNav.SyncTab("Updates");
+        }
+
+        protected override void OnAppearing()
         {
             base.OnAppearing();
 
+            // Re-subscribe each time (guarded against double subscription)
             _viewModel.NavigateToCreateProposal -= OnNavigateToCreateProposal;
             _viewModel.NavigateToCreateProposal += OnNavigateToCreateProposal;
-
             _viewModel.NavigateToEditProfile -= OnNavigateToEditProfile;
             _viewModel.NavigateToEditProfile += OnNavigateToEditProfile;
 
-            await _viewModel.InitializeAsync();
-            await Task.Delay(300);
-            InitializeScrollIndicators();
+            // SPEED FIX: page renders immediately, data loads in background.
+            if (!_initialized)
+            {
+                _initialized = true;
+                _ = LoadDataAsync();
+            }
         }
 
         protected override void OnDisappearing()
@@ -42,17 +52,28 @@ namespace CraftConnect_Mobile_App.Pages
             _viewModel.NavigateToEditProfile -= OnNavigateToEditProfile;
         }
 
+        private async Task LoadDataAsync()
+        {
+            try
+            {
+                await _viewModel.InitializeAsync();
+                await Task.Delay(300);
+                InitializeScrollIndicators();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[UpdatesFeed] ❌ Load error: {ex.Message}");
+            }
+        }
+
         // ══════════════════════════════════════════════════════════════
-        // SEND PROPOSAL → user HAS a profile → go to CreateProposalPage
+        // SEND PROPOSAL → user HAS a profile
         // ══════════════════════════════════════════════════════════════
 
         private async void OnNavigateToCreateProposal(object? sender, SendProposalNavigationArgs args)
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine(
-                    $"[UpdatesFeed] Navigating to CreateProposalPage — FeedId: {args.FeedId}, Title: {args.FeedTitle}");
-
                 var createPage = Handler?.MauiContext?.Services.GetService<CreateProposalPage>();
 
                 if (createPage == null)
@@ -78,16 +99,13 @@ namespace CraftConnect_Mobile_App.Pages
         }
 
         // ══════════════════════════════════════════════════════════════
-        // SEND PROPOSAL → user has NO profile → show popup, then redirect
-        // to EditArtisanProfilePage so they can complete their profile
-        // before continuing to CreateProposalPage.
+        // SEND PROPOSAL → user has NO profile
         // ══════════════════════════════════════════════════════════════
 
         private async void OnNavigateToEditProfile(object? sender, NoProfileNavigationArgs args)
         {
             try
             {
-                // ── Confirmation dialog ───────────────────────────────
                 bool proceed = await DisplayAlert(
                     "Artisan Profile Required",
                     "Sending a proposal is only available to users with an artisan profile. " +
@@ -97,14 +115,7 @@ namespace CraftConnect_Mobile_App.Pages
                     "Set Up Profile",
                     "Not Now");
 
-                if (!proceed)
-                {
-                    System.Diagnostics.Debug.WriteLine("[UpdatesFeed] User declined profile setup.");
-                    return;
-                }
-
-                System.Diagnostics.Debug.WriteLine(
-                    $"[UpdatesFeed] No artisan profile — pushing EditArtisanProfilePage. ReturnFeedId: {args.FeedId}");
+                if (!proceed) return;
 
                 var editPage = Handler?.MauiContext?.Services.GetService<EditArtisanProfilePage>();
 
@@ -114,17 +125,12 @@ namespace CraftConnect_Mobile_App.Pages
                     return;
                 }
 
-                // Pass return context so EditArtisanProfilePage knows where
-                // to navigate after a successful save.
                 editPage.ReturnFeedId = args.FeedId;
                 editPage.ReturnFeedTitle = args.FeedTitle;
                 editPage.AllFeedsSnapshot = _viewModel.AllFeeds?
                     .Select(f => (f.Id, f.Title ?? "Untitled"))
                     .ToList()
                     ?? new List<(string, string)>();
-
-                // Tell the page model this is a proposal redirect so the
-                // banner and save-button text adjust accordingly.
 
                 await Navigation.PushAsync(editPage);
             }

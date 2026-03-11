@@ -1,7 +1,10 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Diagnostics;
 using System.Text;
+using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http.Headers;
 
 namespace CraftConnect_Mobile_App.Services
 {
@@ -10,78 +13,89 @@ namespace CraftConnect_Mobile_App.Services
         private readonly HttpClient _httpClient;
         private readonly string _baseUrl;
 
+        // ── Static options — created once, reused forever (major speed win) ──
+        private static readonly JsonSerializerOptions _serializeOpts = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = false,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
+
+        private static readonly JsonSerializerOptions _deserializeOpts = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
+        private static readonly JwtSecurityTokenHandler _jwtHandler = new();
+
         public AuthService(ApiConfig config)
         {
             _baseUrl = config.BaseUrl.TrimEnd('/');
 
-            Debug.WriteLine($"[AUTH SERVICE] Config null: {config == null}");
-            Debug.WriteLine($"[AUTH SERVICE] BaseUrl from config: '{config.BaseUrl}'");
-            Debug.WriteLine($"[AUTH SERVICE] BaseUrl after trim: '{_baseUrl}'");
+            Debug.WriteLine($"[AUTH SERVICE] BaseUrl: '{_baseUrl}'");
 
-#if ANDROID
-            Debug.WriteLine($"[AUTH SERVICE] Platform: ANDROID — using AndroidMessageHandler");
+            // DEBUG: SSL bypass enabled for development (self-signed certs).
+            // RELEASE: Full certificate validation is enforced — no bypass.
+#if ANDROID && DEBUG
+            Debug.WriteLine("[AUTH SERVICE] Platform: ANDROID DEBUG — SSL bypass ON (dev only)");
             var handler = new Xamarin.Android.Net.AndroidMessageHandler
             {
                 ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
                 {
-                    Debug.WriteLine($"[SSL CALLBACK] ✅ Called! Host: {message.RequestUri.Host}");
-                    Debug.WriteLine($"[SSL CALLBACK] Cert subject: {cert?.Subject}");
-                    Debug.WriteLine($"[SSL CALLBACK] Errors: {errors}");
-                    Debug.WriteLine($"[SSL CALLBACK] Returning true (accepting cert)");
+                    Debug.WriteLine($"[SSL] Host: {message.RequestUri.Host}, Errors: {errors}");
                     return true;
                 }
             };
-#else
-            Debug.WriteLine($"[AUTH SERVICE] Platform: OTHER — using HttpClientHandler");
+#elif ANDROID
+            Debug.WriteLine("[AUTH SERVICE] Platform: ANDROID RELEASE — SSL validation enforced");
+            var handler = new Xamarin.Android.Net.AndroidMessageHandler();
+#elif DEBUG
+            Debug.WriteLine("[AUTH SERVICE] Platform: OTHER DEBUG — SSL bypass ON (dev only)");
             var handler = new HttpClientHandler
             {
                 ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
                 {
-                    Debug.WriteLine($"[SSL CALLBACK] ✅ Called! Host: {message.RequestUri.Host}, Errors: {errors}");
+                    Debug.WriteLine($"[SSL] Host: {message.RequestUri.Host}, Errors: {errors}");
                     return true;
                 }
             };
+#else
+            Debug.WriteLine("[AUTH SERVICE] Platform: OTHER RELEASE — SSL validation enforced");
+            var handler = new HttpClientHandler();
 #endif
 
             _httpClient = new HttpClient(handler)
             {
                 BaseAddress = new Uri(_baseUrl),
-                Timeout = TimeSpan.FromSeconds(30)
+                Timeout = TimeSpan.FromSeconds(15) // Reduced from 30s — better UX on mobile
             };
 
-            Debug.WriteLine($"[AUTH SERVICE] HttpClient created. BaseAddress: {_httpClient.BaseAddress}");
-            Debug.WriteLine($"[AUTH SERVICE] Timeout: {_httpClient.Timeout.TotalSeconds}s");
-            Debug.WriteLine($"[AUTH SERVICE] Initialized with BaseUrl: {_baseUrl}");
+            Debug.WriteLine($"[AUTH SERVICE] Initialized. BaseAddress: {_httpClient.BaseAddress}, Timeout: {_httpClient.Timeout.TotalSeconds}s");
         }
 
         // ============================================================
         // PASSWORD LOGIN  →  POST /api/auth/login/password
         // ============================================================
-        public async Task<AuthResult> LoginWithPasswordAsync(PasswordLoginRequest request)
+        public async Task<AuthResult> LoginWithPasswordAsync(PasswordLoginRequest request, CancellationToken cancellationToken = default)
         {
             Debug.WriteLine($"\n[LOGIN/PASSWORD START] Email: {request.Email}");
 
             try
             {
-                SetJsonHeaders();
-
                 var json = Serialize(request);
                 Debug.WriteLine($"[LOGIN/PASSWORD] Serialized JSON: {json}");
 
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
                 var endpoint = "/api/auth/login/password";
-                var fullUrl = $"{_baseUrl}{endpoint}";
-                Debug.WriteLine($"[LOGIN/PASSWORD] Full URL: {fullUrl}");
-                Debug.WriteLine($"[LOGIN/PASSWORD] HttpClient BaseAddress: {_httpClient.BaseAddress}");
-                Debug.WriteLine($"[LOGIN/PASSWORD] Sending request...");
+                Debug.WriteLine($"[LOGIN/PASSWORD] Full URL: {_baseUrl}{endpoint}");
 
                 var sw = Stopwatch.StartNew();
 
                 HttpResponseMessage response;
                 try
                 {
-                    response = await _httpClient.PostAsync(endpoint, content);
+                    using var message = BuildRequest(HttpMethod.Post, endpoint,
+                        new StringContent(json, Encoding.UTF8, "application/json"));
+                    response = await _httpClient.SendAsync(message, cancellationToken);
                 }
                 catch (HttpRequestException httpEx)
                 {
@@ -89,27 +103,21 @@ namespace CraftConnect_Mobile_App.Services
                     Debug.WriteLine($"[LOGIN/PASSWORD] ❌ HttpRequestException after {sw.ElapsedMilliseconds}ms");
                     Debug.WriteLine($"[LOGIN/PASSWORD] Message: {httpEx.Message}");
                     Debug.WriteLine($"[LOGIN/PASSWORD] StatusCode: {httpEx.StatusCode}");
-                    Debug.WriteLine($"[LOGIN/PASSWORD] InnerException type: {httpEx.InnerException?.GetType().FullName}");
-                    Debug.WriteLine($"[LOGIN/PASSWORD] InnerException message: {httpEx.InnerException?.Message}");
-                    Debug.WriteLine($"[LOGIN/PASSWORD] InnerException inner: {httpEx.InnerException?.InnerException?.Message}");
+                    Debug.WriteLine($"[LOGIN/PASSWORD] InnerException: {httpEx.InnerException?.Message}");
                     return AuthResult.Fail("Network error. Check your connection.");
                 }
                 catch (TaskCanceledException tcEx)
                 {
                     sw.Stop();
-                    Debug.WriteLine($"[LOGIN/PASSWORD] ❌ TaskCanceledException after {sw.ElapsedMilliseconds}ms");
-                    Debug.WriteLine($"[LOGIN/PASSWORD] Message: {tcEx.Message}");
-                    Debug.WriteLine($"[LOGIN/PASSWORD] CancellationToken cancelled: {tcEx.CancellationToken.IsCancellationRequested}");
-                    Debug.WriteLine($"[LOGIN/PASSWORD] InnerException: {tcEx.InnerException?.Message}");
+                    Debug.WriteLine($"[LOGIN/PASSWORD] ❌ TaskCanceledException after {sw.ElapsedMilliseconds}ms: {tcEx.Message}");
                     return AuthResult.Fail("Request timed out. Check your network connection.");
                 }
 
                 sw.Stop();
                 Debug.WriteLine($"[LOGIN/PASSWORD] ✅ Got response in {sw.ElapsedMilliseconds}ms");
                 Debug.WriteLine($"[LOGIN/PASSWORD] Status: {(int)response.StatusCode} {response.StatusCode}");
-                Debug.WriteLine($"[LOGIN/PASSWORD] ReasonPhrase: {response.ReasonPhrase}");
 
-                var body = await response.Content.ReadAsStringAsync();
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
                 Debug.WriteLine($"[LOGIN/PASSWORD] Response body: {body}");
 
                 if (response.IsSuccessStatusCode)
@@ -129,9 +137,7 @@ namespace CraftConnect_Mobile_App.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[LOGIN/PASSWORD] ❌ Unexpected exception: {ex.GetType().FullName}");
-                Debug.WriteLine($"[LOGIN/PASSWORD] Message: {ex.Message}");
-                Debug.WriteLine($"[LOGIN/PASSWORD] StackTrace: {ex.StackTrace}");
+                Debug.WriteLine($"[LOGIN/PASSWORD] ❌ Unexpected exception: {ex.GetType().FullName}: {ex.Message}");
                 return AuthResult.Fail($"Unexpected error: {ex.Message}");
             }
         }
@@ -139,46 +145,39 @@ namespace CraftConnect_Mobile_App.Services
         // ============================================================
         // SEND OTP  →  POST /api/auth/login/otp/send
         // ============================================================
-        public async Task<AuthResult> SendOtpAsync(OtpSendRequest request)
+        public async Task<AuthResult> SendOtpAsync(OtpSendRequest request, CancellationToken cancellationToken = default)
         {
             Debug.WriteLine($"\n[OTP/SEND START] Phone: {request.Phone}");
 
             try
             {
-                SetJsonHeaders();
-
                 var json = Serialize(request);
                 Debug.WriteLine($"[OTP/SEND] Serialized JSON: {json}");
 
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
                 var endpoint = "/api/auth/login/otp/send";
                 Debug.WriteLine($"[OTP/SEND] Full URL: {_baseUrl}{endpoint}");
-                Debug.WriteLine($"[OTP/SEND] Sending request...");
 
                 var sw = Stopwatch.StartNew();
 
                 HttpResponseMessage response;
                 try
                 {
-                    response = await _httpClient.PostAsync(endpoint, content);
+                    using var message = BuildRequest(HttpMethod.Post, endpoint,
+                        new StringContent(json, Encoding.UTF8, "application/json"));
+                    response = await _httpClient.SendAsync(message, cancellationToken);
                 }
                 catch (HttpRequestException httpEx)
                 {
                     sw.Stop();
                     Debug.WriteLine($"[OTP/SEND] ❌ HttpRequestException after {sw.ElapsedMilliseconds}ms");
                     Debug.WriteLine($"[OTP/SEND] Message: {httpEx.Message}");
-                    Debug.WriteLine($"[OTP/SEND] InnerException type: {httpEx.InnerException?.GetType().FullName}");
-                    Debug.WriteLine($"[OTP/SEND] InnerException message: {httpEx.InnerException?.Message}");
-                    Debug.WriteLine($"[OTP/SEND] InnerException inner: {httpEx.InnerException?.InnerException?.Message}");
+                    Debug.WriteLine($"[OTP/SEND] InnerException: {httpEx.InnerException?.Message}");
                     return AuthResult.Fail("Network error. Check your connection.");
                 }
                 catch (TaskCanceledException tcEx)
                 {
                     sw.Stop();
-                    Debug.WriteLine($"[OTP/SEND] ❌ TaskCanceledException after {sw.ElapsedMilliseconds}ms");
-                    Debug.WriteLine($"[OTP/SEND] Message: {tcEx.Message}");
-                    Debug.WriteLine($"[OTP/SEND] InnerException: {tcEx.InnerException?.Message}");
+                    Debug.WriteLine($"[OTP/SEND] ❌ TaskCanceledException after {sw.ElapsedMilliseconds}ms: {tcEx.Message}");
                     return AuthResult.Fail("Request timed out.");
                 }
 
@@ -188,11 +187,9 @@ namespace CraftConnect_Mobile_App.Services
 
                 if (response.StatusCode == System.Net.HttpStatusCode.NoContent ||
                     response.IsSuccessStatusCode)
-                {
                     return AuthResult.Ok();
-                }
 
-                var body = await response.Content.ReadAsStringAsync();
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
                 Debug.WriteLine($"[OTP/SEND] Error body: {body}");
 
                 var error = TryParseErrors(body);
@@ -204,8 +201,7 @@ namespace CraftConnect_Mobile_App.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[OTP/SEND] ❌ Unexpected exception: {ex.GetType().FullName}");
-                Debug.WriteLine($"[OTP/SEND] Message: {ex.Message}");
+                Debug.WriteLine($"[OTP/SEND] ❌ Unexpected exception: {ex.GetType().FullName}: {ex.Message}");
                 return AuthResult.Fail($"Unexpected error: {ex.Message}");
             }
         }
@@ -213,17 +209,13 @@ namespace CraftConnect_Mobile_App.Services
         // ============================================================
         // VERIFY OTP  →  POST /api/auth/login/otp/verify
         // ============================================================
-        public async Task<AuthResult> VerifyOtpAsync(OtpVerifyRequest request)
+        public async Task<AuthResult> VerifyOtpAsync(OtpVerifyRequest request, CancellationToken cancellationToken = default)
         {
             Debug.WriteLine($"\n[OTP/VERIFY START] Phone: {request.Phone}");
 
             try
             {
-                SetJsonHeaders();
-
                 var json = Serialize(request);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
                 var endpoint = "/api/auth/login/otp/verify";
                 Debug.WriteLine($"[OTP/VERIFY] Full URL: {_baseUrl}{endpoint}");
 
@@ -232,13 +224,14 @@ namespace CraftConnect_Mobile_App.Services
                 HttpResponseMessage response;
                 try
                 {
-                    response = await _httpClient.PostAsync(endpoint, content);
+                    using var message = BuildRequest(HttpMethod.Post, endpoint,
+                        new StringContent(json, Encoding.UTF8, "application/json"));
+                    response = await _httpClient.SendAsync(message, cancellationToken);
                 }
                 catch (HttpRequestException httpEx)
                 {
                     sw.Stop();
-                    Debug.WriteLine($"[OTP/VERIFY] ❌ HttpRequestException after {sw.ElapsedMilliseconds}ms");
-                    Debug.WriteLine($"[OTP/VERIFY] Message: {httpEx.Message}");
+                    Debug.WriteLine($"[OTP/VERIFY] ❌ HttpRequestException after {sw.ElapsedMilliseconds}ms: {httpEx.Message}");
                     Debug.WriteLine($"[OTP/VERIFY] InnerException: {httpEx.InnerException?.Message}");
                     return AuthResult.Fail("Network error. Check your connection.");
                 }
@@ -253,7 +246,7 @@ namespace CraftConnect_Mobile_App.Services
                 Debug.WriteLine($"[OTP/VERIFY] ✅ Got response in {sw.ElapsedMilliseconds}ms");
                 Debug.WriteLine($"[OTP/VERIFY] Status: {(int)response.StatusCode} {response.StatusCode}");
 
-                var body = await response.Content.ReadAsStringAsync();
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
                 Debug.WriteLine($"[OTP/VERIFY] Response: {body}");
 
                 if (response.IsSuccessStatusCode)
@@ -279,45 +272,38 @@ namespace CraftConnect_Mobile_App.Services
         // ============================================================
         // GET CAPTCHA  →  GET /api/auth/captcha
         // ============================================================
-        public async Task<CaptchaResult> GetCaptchaAsync()
+        public async Task<CaptchaResult> GetCaptchaAsync(CancellationToken cancellationToken = default)
         {
             Debug.WriteLine($"\n[CAPTCHA] GET {_baseUrl}/api/auth/captcha");
 
             try
             {
-                SetJsonHeaders();
-
-                Debug.WriteLine($"[CAPTCHA] Sending GET request...");
                 var sw = Stopwatch.StartNew();
 
                 HttpResponseMessage response;
                 try
                 {
-                    response = await _httpClient.GetAsync("/api/auth/captcha");
+                    using var message = BuildRequest(HttpMethod.Get, "/api/auth/captcha");
+                    response = await _httpClient.SendAsync(message, cancellationToken);
                 }
                 catch (HttpRequestException httpEx)
                 {
                     sw.Stop();
-                    Debug.WriteLine($"[CAPTCHA] ❌ HttpRequestException after {sw.ElapsedMilliseconds}ms");
-                    Debug.WriteLine($"[CAPTCHA] Message: {httpEx.Message}");
-                    Debug.WriteLine($"[CAPTCHA] InnerException type: {httpEx.InnerException?.GetType().FullName}");
-                    Debug.WriteLine($"[CAPTCHA] InnerException message: {httpEx.InnerException?.Message}");
-                    Debug.WriteLine($"[CAPTCHA] InnerException inner: {httpEx.InnerException?.InnerException?.Message}");
-                    return new CaptchaResult { Success = false, Question = "What is 5 + 3?", Id = 0 };
+                    Debug.WriteLine($"[CAPTCHA] ❌ HttpRequestException after {sw.ElapsedMilliseconds}ms: {httpEx.Message}");
+                    Debug.WriteLine($"[CAPTCHA] InnerException: {httpEx.InnerException?.Message}");
+                    return FallbackCaptcha();
                 }
                 catch (TaskCanceledException tcEx)
                 {
                     sw.Stop();
-                    Debug.WriteLine($"[CAPTCHA] ❌ Timeout after {sw.ElapsedMilliseconds}ms");
-                    Debug.WriteLine($"[CAPTCHA] Message: {tcEx.Message}");
-                    Debug.WriteLine($"[CAPTCHA] InnerException: {tcEx.InnerException?.Message}");
-                    return new CaptchaResult { Success = false, Question = "What is 5 + 3?", Id = 0 };
+                    Debug.WriteLine($"[CAPTCHA] ❌ Timeout after {sw.ElapsedMilliseconds}ms: {tcEx.Message}");
+                    return FallbackCaptcha();
                 }
 
                 sw.Stop();
                 Debug.WriteLine($"[CAPTCHA] ✅ Got response in {sw.ElapsedMilliseconds}ms");
 
-                var body = await response.Content.ReadAsStringAsync();
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
                 Debug.WriteLine($"[CAPTCHA] Status: {(int)response.StatusCode}, Body: {body}");
 
                 if (response.IsSuccessStatusCode)
@@ -327,29 +313,28 @@ namespace CraftConnect_Mobile_App.Services
                         return new CaptchaResult { Success = true, Id = captcha.Id, Question = captcha.Question };
                 }
 
-                return new CaptchaResult { Success = false, Question = "What is 5 + 3?", Id = 0 };
+                return FallbackCaptcha();
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[CAPTCHA] ❌ Unexpected exception: {ex.GetType().FullName}: {ex.Message}");
-                return new CaptchaResult { Success = false, Question = "What is 5 + 3?", Id = 0 };
+                return FallbackCaptcha();
             }
         }
 
         // ============================================================
         // AUTHENTICATED HELPERS
         // ============================================================
-        public async Task<T?> GetAuthenticatedAsync<T>(string endpoint)
+        public async Task<T?> GetAuthenticatedAsync<T>(string endpoint, CancellationToken cancellationToken = default)
         {
             var token = await GetTokenAsync();
             if (string.IsNullOrEmpty(token))
                 throw new UnauthorizedAccessException("No authentication token found.");
 
-            SetJsonHeaders();
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            using var message = BuildRequest(HttpMethod.Get, endpoint);
+            message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-            var response = await _httpClient.GetAsync(endpoint);
+            var response = await _httpClient.SendAsync(message, cancellationToken);
 
             if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
@@ -358,20 +343,21 @@ namespace CraftConnect_Mobile_App.Services
             }
 
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<T>();
+            return await response.Content.ReadFromJsonAsync<T>(cancellationToken);
         }
 
-        public async Task<TResponse?> PostAuthenticatedAsync<TRequest, TResponse>(string endpoint, TRequest data)
+        public async Task<TResponse?> PostAuthenticatedAsync<TRequest, TResponse>(string endpoint, TRequest data, CancellationToken cancellationToken = default)
         {
             var token = await GetTokenAsync();
             if (string.IsNullOrEmpty(token))
                 throw new UnauthorizedAccessException("No authentication token found.");
 
-            SetJsonHeaders();
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var json = Serialize(data);
+            using var message = BuildRequest(HttpMethod.Post, endpoint,
+                new StringContent(json, Encoding.UTF8, "application/json"));
+            message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-            var response = await _httpClient.PostAsJsonAsync(endpoint, data);
+            var response = await _httpClient.SendAsync(message, cancellationToken);
 
             if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
@@ -380,7 +366,7 @@ namespace CraftConnect_Mobile_App.Services
             }
 
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<TResponse>();
+            return await response.Content.ReadFromJsonAsync<TResponse>(cancellationToken);
         }
 
         // ============================================================
@@ -405,10 +391,26 @@ namespace CraftConnect_Mobile_App.Services
             catch { return string.Empty; }
         }
 
+        /// <summary>
+        /// Checks token exists AND is not expired.
+        /// Replaces the old string-only check to prevent silent 401s.
+        /// </summary>
         public async Task<bool> IsAuthenticatedAsync()
         {
             var token = await GetTokenAsync();
-            return !string.IsNullOrEmpty(token);
+            if (string.IsNullOrEmpty(token)) return false;
+
+            try
+            {
+                var jwt = _jwtHandler.ReadJwtToken(token);
+                // 1-minute buffer so we don't use a token that expires mid-request
+                return jwt.ValidTo > DateTime.UtcNow.AddMinutes(1);
+            }
+            catch
+            {
+                // Malformed token — treat as unauthenticated
+                return false;
+            }
         }
 
         public Task LogoutAsync()
@@ -425,7 +427,8 @@ namespace CraftConnect_Mobile_App.Services
         {
             try
             {
-                var response = await _httpClient.GetAsync("/api/auth/captcha");
+                using var message = BuildRequest(HttpMethod.Get, "/api/auth/captcha");
+                var response = await _httpClient.SendAsync(message);
                 Debug.WriteLine($"[TEST CONNECTION] {(int)response.StatusCode}");
                 return response.IsSuccessStatusCode;
             }
@@ -439,39 +442,39 @@ namespace CraftConnect_Mobile_App.Services
         // ============================================================
         // PRIVATE HELPERS
         // ============================================================
-        private void SetJsonHeaders()
+
+        /// <summary>
+        /// Builds a per-request HttpRequestMessage with standard headers.
+        /// Replaces DefaultRequestHeaders.Clear() which caused race conditions
+        /// when two requests fired simultaneously on the shared HttpClient.
+        /// </summary>
+        private static HttpRequestMessage BuildRequest(HttpMethod method, string endpoint, HttpContent? content = null)
         {
-            _httpClient.DefaultRequestHeaders.Clear();
-            _httpClient.DefaultRequestHeaders.Accept.Clear();
-            _httpClient.DefaultRequestHeaders.Accept.Add(
-                new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
-            _httpClient.DefaultRequestHeaders.Add("X-Requested-With", "Mobile");
+            var msg = new HttpRequestMessage(method, endpoint);
+            msg.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            msg.Headers.Add("X-Requested-With", "Mobile");
+            msg.Content = content;
+            return msg;
         }
 
         private static string Serialize<T>(T obj) =>
-            JsonSerializer.Serialize(obj, new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                WriteIndented = false,
-                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-            });
+            JsonSerializer.Serialize(obj, _serializeOpts);
 
         private static T? Deserialize<T>(string json) =>
-            JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            JsonSerializer.Deserialize<T>(json, _deserializeOpts);
 
         private static string? TryParseErrors(string body)
         {
             try
             {
-                var err = JsonSerializer.Deserialize<ErrorResponse>(body,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                var err = JsonSerializer.Deserialize<ErrorResponse>(body, _deserializeOpts);
                 return err?.Errors?.FirstOrDefault();
             }
             catch { return null; }
         }
+
+        private static CaptchaResult FallbackCaptcha() =>
+            new() { Success = false, Question = "What is 5 + 3?", Id = 0 };
     }
 
     // ============================================================

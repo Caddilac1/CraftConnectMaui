@@ -1,23 +1,42 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <resources>
-	<!-- Splash Theme -->
+
+	<!-- ── Splash Theme ── -->
 	<style name="Maui.SplashTheme" parent="Theme.SplashScreen">
 		<item name="android:windowBackground">@color/splash_background</item>
 		<item name="colorPrimary">#5F67EA</item>
-
-		<!-- CRITICAL: Navigation bar settings -->
-		<item name="android:navigationBarColor">@android:color/transparent</item>
-		<item name="android:windowTranslucentNavigation">true</item>
-		<item name="android:enforceNavigationBarContrast">false</item>
-
-		<!-- Make status bar transparent as well -->
 		<item name="android:statusBarColor">@android:color/transparent</item>
-
-		<!-- Enable edge-to-edge -->
+		<item name="android:navigationBarColor">@android:color/transparent</item>
+		<item name="android:enforceNavigationBarContrast">false</item>
 		<item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
 		<item name="android:windowDrawsSystemBarBackgrounds">true</item>
 	</style>
 
-	<!-- Colors -->
+	<!-- ── Main App Theme ── -->
+	<style name="Maui.MainTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+		<item name="windowActionBar">false</item>
+		<item name="windowNoTitle">true</item>
+
+		<!-- Status bar: transparent, dark icons on light backgrounds -->
+		<item name="android:statusBarColor">@android:color/transparent</item>
+		<item name="android:windowTranslucentStatus">false</item>
+		<item name="android:windowLightStatusBar">true</item>
+
+		<!-- Nav bar: transparent, light icons -->
+		<!-- windowTranslucentNavigation intentionally removed — -->
+		<!-- conflicts with SetDecorFitsSystemWindows(false) in MainActivity -->
+		<item name="android:navigationBarColor">@android:color/transparent</item>
+		<item name="android:enforceNavigationBarContrast">false</item>
+		<item name="android:windowLightNavigationBar">true</item>
+
+		<!-- Edge-to-edge -->
+		<item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+		<item name="android:windowDrawsSystemBarBackgrounds">true</item>
+
+		<item name="colorPrimary">#5F67EA</item>
+	</style>
+
+	<!-- ── Colors ── -->
 	<color name="splash_background">#5F67EA</color>
+
 </resources>

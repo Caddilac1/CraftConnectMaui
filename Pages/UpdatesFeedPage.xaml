@@ -50,7 +50,7 @@
         <!-- ========================================
              MAIN CONTENT - HORIZONTAL SCROLLING
              ======================================== -->
-        <RefreshView Grid.Row="1" 
+        <RefreshView Grid.Row="1"
                      IsRefreshing="{Binding IsRefreshing}"
                      Command="{Binding RefreshCommand}"
                      RefreshColor="#5F67EA">
@@ -59,7 +59,7 @@
                         x:Name="MainScrollView">
                 <VerticalStackLayout Padding="0,16,0,80" Spacing="20">
 
-                    <!-- Featured Feeds Section - Horizontal Scroll -->
+                    <!-- Featured Feeds Section -->
                     <VerticalStackLayout Spacing="12" IsVisible="{Binding HasFeaturedFeeds}">
                         <Label Text="Featured Feeds"
                                FontSize="18"
@@ -67,7 +67,7 @@
                                TextColor="#1A1D1F"
                                Margin="16,0"/>
 
-                        <ScrollView Orientation="Horizontal" 
+                        <ScrollView Orientation="Horizontal"
                                    HorizontalScrollBarVisibility="Never"
                                    Margin="16,0">
                             <HorizontalStackLayout Spacing="12">
@@ -87,13 +87,8 @@
                                                 <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.FeedTappedCommand}"
                                                                     CommandParameter="{Binding .}"/>
                                             </Frame.GestureRecognizers>
-
                                             <Grid>
-                                                <!-- Background Image -->
-                                                <Image Source="{Binding ImageUrl}"
-                                                       Aspect="AspectFill"/>
-
-                                                <!-- Overlay Content -->
+                                                <Image Source="{Binding ImageUrl}" Aspect="AspectFill"/>
                                                 <VerticalStackLayout Padding="12"
                                                                    Spacing="4"
                                                                    VerticalOptions="End"
@@ -102,7 +97,6 @@
                                                            FontSize="10"
                                                            TextColor="#5F67EA"
                                                            FontAttributes="Bold"/>
-
                                                     <Label Text="{Binding Title}"
                                                            FontSize="14"
                                                            FontAttributes="Bold"
@@ -118,7 +112,7 @@
                         </ScrollView>
                     </VerticalStackLayout>
 
-                    <!-- All Feeds Section - HORIZONTAL SCROLL WITH INDICATORS -->
+                    <!-- All Feeds Section -->
                     <VerticalStackLayout Spacing="12">
                         <HorizontalStackLayout Margin="16,0"
                                               Spacing="8"
@@ -128,13 +122,11 @@
                                    FontAttributes="Bold"
                                    TextColor="#1A1D1F"
                                    HorizontalOptions="StartAndExpand"/>
-
                             <Label Text="{Binding FeedCount}"
                                    FontSize="12"
                                    TextColor="#6B7280"/>
                         </HorizontalStackLayout>
 
-                        <!-- HORIZONTAL FEED CARDS - Using ScrollView for Smooth Performance -->
                         <ScrollView x:Name="FeedsScrollView"
                                    Orientation="Horizontal"
                                    HorizontalScrollBarVisibility="Never"
@@ -156,35 +148,28 @@
                                                VerticalOptions="Start">
 
                                             <VerticalStackLayout Spacing="10">
-                                                <!-- Author Info -->
                                                 <HorizontalStackLayout Spacing="8">
                                                     <Label Text="{Binding Author}"
                                                            FontSize="14"
                                                            FontAttributes="Bold"
                                                            TextColor="#1A1D1F"
                                                            VerticalOptions="Center"/>
-                                                    <Label Text="•"
-                                                           FontSize="12"
-                                                           TextColor="#6B7280"
-                                                           VerticalOptions="Center"/>
+                                                    <Label Text="•" FontSize="12" TextColor="#6B7280" VerticalOptions="Center"/>
                                                     <Label Text="{Binding TimeAgo}"
                                                            FontSize="12"
                                                            TextColor="#6B7280"
                                                            VerticalOptions="Center"/>
                                                 </HorizontalStackLayout>
 
-                                                <!-- Main Image -->
                                                 <Frame CornerRadius="12"
                                                        Padding="0"
                                                        HasShadow="False"
                                                        IsClippedToBounds="True"
                                                        BorderColor="Transparent"
                                                        HeightRequest="180">
-                                                    <Image Source="{Binding ImageUrl}"
-                                                           Aspect="AspectFill"/>
+                                                    <Image Source="{Binding ImageUrl}" Aspect="AspectFill"/>
                                                 </Frame>
 
-                                                <!-- Category Badge -->
                                                 <Border BackgroundColor="#EEF0FF"
                                                        Padding="10,6"
                                                        StrokeThickness="0"
@@ -198,7 +183,6 @@
                                                            FontAttributes="Bold"/>
                                                 </Border>
 
-                                                <!-- Title -->
                                                 <Label Text="{Binding Title}"
                                                        FontSize="16"
                                                        FontAttributes="Bold"
@@ -211,48 +195,33 @@
                                                     </Label.GestureRecognizers>
                                                 </Label>
 
-                                                <!-- Description -->
                                                 <Label Text="{Binding Description}"
                                                        FontSize="13"
                                                        TextColor="#6B7280"
                                                        MaxLines="2"
                                                        LineBreakMode="TailTruncation"/>
 
-                                                <!-- Location -->
                                                 <HorizontalStackLayout Spacing="4" IsVisible="{Binding Location, Converter={StaticResource IsNotNullOrEmptyConverter}}">
                                                     <Label Text="📍" FontSize="13"/>
-                                                    <Label Text="{Binding Location}"
-                                                           FontSize="13"
-                                                           TextColor="#6B7280"/>
+                                                    <Label Text="{Binding Location}" FontSize="13" TextColor="#6B7280"/>
                                                 </HorizontalStackLayout>
 
-                                                <!-- Stats Row -->
                                                 <HorizontalStackLayout Spacing="16">
                                                     <HorizontalStackLayout Spacing="4">
                                                         <Label Text="👁️" FontSize="13"/>
-                                                        <Label Text="{Binding ViewsCount}"
-                                                               FontSize="13"
-                                                               TextColor="#6B7280"/>
+                                                        <Label Text="{Binding ViewsCount}" FontSize="13" TextColor="#6B7280"/>
                                                     </HorizontalStackLayout>
-
                                                     <HorizontalStackLayout Spacing="4">
                                                         <Label Text="👍" FontSize="13"/>
-                                                        <Label Text="{Binding LikesCount}"
-                                                               FontSize="13"
-                                                               TextColor="#6B7280"/>
+                                                        <Label Text="{Binding LikesCount}" FontSize="13" TextColor="#6B7280"/>
                                                     </HorizontalStackLayout>
-
                                                     <HorizontalStackLayout Spacing="4">
                                                         <Label Text="💬" FontSize="13"/>
-                                                        <Label Text="{Binding CommentsCount}"
-                                                               FontSize="13"
-                                                               TextColor="#6B7280"/>
+                                                        <Label Text="{Binding CommentsCount}" FontSize="13" TextColor="#6B7280"/>
                                                     </HorizontalStackLayout>
                                                 </HorizontalStackLayout>
 
-                                                <!-- Action Buttons -->
                                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,8,0,0">
-                                                    <!-- Send Proposal Button -->
                                                     <Button Grid.Column="0"
                                                             Text="📨 Send Proposal"
                                                             BackgroundColor="#5F67EA"
@@ -263,8 +232,6 @@
                                                             HeightRequest="44"
                                                             Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.SendProposalCommand}"
                                                             CommandParameter="{Binding .}"/>
-
-                                                    <!-- Like Button -->
                                                     <Button Grid.Column="1"
                                                             Text="👍"
                                                             BackgroundColor="#F3F4F6"
@@ -276,8 +243,6 @@
                                                             Padding="0"
                                                             Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.LikeFeedCommand}"
                                                             CommandParameter="{Binding .}"/>
-
-                                                    <!-- Favorite Button -->
                                                     <Button Grid.Column="2"
                                                             Text="{Binding FavoriteIcon}"
                                                             BackgroundColor="#F3F4F6"
@@ -296,33 +261,26 @@
                             </HorizontalStackLayout>
                         </ScrollView>
 
-                        <!-- SCROLL INDICATORS - Progress Dots -->
                         <HorizontalStackLayout x:Name="ScrollIndicators"
                                               HorizontalOptions="Center"
                                               Spacing="6"
                                               Margin="0,12,0,16"
                                               BackgroundColor="Transparent"
-                                              IsVisible="{Binding AllFeeds.Count}">
-                            <!-- Dots will be added dynamically in code-behind -->
-                        </HorizontalStackLayout>
+                                              IsVisible="{Binding AllFeeds.Count}"/>
                     </VerticalStackLayout>
 
-                    <!-- Loading Indicator -->
                     <ActivityIndicator IsRunning="{Binding IsLoadingMore}"
                                      IsVisible="{Binding IsLoadingMore}"
                                      Color="#5F67EA"
                                      HeightRequest="50"
                                      Margin="16,0,16,20"/>
 
-                    <!-- Empty State -->
                     <VerticalStackLayout IsVisible="{Binding IsEmpty}"
                                         Spacing="16"
                                         Padding="32"
                                         VerticalOptions="Center"
                                         HorizontalOptions="Center">
-                        <Label Text="📭"
-                               FontSize="64"
-                               HorizontalOptions="Center"/>
+                        <Label Text="📭" FontSize="64" HorizontalOptions="Center"/>
                         <Label Text="No updates available"
                                FontSize="18"
                                FontAttributes="Bold"
@@ -347,6 +305,9 @@
         <!-- ========================================
              BOTTOM NAVIGATION
              ======================================== -->
-        <controls:BottomNavBar Grid.Row="2" ActiveTab="Updates"/>
+        <!-- CHANGE: added x:Name="BottomNav" -->
+        <controls:BottomNavBar x:Name="BottomNav"
+                               Grid.Row="2"
+                               ActiveTab="Updates"/>
     </Grid>
 </ContentPage>

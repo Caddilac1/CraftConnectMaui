@@ -11,15 +11,17 @@ namespace CraftConnect_Mobile_App
         {
             InitializeComponent();
 
-            // Register modal/detail pages that aren't in the Shell hierarchy
-            // These pages are navigated to using Shell.GoToAsync()
+            // Kill ALL Shell chrome — background, navbar, tabbar
+            this.BackgroundColor = Colors.Transparent;
+            Shell.SetBackgroundColor(this, Colors.Transparent);
+            Shell.SetNavBarIsVisible(this, false);
+            Shell.SetTabBarIsVisible(this, false);
+            Shell.SetTabBarBackgroundColor(this, Colors.Transparent);
+            Shell.SetNavBarHasShadow(this, false);
 
-            // ✅ Register ChatPage with simple route name to avoid conflicts
             Routing.RegisterRoute("chat", typeof(ChatPage));
             Routing.RegisterRoute("store", typeof(StorePage));
             Routing.RegisterRoute(nameof(OtpVerificationPage), typeof(OtpVerificationPage));
-            Routing.RegisterRoute("main/UpdatesFeedPage", typeof(UpdatesFeedPage));
-            Routing.RegisterRoute("SettingsPage", typeof(SettingsPage));
             Routing.RegisterRoute("aifeedchat", typeof(AiFeedChatPage));
             Routing.RegisterRoute("ImageViewerPage", typeof(ImageViewerPage));
             Routing.RegisterRoute("ProfileSettingsPage", typeof(Pages.ProfileSettingsPage));
@@ -29,10 +31,6 @@ namespace CraftConnect_Mobile_App
             Routing.RegisterRoute("PaymentMethodsPage", typeof(Pages.PaymentMethodsPage));
             Routing.RegisterRoute("HelpSupportPage", typeof(Pages.HelpSupportPage));
 
-            // Note: LoginPage and GroupChatListPage don't need registration
-            // because they're already defined in AppShell.xaml as ShellContent
-
-            // Apply insets when Shell appears and when navigation occurs
             this.Appearing += AppShell_Appearing;
             this.Navigated += AppShell_Navigated;
         }
@@ -44,6 +42,11 @@ namespace CraftConnect_Mobile_App
 
         private void AppShell_Navigated(object sender, ShellNavigatedEventArgs e)
         {
+            // Re-suppress Shell chrome on every navigation in case MAUI re-applies it
+            Shell.SetTabBarIsVisible(this, false);
+            Shell.SetTabBarBackgroundColor(this, Colors.Transparent);
+            Shell.SetNavBarIsVisible(this, false);
+
             ApplyInsetsIfAndroid();
         }
 
@@ -53,21 +56,13 @@ namespace CraftConnect_Mobile_App
             try
             {
                 var bottom = Platforms.Android.AndroidInsetService.GetNavigationBarHeight();
-
-                // Apply to the currently displayed page
                 var current = Shell.Current?.CurrentPage;
                 if (current != null)
-                {
                     PageInsetManager.ApplyInsetToPage(current, bottom);
-                }
 
-                // Also apply to top modal page if any
                 var modalStack = Shell.Current?.Navigation?.ModalStack;
                 if (modalStack != null && modalStack.Count > 0)
-                {
-                    var topModal = modalStack.Last();
-                    PageInsetManager.ApplyInsetToPage(topModal, bottom);
-                }
+                    PageInsetManager.ApplyInsetToPage(modalStack.Last(), bottom);
             }
             catch (Exception)
             {
