@@ -30,16 +30,9 @@ namespace CraftConnect_Mobile_App
             Routing.RegisterRoute("PrivacySecurityPage", typeof(Pages.PrivacySecurityPage));
             Routing.RegisterRoute("PaymentMethodsPage", typeof(Pages.PaymentMethodsPage));
             Routing.RegisterRoute("HelpSupportPage", typeof(Pages.HelpSupportPage));
-            // AppShell.xaml.cs constructor
             Routing.RegisterRoute(nameof(Pages.RegisterPage), typeof(Pages.RegisterPage));
 
-            this.Appearing += AppShell_Appearing;
             this.Navigated += AppShell_Navigated;
-        }
-
-        private void AppShell_Appearing(object sender, EventArgs e)
-        {
-            ApplyInsetsIfAndroid();
         }
 
         private void AppShell_Navigated(object sender, ShellNavigatedEventArgs e)
@@ -48,29 +41,6 @@ namespace CraftConnect_Mobile_App
             Shell.SetTabBarIsVisible(this, false);
             Shell.SetTabBarBackgroundColor(this, Colors.Transparent);
             Shell.SetNavBarIsVisible(this, false);
-
-            ApplyInsetsIfAndroid();
-        }
-
-        private void ApplyInsetsIfAndroid()
-        {
-#if ANDROID
-            try
-            {
-                var bottom = Platforms.Android.AndroidInsetService.GetNavigationBarHeight();
-                var current = Shell.Current?.CurrentPage;
-                if (current != null)
-                    PageInsetManager.ApplyInsetToPage(current, bottom);
-
-                var modalStack = Shell.Current?.Navigation?.ModalStack;
-                if (modalStack != null && modalStack.Count > 0)
-                    PageInsetManager.ApplyInsetToPage(modalStack.Last(), bottom);
-            }
-            catch (Exception)
-            {
-                // swallow
-            }
-#endif
         }
     }
 }

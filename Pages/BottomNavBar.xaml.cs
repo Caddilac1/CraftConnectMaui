@@ -1,17 +1,20 @@
-﻿using System.Diagnostics;
+﻿using Microsoft.Maui.Controls.Shapes;
+using System.Diagnostics;
+using MauiPath = Microsoft.Maui.Controls.Shapes.Path;
 
-namespace CraftConnect_Mobile_App.Controls
+namespace CraftConnect_Mobile_App.Pages
 {
     public partial class BottomNavBar : ContentView
     {
-        // Bindable property to track active tab
+        // ── Bindable property ────────────────────────────────────────────────
         public static readonly BindableProperty ActiveTabProperty =
             BindableProperty.Create(
                 nameof(ActiveTab),
                 typeof(string),
                 typeof(BottomNavBar),
                 "Chats",
-                BindingMode.TwoWay);
+                BindingMode.TwoWay,
+                propertyChanged: OnActiveTabChanged);
 
         public string ActiveTab
         {
@@ -19,130 +22,119 @@ namespace CraftConnect_Mobile_App.Controls
             set => SetValue(ActiveTabProperty, value);
         }
 
+        private static void OnActiveTabChanged(BindableObject bindable, object oldValue, object newValue)
+        {
+            if (bindable is BottomNavBar nav && newValue is string tab)
+                nav.ApplyActiveState(tab);
+        }
+
+        // ── Route map ────────────────────────────────────────────────────────
+        private static readonly IReadOnlyDictionary<string, string> RouteMap =
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                { "Updates",  "//UpdatesFeedPage"  },
+                { "Contacts", "//ContactsPage"     },
+                { "Chats",    "//GroupChatListPage" },
+                { "Store",    "//StorePage"         },
+                { "Settings", "//SettingsPage"      },
+            };
+
+        private static readonly string[] TabKeys =
+            ["Updates", "Contacts", "Chats", "Store", "Settings"];
+
+        private static readonly Color ActiveColor = Color.FromArgb("#2563EB");
+        private static readonly Color InactiveColor = Color.FromArgb("#6B7280");
+
+        private volatile bool _isNavigating;
+
+        // ── Constructor ──────────────────────────────────────────────────────
         public BottomNavBar()
         {
             InitializeComponent();
+            Loaded += (_, _) => ApplyActiveState(ActiveTab);
         }
 
-        private async void OnUpdatesTapped(object sender, EventArgs e)
+        // ── Visual state ─────────────────────────────────────────────────────
+        private (BoxView Pill, MauiPath Icon, Label Text)[] NavGroups() =>
+        [
+            (UpdatesPill,  UpdatesIcon,  UpdatesLabel),
+            (ContactsPill, ContactsIcon, ContactsLabel),
+            (ChatsPill,    ChatsIcon,    ChatsLabel),
+            (StorePill,    StoreIcon,    StoreLabel),
+            (ProfilePill,  ProfileIcon,  ProfileLabel),
+        ];
+
+        private void ApplyActiveState(string? tab)
         {
-            Debug.WriteLine("[BOTTOM NAV] Updates tapped - Navigating to updates feed");
-
-            // Don't navigate if already on this page
-            if (ActiveTab == "Updates")
+            var groups = NavGroups();
+            for (int i = 0; i < groups.Length; i++)
             {
-                Debug.WriteLine("[BOTTOM NAV] Already on Updates page, skipping navigation");
-                return;
-            }
+                bool active = TabKeys[i] == tab;
+                var (pill, icon, label) = groups[i];
 
-            ActiveTab = "Updates";
-
-            try
-            {
-                // Navigate to the UpdatesFeedPage using Shell navigation
-                await Shell.Current.GoToAsync("//main/UpdatesFeedPage");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[BOTTOM NAV] ❌ Navigation error: {ex.Message}");
-                await Shell.Current.DisplayAlert("Navigation Error", "Could not navigate to Updates page", "OK");
-            }
-        }
-
-        private async void OnContactsTapped(object sender, EventArgs e)
-        {
-            Debug.WriteLine("[BOTTOM NAV] Contacts tapped");
-
-            // Don't navigate if already on this page
-            if (ActiveTab == "Contacts")
-            {
-                Debug.WriteLine("[BOTTOM NAV] Already on Contacts page, skipping navigation");
-                return;
-            }
-
-            ActiveTab = "Contacts";
-
-            try
-            {
-                // TODO: Update route when ContactsPage is created
-                // await Shell.Current.GoToAsync("//main/ContactsPage");
-                await Shell.Current.DisplayAlert("Coming Soon", "Contacts feature coming soon!", "OK");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[BOTTOM NAV] ❌ Navigation error: {ex.Message}");
+                pill.IsVisible = active;
+                icon.Fill = active ? new SolidColorBrush(ActiveColor)
+                                              : new SolidColorBrush(InactiveColor);
+                label.TextColor = active ? ActiveColor : InactiveColor;
+                label.FontAttributes = active ? FontAttributes.Bold : FontAttributes.None;
             }
         }
 
-        private async void OnChatsTapped(object sender, EventArgs e)
+        // ── Tap handlers ─────────────────────────────────────────────────────
+        private void OnUpdatesTapped(object sender, EventArgs e) => TryNavigate("Updates");
+        private void OnContactsTapped(object sender, EventArgs e) => TryNavigate("Contacts");
+        private void OnChatsTapped(object sender, EventArgs e) => TryNavigate("Chats");
+        private void OnStoreTapped(object sender, EventArgs e) => TryNavigate("Store");
+        private void OnProfileTapped(object sender, EventArgs e) => TryNavigate("Settings");
+
+        // ── Core navigation ──────────────────────────────────────────────────
+        private async void TryNavigate(string tab)
         {
-            Debug.WriteLine("[BOTTOM NAV] Chats tapped - Navigating to chat list");
-
-            // Don't navigate if already on this page
-            if (ActiveTab == "Chats")
-            {
-                Debug.WriteLine("[BOTTOM NAV] Already on Chats page, skipping navigation");
-                return;
-            }
-
-            ActiveTab = "Chats";
+            if (ActiveTab == tab) return;
+            if (_isNavigating) return;
+            _isNavigating = true;
 
             try
             {
-                // Navigate back to the main chat list page
-                await Shell.Current.GoToAsync("//main/GroupChatListPage");
+                ActiveTab = tab;
+
+                if (!RouteMap.TryGetValue(tab, out var route))
+                {
+                    Debug.WriteLine($"[NAV] Unknown tab: {tab}");
+                    return;
+                }
+
+                await Shell.Current.GoToAsync(route);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[BOTTOM NAV] ❌ Navigation error: {ex.Message}");
+                Debug.WriteLine($"[NAV] ❌ {tab}: {ex.Message}");
+            }
+            finally
+            {
+                _isNavigating = false;
             }
         }
 
-        private async void OnStoreTapped(object sender, EventArgs e)
+        // ── Public API ───────────────────────────────────────────────────────
+        public void SyncTab(string tabKey)
         {
-            Debug.WriteLine("[BOTTOM NAV] Store tapped - Navigating to store");
-
-            // Don't navigate if already on this page
-            if (ActiveTab == "Store")
-            {
-                Debug.WriteLine("[BOTTOM NAV] Already on Store page, skipping navigation");
-                return;
-            }
-
-            ActiveTab = "Store";
-
-            try
-            {
-                await Shell.Current.GoToAsync("store");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[BOTTOM NAV] ❌ Navigation error: {ex.Message}");
-            }
+            if (string.IsNullOrWhiteSpace(tabKey)) return;
+            if (ActiveTab == tabKey) return;
+            SetValue(ActiveTabProperty, tabKey);
         }
 
-        private async void OnSettingsTapped(object sender, EventArgs e)
+        public void SetBadgeVisible(string tabKey, bool visible)
         {
-            Debug.WriteLine("[BOTTOM NAV] Settings tapped - Navigating to settings");
-
-            // Don't navigate if already on this page
-            if (ActiveTab == "Settings")
+            Ellipse? badge = tabKey switch
             {
-                Debug.WriteLine("[BOTTOM NAV] Already on Settings page, skipping navigation");
-                return;
-            }
-
-            ActiveTab = "Settings";
-
-            try
-            {
-                await Shell.Current.GoToAsync("//main/SettingsPage");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[BOTTOM NAV] ❌ Navigation error: {ex.Message}");
-                await Shell.Current.DisplayAlert("Navigation Error", "Could not navigate to Settings page", "OK");
-            }
+                "Updates" => UpdatesBadge,
+                "Contacts" => ContactsBadge,
+                "Chats" => ChatsBadge,
+                "Settings" => ProfileBadge,
+                _ => null
+            };
+            if (badge is not null) badge.IsVisible = visible;
         }
     }
 }

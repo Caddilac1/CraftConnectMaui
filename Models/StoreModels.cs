@@ -41,6 +41,18 @@ namespace CraftConnect_Mobile_App.Models
         public string DisplayPrice => RequiresQuote ? "Get Quote" : $"${Price:N2}";
         public string ActionButtonText => Type == StoreItemType.Product ? "Add to Cart" : (RequiresQuote ? "Request Quote" : "Book Service");
         public string TypeBadge => Type == StoreItemType.Product ? "Product" : "Service";
+
+        // ─────────────────────────────────────────────────────────────────
+        // ADD THESE TWO PROPERTIES to your existing StoreItem model class
+        // ─────────────────────────────────────────────────────────────────
+
+        // The backend ProductCompanyBusinessLocationId — used for cart/order API calls.
+        // The Guid Id is kept for local list operations; ApiProductId is the real DB key.
+        public int ApiProductId { get; set; }
+
+        // Set when a promotional price is active. Null means no discount.
+        // The UI can show a strikethrough on OriginalPrice alongside the discounted Price.
+        public decimal? OriginalPrice { get; set; }
     }
 
     /// <summary>

@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<color name="colorPrimary">#512BD4</color>
-	<color name="colorPrimaryDark">#2B0B98</color>
-	<color name="colorAccent">#2B0B98</color>
-	<color name="navigationBarColor">#FFFFFF</color>
+	<color name="colorPrimary">#5F67EA</color>
+	<color name="colorPrimaryDark">#5F67EA</color>
+	<color name="colorAccent">#5F67EA</color>
+
+	<!-- Dark grey used for the 3-button navigation bar —
+	     matches the spanner/header background on the login page -->
+	<color name="navBarColor">#1B2B3A</color>
 </resources>

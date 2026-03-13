@@ -2,7 +2,6 @@
 using Android.Content.PM;
 using Android.OS;
 using Android.Views;
-using AndroidX.Core.View;
 
 namespace CraftConnect_Mobile_App
 {
@@ -24,44 +23,53 @@ namespace CraftConnect_Mobile_App
             {
                 Window?.SetSoftInputMode(SoftInput.AdjustResize | SoftInput.StateHidden);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine(
                     $"[MainActivity] ❌ SoftInputMode error: {ex.Message}");
             }
 
-            ConfigureWindowInsets();
-        }
-
-        private void ConfigureWindowInsets()
-        {
-            if (Window == null) return;
-
             try
             {
-                Window.SetStatusBarColor(Android.Graphics.Color.Transparent);
+                if (Window == null) return;
+
+                // Black status bar, white icons
+                Window.SetStatusBarColor(Android.Graphics.Color.Black);
+
+                // Dark grey nav bar matching app header, white icons
                 Window.SetNavigationBarColor(
-                    Android.Graphics.Color.ParseColor("#F2F4F7"));
-
-                // Edge-to-edge — content draws behind system bars
-                WindowCompat.SetDecorFitsSystemWindows(Window, false);
-
-                // #1B2B3A matches LoginPage background — the FIRST page shown.
-                // Each subsequent page uses its own BoxView to fill the status
-                // bar area with the correct color for that page.
-                Window.DecorView.SetBackgroundColor(
                     Android.Graphics.Color.ParseColor("#1B2B3A"));
 
+                // Disable contrast enforcement so Android doesn't override colors
                 if (Build.VERSION.SdkInt >= BuildVersionCodes.Q)
+                {
+                    Window.StatusBarContrastEnforced = false;
                     Window.NavigationBarContrastEnforced = false;
+                }
 
-                System.Diagnostics.Debug.WriteLine(
-                    "[MainActivity] ✅ Window insets configured (edge-to-edge)");
+                // Clear light icon flags so icons show white on dark backgrounds
+                if (Build.VERSION.SdkInt >= BuildVersionCodes.R)
+                {
+                    Window.InsetsController?.SetSystemBarsAppearance(
+                        0,
+                        (int)WindowInsetsControllerAppearance.LightStatusBars |
+                        (int)WindowInsetsControllerAppearance.LightNavigationBars);
+                }
+                else if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+                {
+#pragma warning disable CA1422
+                    var flags = Window.DecorView.SystemUiVisibility;
+                    flags &= ~(Android.Views.StatusBarVisibility)
+                                (SystemUiFlags.LightStatusBar |
+                                 SystemUiFlags.LightNavigationBar);
+                    Window.DecorView.SystemUiVisibility = flags;
+#pragma warning restore CA1422
+                }
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine(
-                    $"[MainActivity] ❌ Window insets error: {ex.Message}");
+                    $"[MainActivity] ❌ Bar color error: {ex.Message}");
             }
         }
     }

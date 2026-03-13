@@ -13,7 +13,6 @@ namespace CraftConnect_Mobile_App.Services
         private readonly HttpClient _httpClient;
         private readonly string _baseUrl;
 
-        // ── Static options — created once, reused forever (major speed win) ──
         private static readonly JsonSerializerOptions _serializeOpts = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -34,8 +33,6 @@ namespace CraftConnect_Mobile_App.Services
 
             Debug.WriteLine($"[AUTH SERVICE] BaseUrl: '{_baseUrl}'");
 
-            // DEBUG: SSL bypass enabled for development (self-signed certs).
-            // RELEASE: Full certificate validation is enforced — no bypass.
 #if ANDROID && DEBUG
             Debug.WriteLine("[AUTH SERVICE] Platform: ANDROID DEBUG — SSL bypass ON (dev only)");
             var handler = new Xamarin.Android.Net.AndroidMessageHandler
@@ -67,7 +64,7 @@ namespace CraftConnect_Mobile_App.Services
             _httpClient = new HttpClient(handler)
             {
                 BaseAddress = new Uri(_baseUrl),
-                Timeout = TimeSpan.FromSeconds(15) // Reduced from 30s — better UX on mobile
+                Timeout = TimeSpan.FromSeconds(15)
             };
 
             Debug.WriteLine($"[AUTH SERVICE] Initialized. BaseAddress: {_httpClient.BaseAddress}, Timeout: {_httpClient.Timeout.TotalSeconds}s");
@@ -83,8 +80,6 @@ namespace CraftConnect_Mobile_App.Services
             try
             {
                 var json = Serialize(request);
-                Debug.WriteLine($"[LOGIN/PASSWORD] Serialized JSON: {json}");
-
                 var endpoint = "/api/auth/login/password";
                 Debug.WriteLine($"[LOGIN/PASSWORD] Full URL: {_baseUrl}{endpoint}");
 
@@ -100,30 +95,24 @@ namespace CraftConnect_Mobile_App.Services
                 catch (HttpRequestException httpEx)
                 {
                     sw.Stop();
-                    Debug.WriteLine($"[LOGIN/PASSWORD] ❌ HttpRequestException after {sw.ElapsedMilliseconds}ms");
-                    Debug.WriteLine($"[LOGIN/PASSWORD] Message: {httpEx.Message}");
-                    Debug.WriteLine($"[LOGIN/PASSWORD] StatusCode: {httpEx.StatusCode}");
-                    Debug.WriteLine($"[LOGIN/PASSWORD] InnerException: {httpEx.InnerException?.Message}");
+                    Debug.WriteLine($"[LOGIN/PASSWORD] ❌ HttpRequestException after {sw.ElapsedMilliseconds}ms: {httpEx.Message}");
                     return AuthResult.Fail("Network error. Check your connection.");
                 }
                 catch (TaskCanceledException tcEx)
                 {
                     sw.Stop();
-                    Debug.WriteLine($"[LOGIN/PASSWORD] ❌ TaskCanceledException after {sw.ElapsedMilliseconds}ms: {tcEx.Message}");
+                    Debug.WriteLine($"[LOGIN/PASSWORD] ❌ Timeout after {sw.ElapsedMilliseconds}ms: {tcEx.Message}");
                     return AuthResult.Fail("Request timed out. Check your network connection.");
                 }
 
                 sw.Stop();
-                Debug.WriteLine($"[LOGIN/PASSWORD] ✅ Got response in {sw.ElapsedMilliseconds}ms");
-                Debug.WriteLine($"[LOGIN/PASSWORD] Status: {(int)response.StatusCode} {response.StatusCode}");
+                Debug.WriteLine($"[LOGIN/PASSWORD] ✅ {sw.ElapsedMilliseconds}ms — Status: {(int)response.StatusCode}");
 
                 var body = await response.Content.ReadAsStringAsync(cancellationToken);
-                Debug.WriteLine($"[LOGIN/PASSWORD] Response body: {body}");
 
                 if (response.IsSuccessStatusCode)
                 {
                     var tokenResponse = Deserialize<TokenResponse>(body);
-                    Debug.WriteLine($"[LOGIN/PASSWORD] Token parsed: {!string.IsNullOrEmpty(tokenResponse?.Token)}");
                     if (!string.IsNullOrEmpty(tokenResponse?.Token))
                     {
                         await SaveTokenAsync(tokenResponse.Token);
@@ -131,13 +120,11 @@ namespace CraftConnect_Mobile_App.Services
                     }
                 }
 
-                var error = TryParseErrors(body);
-                Debug.WriteLine($"[LOGIN/PASSWORD] Error parsed: {error}");
-                return AuthResult.Fail(error ?? $"Login failed ({(int)response.StatusCode})");
+                return AuthResult.Fail(TryParseErrors(body) ?? $"Login failed ({(int)response.StatusCode})");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[LOGIN/PASSWORD] ❌ Unexpected exception: {ex.GetType().FullName}: {ex.Message}");
+                Debug.WriteLine($"[LOGIN/PASSWORD] ❌ {ex.GetType().FullName}: {ex.Message}");
                 return AuthResult.Fail($"Unexpected error: {ex.Message}");
             }
         }
@@ -152,10 +139,7 @@ namespace CraftConnect_Mobile_App.Services
             try
             {
                 var json = Serialize(request);
-                Debug.WriteLine($"[OTP/SEND] Serialized JSON: {json}");
-
                 var endpoint = "/api/auth/login/otp/send";
-                Debug.WriteLine($"[OTP/SEND] Full URL: {_baseUrl}{endpoint}");
 
                 var sw = Stopwatch.StartNew();
 
@@ -169,29 +153,24 @@ namespace CraftConnect_Mobile_App.Services
                 catch (HttpRequestException httpEx)
                 {
                     sw.Stop();
-                    Debug.WriteLine($"[OTP/SEND] ❌ HttpRequestException after {sw.ElapsedMilliseconds}ms");
-                    Debug.WriteLine($"[OTP/SEND] Message: {httpEx.Message}");
-                    Debug.WriteLine($"[OTP/SEND] InnerException: {httpEx.InnerException?.Message}");
+                    Debug.WriteLine($"[OTP/SEND] ❌ {sw.ElapsedMilliseconds}ms: {httpEx.Message}");
                     return AuthResult.Fail("Network error. Check your connection.");
                 }
                 catch (TaskCanceledException tcEx)
                 {
                     sw.Stop();
-                    Debug.WriteLine($"[OTP/SEND] ❌ TaskCanceledException after {sw.ElapsedMilliseconds}ms: {tcEx.Message}");
+                    Debug.WriteLine($"[OTP/SEND] ❌ Timeout {sw.ElapsedMilliseconds}ms: {tcEx.Message}");
                     return AuthResult.Fail("Request timed out.");
                 }
 
                 sw.Stop();
-                Debug.WriteLine($"[OTP/SEND] ✅ Got response in {sw.ElapsedMilliseconds}ms");
-                Debug.WriteLine($"[OTP/SEND] Status: {(int)response.StatusCode} {response.StatusCode}");
+                Debug.WriteLine($"[OTP/SEND] ✅ {sw.ElapsedMilliseconds}ms — Status: {(int)response.StatusCode}");
 
                 if (response.StatusCode == System.Net.HttpStatusCode.NoContent ||
                     response.IsSuccessStatusCode)
                     return AuthResult.Ok();
 
                 var body = await response.Content.ReadAsStringAsync(cancellationToken);
-                Debug.WriteLine($"[OTP/SEND] Error body: {body}");
-
                 var error = TryParseErrors(body);
 
                 if ((int)response.StatusCode == 429)
@@ -201,7 +180,7 @@ namespace CraftConnect_Mobile_App.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[OTP/SEND] ❌ Unexpected exception: {ex.GetType().FullName}: {ex.Message}");
+                Debug.WriteLine($"[OTP/SEND] ❌ {ex.GetType().FullName}: {ex.Message}");
                 return AuthResult.Fail($"Unexpected error: {ex.Message}");
             }
         }
@@ -217,7 +196,6 @@ namespace CraftConnect_Mobile_App.Services
             {
                 var json = Serialize(request);
                 var endpoint = "/api/auth/login/otp/verify";
-                Debug.WriteLine($"[OTP/VERIFY] Full URL: {_baseUrl}{endpoint}");
 
                 var sw = Stopwatch.StartNew();
 
@@ -231,23 +209,20 @@ namespace CraftConnect_Mobile_App.Services
                 catch (HttpRequestException httpEx)
                 {
                     sw.Stop();
-                    Debug.WriteLine($"[OTP/VERIFY] ❌ HttpRequestException after {sw.ElapsedMilliseconds}ms: {httpEx.Message}");
-                    Debug.WriteLine($"[OTP/VERIFY] InnerException: {httpEx.InnerException?.Message}");
+                    Debug.WriteLine($"[OTP/VERIFY] ❌ {sw.ElapsedMilliseconds}ms: {httpEx.Message}");
                     return AuthResult.Fail("Network error. Check your connection.");
                 }
                 catch (TaskCanceledException tcEx)
                 {
                     sw.Stop();
-                    Debug.WriteLine($"[OTP/VERIFY] ❌ Timeout after {sw.ElapsedMilliseconds}ms: {tcEx.Message}");
+                    Debug.WriteLine($"[OTP/VERIFY] ❌ Timeout {sw.ElapsedMilliseconds}ms: {tcEx.Message}");
                     return AuthResult.Fail("Request timed out.");
                 }
 
                 sw.Stop();
-                Debug.WriteLine($"[OTP/VERIFY] ✅ Got response in {sw.ElapsedMilliseconds}ms");
-                Debug.WriteLine($"[OTP/VERIFY] Status: {(int)response.StatusCode} {response.StatusCode}");
+                Debug.WriteLine($"[OTP/VERIFY] ✅ {sw.ElapsedMilliseconds}ms — Status: {(int)response.StatusCode}");
 
                 var body = await response.Content.ReadAsStringAsync(cancellationToken);
-                Debug.WriteLine($"[OTP/VERIFY] Response: {body}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -259,12 +234,11 @@ namespace CraftConnect_Mobile_App.Services
                     }
                 }
 
-                var error = TryParseErrors(body);
-                return AuthResult.Fail(error ?? "Invalid or expired OTP.");
+                return AuthResult.Fail(TryParseErrors(body) ?? "Invalid or expired OTP.");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[OTP/VERIFY] ❌ Unexpected exception: {ex.GetType().FullName}: {ex.Message}");
+                Debug.WriteLine($"[OTP/VERIFY] ❌ {ex.GetType().FullName}: {ex.Message}");
                 return AuthResult.Fail($"Unexpected error: {ex.Message}");
             }
         }
@@ -289,22 +263,20 @@ namespace CraftConnect_Mobile_App.Services
                 catch (HttpRequestException httpEx)
                 {
                     sw.Stop();
-                    Debug.WriteLine($"[CAPTCHA] ❌ HttpRequestException after {sw.ElapsedMilliseconds}ms: {httpEx.Message}");
-                    Debug.WriteLine($"[CAPTCHA] InnerException: {httpEx.InnerException?.Message}");
+                    Debug.WriteLine($"[CAPTCHA] ❌ {sw.ElapsedMilliseconds}ms: {httpEx.Message}");
                     return FallbackCaptcha();
                 }
                 catch (TaskCanceledException tcEx)
                 {
                     sw.Stop();
-                    Debug.WriteLine($"[CAPTCHA] ❌ Timeout after {sw.ElapsedMilliseconds}ms: {tcEx.Message}");
+                    Debug.WriteLine($"[CAPTCHA] ❌ Timeout {sw.ElapsedMilliseconds}ms: {tcEx.Message}");
                     return FallbackCaptcha();
                 }
 
                 sw.Stop();
-                Debug.WriteLine($"[CAPTCHA] ✅ Got response in {sw.ElapsedMilliseconds}ms");
+                Debug.WriteLine($"[CAPTCHA] ✅ {sw.ElapsedMilliseconds}ms — Status: {(int)response.StatusCode}");
 
                 var body = await response.Content.ReadAsStringAsync(cancellationToken);
-                Debug.WriteLine($"[CAPTCHA] Status: {(int)response.StatusCode}, Body: {body}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -317,7 +289,7 @@ namespace CraftConnect_Mobile_App.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[CAPTCHA] ❌ Unexpected exception: {ex.GetType().FullName}: {ex.Message}");
+                Debug.WriteLine($"[CAPTCHA] ❌ {ex.GetType().FullName}: {ex.Message}");
                 return FallbackCaptcha();
             }
         }
@@ -331,36 +303,31 @@ namespace CraftConnect_Mobile_App.Services
 
             try
             {
-                SetJsonHeaders();
-
                 var sw = Stopwatch.StartNew();
 
                 HttpResponseMessage response;
                 try
                 {
-                    response = await _httpClient.GetAsync("/api/lookup/business-types");
+                    using var message = BuildRequest(HttpMethod.Get, "/api/lookup/business-types");
+                    response = await _httpClient.SendAsync(message);
                 }
                 catch (HttpRequestException httpEx)
                 {
                     sw.Stop();
-                    Debug.WriteLine($"[BUSINESS TYPES] ❌ HttpRequestException after {sw.ElapsedMilliseconds}ms");
-                    Debug.WriteLine($"[BUSINESS TYPES] Message: {httpEx.Message}");
-                    Debug.WriteLine($"[BUSINESS TYPES] InnerException: {httpEx.InnerException?.Message}");
+                    Debug.WriteLine($"[BUSINESS TYPES] ❌ {sw.ElapsedMilliseconds}ms: {httpEx.Message}");
                     return Enumerable.Empty<RegisterBusinessTypeDto>();
                 }
                 catch (TaskCanceledException tcEx)
                 {
                     sw.Stop();
-                    Debug.WriteLine($"[BUSINESS TYPES] ❌ Timeout after {sw.ElapsedMilliseconds}ms: {tcEx.Message}");
+                    Debug.WriteLine($"[BUSINESS TYPES] ❌ Timeout {sw.ElapsedMilliseconds}ms: {tcEx.Message}");
                     return Enumerable.Empty<RegisterBusinessTypeDto>();
                 }
 
                 sw.Stop();
-                Debug.WriteLine($"[BUSINESS TYPES] ✅ Got response in {sw.ElapsedMilliseconds}ms");
-                Debug.WriteLine($"[BUSINESS TYPES] Status: {(int)response.StatusCode} {response.StatusCode}");
+                Debug.WriteLine($"[BUSINESS TYPES] ✅ {sw.ElapsedMilliseconds}ms — Status: {(int)response.StatusCode}");
 
                 var body = await response.Content.ReadAsStringAsync();
-                Debug.WriteLine($"[BUSINESS TYPES] Response body: {body}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -369,13 +336,12 @@ namespace CraftConnect_Mobile_App.Services
                     return types ?? new List<RegisterBusinessTypeDto>();
                 }
 
-                var error = TryParseErrors(body);
-                Debug.WriteLine($"[BUSINESS TYPES] ❌ Error: {error}");
+                Debug.WriteLine($"[BUSINESS TYPES] ❌ Error: {TryParseErrors(body)}");
                 return Enumerable.Empty<RegisterBusinessTypeDto>();
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[BUSINESS TYPES] ❌ Unexpected exception: {ex.GetType().FullName}: {ex.Message}");
+                Debug.WriteLine($"[BUSINESS TYPES] ❌ {ex.GetType().FullName}: {ex.Message}");
                 return Enumerable.Empty<RegisterBusinessTypeDto>();
             }
         }
@@ -389,79 +355,52 @@ namespace CraftConnect_Mobile_App.Services
 
             try
             {
-                SetJsonHeaders();
-
                 var json = Serialize(request);
-                Debug.WriteLine($"[REGISTER] Serialized JSON: {json}");
-
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
                 var endpoint = "/api/auth/register";
-                var fullUrl = $"{_baseUrl}{endpoint}";
-                Debug.WriteLine($"[REGISTER] Full URL: {fullUrl}");
-                Debug.WriteLine($"[REGISTER] Sending request...");
 
                 var sw = Stopwatch.StartNew();
 
                 HttpResponseMessage response;
                 try
                 {
-                    response = await _httpClient.PostAsync(endpoint, content);
+                    using var message = BuildRequest(HttpMethod.Post, endpoint,
+                        new StringContent(json, Encoding.UTF8, "application/json"));
+                    response = await _httpClient.SendAsync(message);
                 }
                 catch (HttpRequestException httpEx)
                 {
                     sw.Stop();
-                    Debug.WriteLine($"[REGISTER] ❌ HttpRequestException after {sw.ElapsedMilliseconds}ms");
-                    Debug.WriteLine($"[REGISTER] Message: {httpEx.Message}");
-                    Debug.WriteLine($"[REGISTER] StatusCode: {httpEx.StatusCode}");
-                    Debug.WriteLine($"[REGISTER] InnerException type: {httpEx.InnerException?.GetType().FullName}");
-                    Debug.WriteLine($"[REGISTER] InnerException message: {httpEx.InnerException?.Message}");
-                    Debug.WriteLine($"[REGISTER] InnerException inner: {httpEx.InnerException?.InnerException?.Message}");
+                    Debug.WriteLine($"[REGISTER] ❌ {sw.ElapsedMilliseconds}ms: {httpEx.Message}");
                     return new RegisterApiResponse { Success = false, Message = "Network error. Check your connection." };
                 }
                 catch (TaskCanceledException tcEx)
                 {
                     sw.Stop();
-                    Debug.WriteLine($"[REGISTER] ❌ TaskCanceledException after {sw.ElapsedMilliseconds}ms");
-                    Debug.WriteLine($"[REGISTER] Message: {tcEx.Message}");
-                    Debug.WriteLine($"[REGISTER] CancellationToken cancelled: {tcEx.CancellationToken.IsCancellationRequested}");
-                    Debug.WriteLine($"[REGISTER] InnerException: {tcEx.InnerException?.Message}");
+                    Debug.WriteLine($"[REGISTER] ❌ Timeout {sw.ElapsedMilliseconds}ms: {tcEx.Message}");
                     return new RegisterApiResponse { Success = false, Message = "Request timed out. Check your network connection." };
                 }
 
                 sw.Stop();
-                Debug.WriteLine($"[REGISTER] ✅ Got response in {sw.ElapsedMilliseconds}ms");
-                Debug.WriteLine($"[REGISTER] Status: {(int)response.StatusCode} {response.StatusCode}");
-                Debug.WriteLine($"[REGISTER] ReasonPhrase: {response.ReasonPhrase}");
+                Debug.WriteLine($"[REGISTER] ✅ {sw.ElapsedMilliseconds}ms — Status: {(int)response.StatusCode}");
 
                 var body = await response.Content.ReadAsStringAsync();
-                Debug.WriteLine($"[REGISTER] Response body: {body}");
 
                 if (response.IsSuccessStatusCode)
                 {
-                    // Try to parse a typed response first
                     var success = Deserialize<RegisterApiResponse>(body);
-                    if (success != null)
-                    {
-                        success.Success = true;
-                        return success;
-                    }
+                    if (success != null) { success.Success = true; return success; }
                     return new RegisterApiResponse { Success = true };
                 }
 
-                // Non-success — extract the most useful error message
-                var errorMsg = TryParseErrors(body);
-                Debug.WriteLine($"[REGISTER] Error parsed: {errorMsg}");
                 return new RegisterApiResponse
                 {
                     Success = false,
-                    Message = errorMsg ?? $"Registration failed ({(int)response.StatusCode})"
+                    Message = TryParseErrors(body) ?? $"Registration failed ({(int)response.StatusCode})"
                 };
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[REGISTER] ❌ Unexpected exception: {ex.GetType().FullName}");
-                Debug.WriteLine($"[REGISTER] Message: {ex.Message}");
-                Debug.WriteLine($"[REGISTER] StackTrace: {ex.StackTrace}");
+                Debug.WriteLine($"[REGISTER] ❌ {ex.GetType().FullName}: {ex.Message}");
                 return new RegisterApiResponse { Success = false, Message = $"Unexpected error: {ex.Message}" };
             }
         }
@@ -535,10 +474,6 @@ namespace CraftConnect_Mobile_App.Services
             catch { return string.Empty; }
         }
 
-        /// <summary>
-        /// Checks token exists AND is not expired.
-        /// Replaces the old string-only check to prevent silent 401s.
-        /// </summary>
         public async Task<bool> IsAuthenticatedAsync()
         {
             var token = await GetTokenAsync();
@@ -547,14 +482,9 @@ namespace CraftConnect_Mobile_App.Services
             try
             {
                 var jwt = _jwtHandler.ReadJwtToken(token);
-                // 1-minute buffer so we don't use a token that expires mid-request
                 return jwt.ValidTo > DateTime.UtcNow.AddMinutes(1);
             }
-            catch
-            {
-                // Malformed token — treat as unauthenticated
-                return false;
-            }
+            catch { return false; }
         }
 
         public Task LogoutAsync()
@@ -586,12 +516,6 @@ namespace CraftConnect_Mobile_App.Services
         // ============================================================
         // PRIVATE HELPERS
         // ============================================================
-
-        /// <summary>
-        /// Builds a per-request HttpRequestMessage with standard headers.
-        /// Replaces DefaultRequestHeaders.Clear() which caused race conditions
-        /// when two requests fired simultaneously on the shared HttpClient.
-        /// </summary>
         private static HttpRequestMessage BuildRequest(HttpMethod method, string endpoint, HttpContent? content = null)
         {
             var msg = new HttpRequestMessage(method, endpoint);

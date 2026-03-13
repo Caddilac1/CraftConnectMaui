@@ -86,6 +86,8 @@ namespace CraftConnect_Mobile_App
             builder.Services.AddSingleton<ArtisanProposalService>();
             builder.Services.AddSingleton<IProfileApiService>(sp =>
                 new ProfileApiService(sp.GetRequiredService<ApiConfig>()));
+            builder.Services.AddSingleton<IStoreService, StoreService>(sp =>
+                new StoreService(sp.GetRequiredService<ApiConfig>()));
 
             // ========================================
             // VIEWMODELS
@@ -94,7 +96,8 @@ namespace CraftConnect_Mobile_App
             builder.Services.AddTransient<LoginPageModel>();
             builder.Services.AddTransient<GroupChatListPageModel>();
             builder.Services.AddTransient<ChatPageModel>();
-            builder.Services.AddTransient<StorePageModel>();
+            builder.Services.AddTransient<StorePageModel>(sp =>
+                new StorePageModel(sp.GetRequiredService<IStoreService>()));
             builder.Services.AddTransient<OtpVerificationPageModel>();
             builder.Services.AddTransient<SettingsPageViewModel>();
             builder.Services.AddTransient<AiFeedChatPageModel>();

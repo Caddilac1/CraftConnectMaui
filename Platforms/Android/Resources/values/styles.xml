@@ -1,6 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <resources>
-
 	<!-- ── Splash Theme ── -->
 	<style name="Maui.SplashTheme" parent="Theme.SplashScreen">
 		<item name="android:windowBackground">@color/splash_background</item>
@@ -17,19 +16,17 @@
 		<item name="windowActionBar">false</item>
 		<item name="windowNoTitle">true</item>
 
-		<!-- Status bar: transparent, dark icons on light backgrounds -->
-		<item name="android:statusBarColor">@android:color/transparent</item>
+		<!-- Status bar: black background, white icons -->
+		<item name="android:statusBarColor">#000000</item>
 		<item name="android:windowTranslucentStatus">false</item>
-		<item name="android:windowLightStatusBar">true</item>
+		<item name="android:windowLightStatusBar">false</item>
 
-		<!-- Nav bar: transparent, light icons -->
-		<!-- windowTranslucentNavigation intentionally removed — -->
-		<!-- conflicts with SetDecorFitsSystemWindows(false) in MainActivity -->
-		<item name="android:navigationBarColor">@android:color/transparent</item>
+		<!-- Nav bar: dark grey to match app header, white icons -->
+		<item name="android:navigationBarColor">@color/navBarColor</item>
+		<item name="android:windowLightNavigationBar">false</item>
 		<item name="android:enforceNavigationBarContrast">false</item>
-		<item name="android:windowLightNavigationBar">true</item>
 
-		<!-- Edge-to-edge -->
+		<!-- Layout -->
 		<item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
 		<item name="android:windowDrawsSystemBarBackgrounds">true</item>
 
@@ -38,5 +35,4 @@
 
 	<!-- ── Colors ── -->
 	<color name="splash_background">#5F67EA</color>
-
 </resources>

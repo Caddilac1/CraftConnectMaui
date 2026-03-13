@@ -4,27 +4,36 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using CraftConnect_Mobile_App.Models;
+using CraftConnect_Mobile_App.Services;
 using Microsoft.Maui.Controls;
 
 namespace CraftConnect_Mobile_App.PageModels
 {
     public class StorePageModel : BasePageModel
     {
-        // Store items (products & services)
+        private readonly IStoreService _storeService;
+
+        // ── Collections ───────────────────────────────────────────────
+        // All items currently shown in the grid (products + services)
         public ObservableCollection<StoreItem> StoreItems { get; } = new();
 
-        // Cart (only for products)
+        // Full unfiltered product list — used when switching filters
+        private List<StoreItem> _allProducts = new();
+
+        // Cart (products only)
         public ObservableCollection<CartItem> CartItems { get; } = new();
 
-        // Service bookings
+        // Service bookings — populated when services endpoint is ready
         public ObservableCollection<ServiceBooking> ServiceBookings { get; } = new();
 
+        // ── Commands ──────────────────────────────────────────────────
         public Command RefreshCommand { get; }
         public Command<StoreItem> ItemTappedCommand { get; }
         public Command<StoreItem> AddToCartOrBookCommand { get; }
         public Command ViewCartCommand { get; }
         public Command<string> FilterCategoryCommand { get; }
 
+        // ── Properties ────────────────────────────────────────────────
         private string _searchText = string.Empty;
         public string SearchText
         {
@@ -33,7 +42,7 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 _searchText = value;
                 OnPropertyChanged();
-                // TODO: Implement search filtering
+                ApplyFilter(_activeFilter);
             }
         }
 
@@ -41,67 +50,89 @@ namespace CraftConnect_Mobile_App.PageModels
         public int CartItemCount
         {
             get => _cartItemCount;
-            set
-            {
-                _cartItemCount = value;
-                OnPropertyChanged();
-            }
+            set { _cartItemCount = value; OnPropertyChanged(); }
         }
 
-        // ─── Helper to get current Page safely ───────────────────────────────────
+        private string _activeFilter = "All";
+        public string ActiveFilter
+        {
+            get => _activeFilter;
+            set { _activeFilter = value; OnPropertyChanged(); }
+        }
+
+        private bool _hasError;
+        public bool HasError
+        {
+            get => _hasError;
+            set { _hasError = value; OnPropertyChanged(); }
+        }
+
+        private string _errorMessage = string.Empty;
+        public string ErrorMessage
+        {
+            get => _errorMessage;
+            set { _errorMessage = value; OnPropertyChanged(); }
+        }
+
+        // ── Safe page reference ───────────────────────────────────────
         private static Page? CurrentPage =>
             Application.Current?.Windows[0].Page;
 
-        public StorePageModel()
+        // ── Constructor ───────────────────────────────────────────────
+        public StorePageModel(IStoreService storeService)
         {
-            RefreshCommand = new Command(async () => await LoadStoreItems());
-            ItemTappedCommand = new Command<StoreItem>(async (item) => await ViewItemDetails(item));
-            AddToCartOrBookCommand = new Command<StoreItem>(async (item) => await HandleItemAction(item));
-            ViewCartCommand = new Command(async () => await NavigateToCart());
-            FilterCategoryCommand = new Command<string>((category) => FilterByCategory(category));
+            _storeService = storeService;
 
-            Debug.WriteLine("[STORE PAGE MODEL] Initialized");
+            RefreshCommand = new Command(async () => await LoadStoreItemsAsync());
+            ItemTappedCommand = new Command<StoreItem>(async item => await ViewItemDetailsAsync(item));
+            AddToCartOrBookCommand = new Command<StoreItem>(async item => await HandleItemActionAsync(item));
+            ViewCartCommand = new Command(async () => await NavigateToCartAsync());
+            FilterCategoryCommand = new Command<string>(category => ApplyFilter(category));
+
+            Debug.WriteLine("[STORE PAGE MODEL] Initialized with IStoreService");
         }
 
-        /// <summary>
-        /// Initialize and load store items
-        /// </summary>
+        // ── Public API ────────────────────────────────────────────────
+
         public async Task InitializeAsync()
         {
-            await LoadStoreItems();
+            await LoadStoreItemsAsync();
         }
 
-        /// <summary>
-        /// Load store items (products and services)
-        /// </summary>
-        private async Task LoadStoreItems()
+        // ── Load products from API ────────────────────────────────────
+
+        private async Task LoadStoreItemsAsync()
         {
             if (IsBusy) return;
 
             try
             {
                 IsBusy = true;
-                StoreItems.Clear();
+                HasError = false;
 
-                // TODO: Replace with actual API call
-                // var items = await _storeService.GetStoreItemsAsync();
+                Debug.WriteLine("[STORE PAGE MODEL] 📡 Loading products from API...");
 
-                // DEMO DATA - Remove when you have real API
-                var demoItems = GenerateDemoData();
+                var result = await _storeService.GetProductsAsync(
+                    page: 1,
+                    pageSize: 40,    // load enough for a full first screen
+                    sortBy: "popular");
 
-                foreach (var item in demoItems)
-                {
-                    StoreItems.Add(item);
-                }
+                _allProducts = result.Items;
 
-                Debug.WriteLine($"[STORE PAGE MODEL] ✅ Loaded {StoreItems.Count} items");
+                Debug.WriteLine($"[STORE PAGE MODEL] ✅ API returned {_allProducts.Count} products");
+
+                // Apply whatever filter is currently active
+                ApplyFilter(_activeFilter);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[STORE PAGE MODEL] ❌ Error: {ex.Message}");
-                await CurrentPage.DisplayAlert(
+                Debug.WriteLine($"[STORE PAGE MODEL] ❌ Load error: {ex.Message}");
+                HasError = true;
+                ErrorMessage = "Failed to load store items. Pull down to retry.";
+
+                await CurrentPage!.DisplayAlert(
                     "Error",
-                    $"Failed to load store items: {ex.Message}",
+                    $"Failed to load store: {ex.Message}",
                     "OK");
             }
             finally
@@ -110,281 +141,152 @@ namespace CraftConnect_Mobile_App.PageModels
             }
         }
 
-        /// <summary>
-        /// Handle item action - Add to Cart for products, Book for services
-        /// </summary>
-        private async Task HandleItemAction(StoreItem item)
+        // ── Filter logic ──────────────────────────────────────────────
+        // Keeps the category chips working while services are not yet
+        // from the API. Service items will be added to _allProducts
+        // when that endpoint is ready — the filter logic stays the same.
+
+        private void ApplyFilter(string category)
+        {
+            ActiveFilter = category;
+
+            IEnumerable<StoreItem> filtered = _allProducts;
+
+            // Category chip filter
+            filtered = category switch
+            {
+                "Products" => filtered.Where(i => i.Type == StoreItemType.Product),
+                "Services" => filtered.Where(i => i.Type == StoreItemType.Service),
+                _ => filtered   // "All" and any future chips
+            };
+
+            // Search text filter (applied on top of category)
+            if (!string.IsNullOrWhiteSpace(_searchText))
+            {
+                var q = _searchText.Trim().ToLower();
+                filtered = filtered.Where(i =>
+                    i.Name.ToLower().Contains(q) ||
+                    i.Description.ToLower().Contains(q) ||
+                    i.SellerName.ToLower().Contains(q));
+            }
+
+            StoreItems.Clear();
+            foreach (var item in filtered)
+                StoreItems.Add(item);
+
+            Debug.WriteLine($"[STORE PAGE MODEL] Filter '{category}' → {StoreItems.Count} items shown");
+        }
+
+        // ── Item action dispatcher ────────────────────────────────────
+
+        private async Task HandleItemActionAsync(StoreItem item)
         {
             if (item == null) return;
 
-            Debug.WriteLine($"[STORE PAGE MODEL] Action for: {item.Name} (Type: {item.Type})");
-
             if (item.Type == StoreItemType.Product)
-            {
-                await AddToCart(item);
-            }
+                await AddToCartAsync(item);
             else
-            {
-                await BookService(item);
-            }
+                await BookServiceAsync(item);
         }
 
-        /// <summary>
-        /// Add product to cart
-        /// </summary>
-        private async Task AddToCart(StoreItem product)
+        // ── Add to cart ───────────────────────────────────────────────
+
+        private async Task AddToCartAsync(StoreItem product)
         {
             try
             {
-                var existingItem = CartItems.FirstOrDefault(c => c.Item.Id == product.Id);
-
-                if (existingItem != null)
-                {
-                    existingItem.Quantity++;
-                    Debug.WriteLine($"[STORE PAGE MODEL] Increased quantity: {product.Name} x{existingItem.Quantity}");
-                }
+                // Optimistic local update first for instant UI feedback
+                var existing = CartItems.FirstOrDefault(c => c.Item.Id == product.Id);
+                if (existing != null)
+                    existing.Quantity++;
                 else
-                {
-                    var cartItem = new CartItem
-                    {
-                        Id = Guid.NewGuid(),
-                        Item = product,
-                        Quantity = 1
-                    };
-                    CartItems.Add(cartItem);
-                    Debug.WriteLine($"[STORE PAGE MODEL] Added to cart: {product.Name}");
-                }
+                    CartItems.Add(new CartItem { Id = Guid.NewGuid(), Item = product, Quantity = 1 });
 
                 CartItemCount = CartItems.Sum(c => c.Quantity);
 
-                await CurrentPage.DisplayAlert(
-                    "✓ Added to Cart",
-                    $"{product.Name} has been added to your cart",
-                    "OK");
+                // Then persist to API in the background
+                var success = await _storeService.AddToCartAsync(product.ApiProductId, 1);
 
-                // TODO: Save cart to database or service
+                if (!success)
+                {
+                    // Rollback optimistic update
+                    var added = CartItems.FirstOrDefault(c => c.Item.Id == product.Id);
+                    if (added != null)
+                    {
+                        if (added.Quantity > 1) added.Quantity--;
+                        else CartItems.Remove(added);
+                    }
+                    CartItemCount = CartItems.Sum(c => c.Quantity);
+
+                    await CurrentPage!.DisplayAlert("Error", "Could not add item to cart. Please try again.", "OK");
+                    return;
+                }
+
+                await CurrentPage!.DisplayAlert("✓ Added to Cart", $"{product.Name} added to your cart.", "OK");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[STORE PAGE MODEL] ❌ Error adding to cart: {ex.Message}");
-                await CurrentPage.DisplayAlert(
-                    "Error",
-                    "Failed to add item to cart",
-                    "OK");
+                Debug.WriteLine($"[STORE PAGE MODEL] ❌ AddToCart error: {ex.Message}");
+                await CurrentPage!.DisplayAlert("Error", "Failed to add item to cart.", "OK");
             }
         }
 
-        /// <summary>
-        /// Book a service or request a quote
-        /// </summary>
-        private async Task BookService(StoreItem service)
+        // ── Book service ──────────────────────────────────────────────
+
+        private async Task BookServiceAsync(StoreItem service)
         {
             try
             {
                 if (service.RequiresQuote)
                 {
-                    Debug.WriteLine($"[STORE PAGE MODEL] Requesting quote for: {service.Name}");
-
-                    await CurrentPage.DisplayAlert(
+                    await CurrentPage!.DisplayAlert(
                         "Request Quote",
-                        $"A quote request for '{service.Name}' will be sent to {service.SellerName}. They will contact you with pricing details.",
+                        $"A quote request for '{service.Name}' will be sent to {service.SellerName}.",
                         "OK");
-
-                    // TODO: Navigate to quote request page or send request
-                    // await Shell.Current.GoToAsync($"quote?serviceId={service.Id}");
                 }
                 else
                 {
-                    Debug.WriteLine($"[STORE PAGE MODEL] Booking service: {service.Name}");
-
-                    await CurrentPage.DisplayAlert(
+                    await CurrentPage!.DisplayAlert(
                         "Book Service",
-                        $"Booking '{service.Name}' - Duration: {service.Duration}\nYou'll be able to select a date and time in the next step.",
+                        $"Booking '{service.Name}' — Duration: {service.Duration}\nSelect a date and time in the next step.",
                         "Continue",
                         "Cancel");
-
-                    // TODO: Navigate to service booking page
-                    // await Shell.Current.GoToAsync($"bookservice?serviceId={service.Id}");
+                    // TODO: await Shell.Current.GoToAsync($"bookservice?serviceId={service.Id}");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[STORE PAGE MODEL] ❌ Error booking service: {ex.Message}");
-                await CurrentPage.DisplayAlert(
-                    "Error",
-                    "Failed to process service request",
-                    "OK");
+                Debug.WriteLine($"[STORE PAGE MODEL] ❌ BookService error: {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// View item details page
-        /// </summary>
-        private async Task ViewItemDetails(StoreItem item)
+        // ── View item details ─────────────────────────────────────────
+
+        private async Task ViewItemDetailsAsync(StoreItem item)
         {
             if (item == null) return;
-
-            Debug.WriteLine($"[STORE PAGE MODEL] Viewing details for: {item.Name}");
-
-            // TODO: Navigate to item details page
-            // await Shell.Current.GoToAsync($"itemdetails?itemId={item.Id}");
-
-            await CurrentPage.DisplayAlert(
+            // TODO: await Shell.Current.GoToAsync($"itemdetails?itemId={item.ApiProductId}");
+            await CurrentPage!.DisplayAlert(
                 item.Name,
                 $"{item.Description}\n\nPrice: {item.DisplayPrice}\nSeller: {item.SellerName}\nRating: {item.Rating}⭐ ({item.ReviewCount} reviews)",
                 "OK");
         }
 
-        /// <summary>
-        /// Navigate to cart page
-        /// </summary>
-        private async Task NavigateToCart()
-        {
-            Debug.WriteLine($"[STORE PAGE MODEL] Navigating to cart ({CartItemCount} items)");
+        // ── Cart navigation ───────────────────────────────────────────
 
+        private async Task NavigateToCartAsync()
+        {
             if (CartItemCount == 0)
             {
-                await CurrentPage.DisplayAlert(
-                    "Cart Empty",
-                    "Your cart is empty. Add some products to get started!",
-                    "OK");
+                await CurrentPage!.DisplayAlert("Cart Empty", "Add some products to get started!", "OK");
                 return;
             }
 
-            // TODO: Navigate to cart page
-            // await Shell.Current.GoToAsync("cart");
-
-            var cartSummary = string.Join("\n", CartItems.Select(c => $"• {c.Item.Name} x{c.Quantity} - ${c.Subtotal:N2}"));
+            var summary = string.Join("\n", CartItems.Select(c => $"• {c.Item.Name} x{c.Quantity} — {c.Item.DisplayPrice}"));
             var total = CartItems.Sum(c => c.Subtotal);
 
-            await CurrentPage.DisplayAlert(
-                "Your Cart",
-                $"{cartSummary}\n\nTotal: ${total:N2}",
-                "OK");
-        }
-
-        /// <summary>
-        /// Filter items by category
-        /// </summary>
-        private void FilterByCategory(string category)
-        {
-            Debug.WriteLine($"[STORE PAGE MODEL] Filtering by category: {category}");
-            // TODO: Implement category filtering
-        }
-
-        /// <summary>
-        /// Generate demo data (remove when you have real API)
-        /// </summary>
-        private List<StoreItem> GenerateDemoData()
-        {
-            return new List<StoreItem>
-            {
-                // PRODUCTS
-                new StoreItem
-                {
-                    Id = Guid.NewGuid(),
-                    Name = "Premium Hammer",
-                    Description = "Professional grade steel hammer with ergonomic grip",
-                    Price = 29.99m,
-                    ImageUrl = "https://via.placeholder.com/300x300/4F46E5/FFFFFF?text=Hammer",
-                    Category = "Tools",
-                    Type = StoreItemType.Product,
-                    SellerId = Guid.NewGuid(),
-                    SellerName = "ToolMaster Inc",
-                    Rating = 4.8,
-                    ReviewCount = 124,
-                    StockQuantity = 45,
-                    Duration = null,
-                    RequiresQuote = false
-                },
-                new StoreItem
-                {
-                    Id = Guid.NewGuid(),
-                    Name = "Power Drill Set",
-                    Description = "18V cordless drill with 50+ accessories",
-                    Price = 149.99m,
-                    ImageUrl = "https://via.placeholder.com/300x300/10B981/FFFFFF?text=Drill",
-                    Category = "Tools",
-                    Type = StoreItemType.Product,
-                    SellerId = Guid.NewGuid(),
-                    SellerName = "BuildPro",
-                    Rating = 4.9,
-                    ReviewCount = 89,
-                    StockQuantity = 12,
-                    Duration = null,
-                    RequiresQuote = false
-                },
-                new StoreItem
-                {
-                    Id = Guid.NewGuid(),
-                    Name = "Safety Gear Kit",
-                    Description = "Complete safety kit with helmet, goggles, and gloves",
-                    Price = 79.99m,
-                    ImageUrl = "https://via.placeholder.com/300x300/F59E0B/FFFFFF?text=Safety",
-                    Category = "Safety",
-                    Type = StoreItemType.Product,
-                    SellerId = Guid.NewGuid(),
-                    SellerName = "SafeWork Co",
-                    Rating = 4.7,
-                    ReviewCount = 56,
-                    StockQuantity = 28,
-                    Duration = null,
-                    RequiresQuote = false
-                },
-
-                // SERVICES
-                new StoreItem
-                {
-                    Id = Guid.NewGuid(),
-                    Name = "Plumbing Repair",
-                    Description = "Professional plumbing services for leaks, installations, and repairs",
-                    Price = 75.00m,
-                    ImageUrl = "https://via.placeholder.com/300x300/3B82F6/FFFFFF?text=Plumbing",
-                    Category = "Services",
-                    Type = StoreItemType.Service,
-                    SellerId = Guid.NewGuid(),
-                    SellerName = "John's Plumbing",
-                    Rating = 4.9,
-                    ReviewCount = 203,
-                    StockQuantity = null,
-                    Duration = "2-3 hours",
-                    RequiresQuote = false
-                },
-                new StoreItem
-                {
-                    Id = Guid.NewGuid(),
-                    Name = "Home Renovation",
-                    Description = "Complete home renovation and remodeling services",
-                    Price = 0m,
-                    ImageUrl = "https://via.placeholder.com/300x300/EF4444/FFFFFF?text=Renovation",
-                    Category = "Services",
-                    Type = StoreItemType.Service,
-                    SellerId = Guid.NewGuid(),
-                    SellerName = "Elite Renovations",
-                    Rating = 5.0,
-                    ReviewCount = 67,
-                    StockQuantity = null,
-                    Duration = "Varies",
-                    RequiresQuote = true
-                },
-                new StoreItem
-                {
-                    Id = Guid.NewGuid(),
-                    Name = "Electrical Work",
-                    Description = "Licensed electrician for wiring, installations, and repairs",
-                    Price = 85.00m,
-                    ImageUrl = "https://via.placeholder.com/300x300/8B5CF6/FFFFFF?text=Electric",
-                    Category = "Services",
-                    Type = StoreItemType.Service,
-                    SellerId = Guid.NewGuid(),
-                    SellerName = "Spark Electric",
-                    Rating = 4.8,
-                    ReviewCount = 142,
-                    StockQuantity = null,
-                    Duration = "1-2 hours",
-                    RequiresQuote = false
-                }
-            };
+            await CurrentPage!.DisplayAlert("Your Cart", $"{summary}\n\nTotal: ${total:N2}", "OK");
+            // TODO: await Shell.Current.GoToAsync("cart");
         }
     }
 }
