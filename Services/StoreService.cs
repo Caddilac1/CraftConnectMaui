@@ -6,17 +6,17 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using CraftConnect_Mobile_App.Models;
 
 namespace CraftConnect_Mobile_App.Services
 {
-    // ═══════════════════════════════════════════════════════════════
-    // PRIVATE API RESPONSE MODELS — match backend JSON exactly
-    // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════
+    // PRIVATE API RESPONSE MODELS
+    // ═══════════════════════════════════════════════════════════════════════
 
-    // ProductsApiController shape  →  ApiResponse<PaginatedResult<ProductSummaryDto>>
+    // ── Products  GET /api/products ──────────────────────────────────────
+
     internal class ProductsApiResponse
     {
         public bool Success { get; set; }
@@ -56,7 +56,6 @@ namespace CraftConnect_Mobile_App.Services
         public bool IsFeatured { get; set; }
     }
 
-    // ProductsApiController list endpoints  →  ApiResponse<List<ProductSummaryDto>>
     internal class ProductListApiResponse
     {
         public bool Success { get; set; }
@@ -64,7 +63,55 @@ namespace CraftConnect_Mobile_App.Services
         public List<ProductSummaryApiDto>? Data { get; set; }
     }
 
-    // EcommerceApiController categories  →  { Success, Data: [...] }
+    // ── Services  GET /api/services ─────────────────────────────────────
+
+    internal class StoreServicesApiResponse
+    {
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+        public StoreServicesPaginatedData? Data { get; set; }
+    }
+
+    internal class StoreServicesPaginatedData
+    {
+        public List<StoreServiceSummaryApiDto> Items { get; set; } = new();
+        public int TotalCount { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages { get; set; }
+        public bool HasNextPage { get; set; }
+        public bool HasPreviousPage { get; set; }
+    }
+
+    internal class StoreServiceSummaryApiDto
+    {
+        public int ServiceCompanyBusinessLocationId { get; set; }
+        public int ServiceId { get; set; }
+        public int CompanyBusinessLocationId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? SecondaryName { get; set; }
+        public string? Description { get; set; }
+        public string? StoreName { get; set; }
+        public string? ServiceTypeName { get; set; }
+        public decimal ServicePrice { get; set; }
+        public double AverageRating { get; set; }
+        public int TotalReviews { get; set; }
+        public int TotalBookings { get; set; }
+        public string? ThumbnailUrl { get; set; }
+        public bool HasAvailability { get; set; }
+        public bool IsPopular { get; set; }
+        public bool IsFeatured { get; set; }
+    }
+
+    internal class StoreServicesListApiResponse
+    {
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+        public List<StoreServiceSummaryApiDto>? Data { get; set; }
+    }
+
+    // ── Categories ───────────────────────────────────────────────────────
+
     internal class CategoriesApiResponse
     {
         public bool Success { get; set; }
@@ -79,7 +126,8 @@ namespace CraftConnect_Mobile_App.Services
         public int ProductCount { get; set; }
     }
 
-    // EcommerceApiController cart
+    // ── Cart ─────────────────────────────────────────────────────────────
+
     internal class CartApiResponse
     {
         public bool Success { get; set; }
@@ -107,15 +155,9 @@ namespace CraftConnect_Mobile_App.Services
         public bool IsInStock { get; set; }
     }
 
-    internal class CartActionResponse
-    {
-        public bool Success { get; set; }
-        public string? Message { get; set; }
-    }
-
-    // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════
     // STORE SERVICE
-    // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════
 
     public class StoreService : IStoreService
     {
@@ -150,7 +192,6 @@ namespace CraftConnect_Mobile_App.Services
                 }
             };
 #endif
-
             _httpClient = new HttpClient(handler)
             {
                 BaseAddress = new Uri(_baseUrl),
@@ -160,26 +201,43 @@ namespace CraftConnect_Mobile_App.Services
             Debug.WriteLine($"[STORE SERVICE] Initialized. BaseUrl: {_baseUrl}");
         }
 
-        // ── Auth header ───────────────────────────────────────────────
+        // ── Auth helper ──────────────────────────────────────────────────
+        // Per-request token read — never mutates DefaultRequestHeaders.
 
-        private async Task SetAuthHeaderAsync()
+        private static async Task<string> GetTokenAsync()
         {
             try
             {
-                var token = await SecureStorage.GetAsync("auth_token");
-                if (!string.IsNullOrEmpty(token))
-                    _httpClient.DefaultRequestHeaders.Authorization =
-                        new AuthenticationHeaderValue("Bearer", token);
+                var token = await SecureStorage.GetAsync("auth_token") ?? string.Empty;
+                Debug.WriteLine($"[STORE SERVICE] 🔑 Token present: {!string.IsNullOrEmpty(token)}, length: {token.Length}");
+                return token;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[STORE SERVICE] ❌ Auth header error: {ex.Message}");
+                Debug.WriteLine($"[STORE SERVICE] ❌ Token read error: {ex.Message}");
+                return string.Empty;
             }
         }
 
+        private static HttpRequestMessage BuildAuthRequest(
+            HttpMethod method, string url, string token, HttpContent? content = null)
+        {
+            var request = new HttpRequestMessage(method, url);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            if (!string.IsNullOrEmpty(token))
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            request.Content = content;
+            return request;
+        }
+
         // ═══════════════════════════════════════════════════════════════
-        // GET PRODUCTS  →  GET /api/products
-        // Uses the cleaner ProductsApiController
+        // GET PRODUCTS + SERVICES (merged)
+        //
+        // Both API calls run in parallel via Task.WhenAll for speed.
+        // Products come from  GET /api/products
+        // Services come from  GET /api/services
+        // They are merged into one list, products first then services,
+        // both sorted by popularity from their respective APIs.
         // ═══════════════════════════════════════════════════════════════
 
         public async Task<StoreProductsResult> GetProductsAsync(
@@ -193,42 +251,98 @@ namespace CraftConnect_Mobile_App.Services
         {
             try
             {
-                Debug.WriteLine($"[STORE SERVICE] 📡 GetProducts page={page} search={search}");
+                Debug.WriteLine($"[STORE SERVICE] 📡 GetProductsAndServices page={page} search={search}");
 
-                var url = BuildProductsUrl(page, pageSize, search, categoryId, minPrice, maxPrice, sortBy);
+                var productUrl = BuildProductsUrl(page, pageSize, search, categoryId, minPrice, maxPrice, sortBy);
+                var serviceUrl = BuildServicesUrl(page, pageSize, search, minPrice, maxPrice, sortBy);
 
+                // ── Parallel fetch — products and services at the same time ──
                 var sw = Stopwatch.StartNew();
-                var response = await _httpClient.GetAsync(url);
+                var (productResponse, serviceResponse) = await FetchBothAsync(productUrl, serviceUrl);
                 sw.Stop();
+                Debug.WriteLine($"[STORE SERVICE] 📥 Both fetched in {sw.ElapsedMilliseconds}ms");
 
-                Debug.WriteLine($"[STORE SERVICE] 📥 {(int)response.StatusCode} in {sw.ElapsedMilliseconds}ms");
+                // ── Parse products ────────────────────────────────────────
+                var productItems = new List<StoreItem>();
+                int totalProducts = 0;
+                int totalPages = 1;
+                bool hasNext = false;
 
-                if (!response.IsSuccessStatusCode)
+                if (productResponse != null)
                 {
-                    Debug.WriteLine($"[STORE SERVICE] ❌ GetProducts failed: {response.StatusCode}");
-                    return new StoreProductsResult();
+                    var json = await productResponse.Content.ReadAsStringAsync();
+                    var result = JsonSerializer.Deserialize<ProductsApiResponse>(json, _jsonOptions);
+                    if (result?.Data != null)
+                    {
+                        productItems = result.Data.Items.Select(MapProductToStoreItem).ToList();
+                        totalProducts = result.Data.TotalCount;
+                        totalPages = result.Data.TotalPages;
+                        hasNext = result.Data.HasNextPage;
+                    }
                 }
 
-                var json = await response.Content.ReadAsStringAsync();
-                var result = JsonSerializer.Deserialize<ProductsApiResponse>(json, _jsonOptions);
+                // ── Parse services ────────────────────────────────────────
+                var serviceItems = new List<StoreItem>();
+                int totalServices = 0;
 
-                if (result?.Data == null)
-                    return new StoreProductsResult();
+                if (serviceResponse != null)
+                {
+                    var json = await serviceResponse.Content.ReadAsStringAsync();
+                    var result = JsonSerializer.Deserialize<StoreServicesApiResponse>(json, _jsonOptions);
+                    if (result?.Data != null)
+                    {
+                        serviceItems = result.Data.Items.Select(MapServiceToStoreItem).ToList();
+                        totalServices = result.Data.TotalCount;
+                    }
+                }
+
+                // ── Merge: products first, then services ──────────────────
+                var merged = productItems.Concat(serviceItems).ToList();
+
+                Debug.WriteLine($"[STORE SERVICE] ✅ Merged: {productItems.Count} products + {serviceItems.Count} services = {merged.Count} total");
 
                 return new StoreProductsResult
                 {
-                    Items = result.Data.Items.Select(MapToStoreItem).ToList(),
-                    TotalItems = result.Data.TotalCount,
-                    Page = result.Data.Page,
-                    PageSize = result.Data.PageSize,
-                    TotalPages = result.Data.TotalPages,
-                    HasNextPage = result.Data.HasNextPage
+                    Items = merged,
+                    TotalItems = totalProducts + totalServices,
+                    Page = page,
+                    PageSize = pageSize,
+                    TotalPages = totalPages,
+                    HasNextPage = hasNext
                 };
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[STORE SERVICE] ❌ GetProducts exception: {ex.Message}");
+                Debug.WriteLine($"[STORE SERVICE] ❌ GetProductsAndServices exception: {ex.Message}");
                 return new StoreProductsResult();
+            }
+        }
+
+        // Runs both HTTP GET calls in parallel and returns both responses.
+        // If either fails it returns null for that one — the other still renders.
+        private async Task<(HttpResponseMessage? products, HttpResponseMessage? services)> FetchBothAsync(
+            string productUrl, string serviceUrl)
+        {
+            var productTask = SafeGetAsync(productUrl);
+            var serviceTask = SafeGetAsync(serviceUrl);
+
+            await Task.WhenAll(productTask, serviceTask);
+
+            return (await productTask, await serviceTask);
+        }
+
+        private async Task<HttpResponseMessage?> SafeGetAsync(string url)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync(url);
+                Debug.WriteLine($"[STORE SERVICE] 📥 {url} → {(int)response.StatusCode}");
+                return response.IsSuccessStatusCode ? response : null;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[STORE SERVICE] ❌ SafeGet {url}: {ex.Message}");
+                return null;
             }
         }
 
@@ -241,16 +355,12 @@ namespace CraftConnect_Mobile_App.Services
             try
             {
                 Debug.WriteLine($"[STORE SERVICE] 📡 GetFeatured limit={limit}");
-
                 var response = await _httpClient.GetAsync($"/api/products/featured?limit={limit}");
-
-                if (!response.IsSuccessStatusCode)
-                    return new List<StoreItem>();
+                if (!response.IsSuccessStatusCode) return new List<StoreItem>();
 
                 var json = await response.Content.ReadAsStringAsync();
                 var result = JsonSerializer.Deserialize<ProductListApiResponse>(json, _jsonOptions);
-
-                return result?.Data?.Select(MapToStoreItem).ToList() ?? new List<StoreItem>();
+                return result?.Data?.Select(MapProductToStoreItem).ToList() ?? new List<StoreItem>();
             }
             catch (Exception ex)
             {
@@ -268,16 +378,12 @@ namespace CraftConnect_Mobile_App.Services
             try
             {
                 Debug.WriteLine($"[STORE SERVICE] 📡 GetPromotions limit={limit}");
-
                 var response = await _httpClient.GetAsync($"/api/products/promotions?limit={limit}");
-
-                if (!response.IsSuccessStatusCode)
-                    return new List<StoreItem>();
+                if (!response.IsSuccessStatusCode) return new List<StoreItem>();
 
                 var json = await response.Content.ReadAsStringAsync();
                 var result = JsonSerializer.Deserialize<ProductListApiResponse>(json, _jsonOptions);
-
-                return result?.Data?.Select(MapToStoreItem).ToList() ?? new List<StoreItem>();
+                return result?.Data?.Select(MapProductToStoreItem).ToList() ?? new List<StoreItem>();
             }
             catch (Exception ex)
             {
@@ -287,7 +393,7 @@ namespace CraftConnect_Mobile_App.Services
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // GET CATEGORIES  →  GET /api/ecommerce/categories
+        // GET CATEGORIES  →  GET /api/ecommerceapi/categories
         // ═══════════════════════════════════════════════════════════════
 
         public async Task<List<StoreCategoryDto>> GetCategoriesAsync()
@@ -295,15 +401,11 @@ namespace CraftConnect_Mobile_App.Services
             try
             {
                 Debug.WriteLine("[STORE SERVICE] 📡 GetCategories");
-
                 var response = await _httpClient.GetAsync("/api/ecommerceapi/categories");
-
-                if (!response.IsSuccessStatusCode)
-                    return new List<StoreCategoryDto>();
+                if (!response.IsSuccessStatusCode) return new List<StoreCategoryDto>();
 
                 var json = await response.Content.ReadAsStringAsync();
                 var result = JsonSerializer.Deserialize<CategoriesApiResponse>(json, _jsonOptions);
-
                 return result?.Data?.Select(c => new StoreCategoryDto
                 {
                     Id = c.Id,
@@ -320,18 +422,18 @@ namespace CraftConnect_Mobile_App.Services
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // ADD TO CART  →  POST /api/ecommerce/cart/add
+        // CART OPERATIONS  (products only — services use booking flow)
         // ═══════════════════════════════════════════════════════════════
 
         public async Task<bool> AddToCartAsync(int productId, int quantity)
         {
             try
             {
-                await SetAuthHeaderAsync();
-
+                var token = await GetTokenAsync();
                 var payload = JsonSerializer.Serialize(new { ProductId = productId, Quantity = quantity });
-                var content = new StringContent(payload, Encoding.UTF8, "application/json");
-                var response = await _httpClient.PostAsync("/api/ecommerceapi/cart/add", content);
+                var body = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var request = BuildAuthRequest(HttpMethod.Post, "/api/ecommerceapi/cart/add", token, body);
+                var response = await _httpClient.SendAsync(request);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -350,20 +452,15 @@ namespace CraftConnect_Mobile_App.Services
             }
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // UPDATE CART ITEM  →  PUT /api/ecommerce/cart/update
-        // ═══════════════════════════════════════════════════════════════
-
         public async Task<bool> UpdateCartItemAsync(int cartItemId, int quantity)
         {
             try
             {
-                await SetAuthHeaderAsync();
-
+                var token = await GetTokenAsync();
                 var payload = JsonSerializer.Serialize(new { CartItemId = cartItemId, Quantity = quantity });
-                var content = new StringContent(payload, Encoding.UTF8, "application/json");
-                var response = await _httpClient.PutAsync("/api/ecommerceapi/cart/update", content);
-
+                var body = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var request = BuildAuthRequest(HttpMethod.Put, "/api/ecommerceapi/cart/update", token, body);
+                var response = await _httpClient.SendAsync(request);
                 Debug.WriteLine($"[STORE SERVICE] UpdateCartItem {cartItemId} → {(int)response.StatusCode}");
                 return response.IsSuccessStatusCode;
             }
@@ -374,18 +471,13 @@ namespace CraftConnect_Mobile_App.Services
             }
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // REMOVE FROM CART  →  DELETE /api/ecommerce/cart/remove/{id}
-        // ═══════════════════════════════════════════════════════════════
-
         public async Task<bool> RemoveFromCartAsync(int cartItemId)
         {
             try
             {
-                await SetAuthHeaderAsync();
-
-                var response = await _httpClient.DeleteAsync($"/api/ecommerceapi/cart/remove/{cartItemId}");
-
+                var token = await GetTokenAsync();
+                using var request = BuildAuthRequest(HttpMethod.Delete, $"/api/ecommerceapi/cart/remove/{cartItemId}", token);
+                var response = await _httpClient.SendAsync(request);
                 Debug.WriteLine($"[STORE SERVICE] RemoveFromCart {cartItemId} → {(int)response.StatusCode}");
                 return response.IsSuccessStatusCode;
             }
@@ -396,24 +488,20 @@ namespace CraftConnect_Mobile_App.Services
             }
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // GET CART  →  GET /api/ecommerce/cart
-        // ═══════════════════════════════════════════════════════════════
-
         public async Task<StoreCartResult?> GetCartAsync()
         {
             try
             {
-                await SetAuthHeaderAsync();
+                var token = await GetTokenAsync();
+                Debug.WriteLine($"[STORE SERVICE] 📡 GetCart — token present: {!string.IsNullOrEmpty(token)}");
+                using var request = BuildAuthRequest(HttpMethod.Get, "/api/ecommerceapi/cart", token);
+                var response = await _httpClient.SendAsync(request);
+                Debug.WriteLine($"[STORE SERVICE] 📥 GetCart response: {(int)response.StatusCode}");
 
-                var response = await _httpClient.GetAsync("/api/ecommerceapi/cart");
-
-                if (!response.IsSuccessStatusCode)
-                    return null;
+                if (!response.IsSuccessStatusCode) return null;
 
                 var json = await response.Content.ReadAsStringAsync();
                 var result = JsonSerializer.Deserialize<CartApiResponse>(json, _jsonOptions);
-
                 if (result?.Data == null) return null;
 
                 return new StoreCartResult
@@ -442,45 +530,56 @@ namespace CraftConnect_Mobile_App.Services
             }
         }
 
-        // ── Private helpers ───────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════
+        // PRIVATE HELPERS
+        // ═══════════════════════════════════════════════════════════════
 
         private static string BuildProductsUrl(
             int page, int pageSize, string? search,
             int? categoryId, decimal? minPrice, decimal? maxPrice, string sortBy)
         {
-            var sb = new StringBuilder($"/api/products?page={page}&pageSize={pageSize}&sortBy={sortBy}");
+            var sb = new StringBuilder(
+                $"/api/products?page={page}&pageSize={pageSize}&sortBy={sortBy}");
 
             if (!string.IsNullOrWhiteSpace(search))
                 sb.Append($"&search={Uri.EscapeDataString(search)}");
-
             if (categoryId.HasValue)
                 sb.Append($"&categoryId={categoryId.Value}");
-
             if (minPrice.HasValue)
                 sb.Append($"&minPrice={minPrice.Value}");
-
             if (maxPrice.HasValue)
                 sb.Append($"&maxPrice={maxPrice.Value}");
 
             return sb.ToString();
         }
 
-        /// <summary>
-        /// Maps a backend ProductSummaryApiDto to the mobile StoreItem model.
-        /// StoreItemType is always Product here — services come from a separate
-        /// endpoint and will be added when that API is ready.
-        /// </summary>
-        private static StoreItem MapToStoreItem(ProductSummaryApiDto dto) => new()
+        private static string BuildServicesUrl(
+            int page, int pageSize, string? search,
+            decimal? minPrice, decimal? maxPrice, string sortBy)
         {
-            // Use the location ID as the stable identifier for cart/order calls
-            Id = new Guid(dto.ProductCompanyBusinessLocationId.ToString()
-                               .PadLeft(32, '0').Insert(8, "-").Insert(13, "-")
-                               .Insert(18, "-").Insert(23, "-")),
+            var sb = new StringBuilder(
+                $"/api/services?page={page}&pageSize={pageSize}&sortBy={sortBy}");
+
+            if (!string.IsNullOrWhiteSpace(search))
+                sb.Append($"&search={Uri.EscapeDataString(search)}");
+            if (minPrice.HasValue)
+                sb.Append($"&minPrice={minPrice.Value}");
+            if (maxPrice.HasValue)
+                sb.Append($"&maxPrice={maxPrice.Value}");
+
+            return sb.ToString();
+        }
+
+        // Maps a product API response to the unified StoreItem
+        private static StoreItem MapProductToStoreItem(ProductSummaryApiDto dto) => new()
+        {
+            Id = MakeGuid(dto.ProductCompanyBusinessLocationId),
             ApiProductId = dto.ProductCompanyBusinessLocationId,
+            ApiServiceId = 0,
             Name = dto.Name,
             Description = dto.Description ?? string.Empty,
             Price = dto.PromotionalPrice ?? dto.SellingPrice,
-            OriginalPrice = dto.PromotionalPrice.HasValue ? dto.SellingPrice : (decimal?)null,
+            OriginalPrice = dto.PromotionalPrice.HasValue ? dto.SellingPrice : null,
             ImageUrl = dto.ThumbnailUrl ?? string.Empty,
             Category = dto.ProductTypeName ?? string.Empty,
             Type = StoreItemType.Product,
@@ -491,5 +590,32 @@ namespace CraftConnect_Mobile_App.Services
             RequiresQuote = false,
             Duration = null
         };
+
+        // Maps a service API response to the unified StoreItem
+        private static StoreItem MapServiceToStoreItem(StoreServiceSummaryApiDto dto) => new()
+        {
+            Id = MakeGuid(dto.ServiceCompanyBusinessLocationId),
+            ApiProductId = 0,
+            ApiServiceId = dto.ServiceCompanyBusinessLocationId,
+            Name = dto.Name,
+            Description = dto.Description ?? string.Empty,
+            Price = dto.ServicePrice,
+            OriginalPrice = null,
+            ImageUrl = dto.ThumbnailUrl ?? string.Empty,
+            Category = dto.ServiceTypeName ?? string.Empty,
+            Type = StoreItemType.Service,
+            SellerName = dto.StoreName ?? string.Empty,
+            Rating = dto.AverageRating,
+            ReviewCount = dto.TotalReviews,
+            StockQuantity = null,       // services have no stock
+            RequiresQuote = false,
+            Duration = null        // pulled on detail page if needed
+        };
+
+        // Stable Guid from an int — same pattern as original StoreService
+        private static Guid MakeGuid(int id) =>
+            new(id.ToString().PadLeft(32, '0')
+                .Insert(8, "-").Insert(13, "-")
+                .Insert(18, "-").Insert(23, "-"));
     }
 }

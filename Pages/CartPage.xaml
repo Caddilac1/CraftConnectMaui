@@ -1,0 +1,386 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pagemodels="clr-namespace:CraftConnect_Mobile_App.PageModels"
+             xmlns:converters="clr-namespace:CraftConnect_Mobile_App.Converters"
+             x:Class="CraftConnect_Mobile_App.Pages.CartPage"
+             x:DataType="pagemodels:CartPageModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#F8F9FA">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:InverseBoolConverter x:Key="InverseBool"/>
+            <!-- + button: grey when at stock limit, orange otherwise -->
+            <converters:BoolToColorConverter x:Key="IncrementColor"
+                                             TrueColor="#FF4500"
+                                             FalseColor="#D1D5DB"/>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- ══════════════════════════════════════════
+             ROW 0 — HEADER
+             ══════════════════════════════════════════ -->
+        <Border Grid.Row="0"
+                BackgroundColor="White"
+                StrokeThickness="0"
+                Padding="16,12">
+            <Border.Shadow>
+                <Shadow Brush="#000000" Opacity="0.05" Radius="8" Offset="0,2"/>
+            </Border.Shadow>
+
+            <Grid ColumnDefinitions="40,*,40">
+
+                <!-- Back -->
+                <Border Grid.Column="0"
+                        BackgroundColor="#F3F4F6"
+                        StrokeThickness="0"
+                        WidthRequest="40" HeightRequest="40">
+                    <Border.StrokeShape><RoundRectangle CornerRadius="20"/></Border.StrokeShape>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding GoBackCommand}"/>
+                    </Border.GestureRecognizers>
+                    <Label Text="←" FontSize="20" TextColor="#1F2937"
+                           HorizontalOptions="Center" VerticalOptions="Center"/>
+                </Border>
+
+                <!-- Title -->
+                <VerticalStackLayout Grid.Column="1"
+                                     HorizontalOptions="Center"
+                                     VerticalOptions="Center"
+                                     Spacing="0">
+                    <Label Text="My Cart"
+                           FontSize="20" FontAttributes="Bold"
+                           TextColor="#1F2937"
+                           HorizontalTextAlignment="Center"/>
+                    <Label Text="{Binding CartSummaryLabel}"
+                           FontSize="12" TextColor="#6B7280"
+                           HorizontalTextAlignment="Center"/>
+                </VerticalStackLayout>
+
+                <!-- Trash (only when cart has items) -->
+                <Border Grid.Column="2"
+                        BackgroundColor="#FFF0ED"
+                        StrokeThickness="0"
+                        WidthRequest="40" HeightRequest="40"
+                        IsVisible="{Binding HasItems}">
+                    <Border.StrokeShape><RoundRectangle CornerRadius="20"/></Border.StrokeShape>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding ClearCartCommand}"/>
+                    </Border.GestureRecognizers>
+                    <Label Text="🗑" FontSize="16"
+                           HorizontalOptions="Center" VerticalOptions="Center"/>
+                </Border>
+
+                <!-- Spacer when no items -->
+                <BoxView Grid.Column="2" Color="Transparent"
+                         IsVisible="{Binding HasItems, Converter={StaticResource InverseBool}}"/>
+            </Grid>
+        </Border>
+
+        <!-- ══════════════════════════════════════════
+             ROW 1 — BODY
+             ══════════════════════════════════════════ -->
+        <Grid Grid.Row="1">
+
+            <!-- Loading -->
+            <ActivityIndicator IsRunning="{Binding IsLoading}"
+                               IsVisible="{Binding IsLoading}"
+                               Color="#FF4500"
+                               VerticalOptions="Center"
+                               HorizontalOptions="Center"/>
+
+            <!-- Empty state -->
+            <VerticalStackLayout IsVisible="{Binding IsEmpty}"
+                                 VerticalOptions="Center"
+                                 HorizontalOptions="Center"
+                                 Padding="40,0"
+                                 Spacing="16">
+                <Label Text="🛒" FontSize="72"
+                       HorizontalTextAlignment="Center"/>
+                <Label Text="Your cart is empty"
+                       FontSize="20" FontAttributes="Bold"
+                       TextColor="#1F2937"
+                       HorizontalTextAlignment="Center"/>
+                <Label Text="Add products from the store to get started."
+                       FontSize="14" TextColor="#6B7280"
+                       HorizontalTextAlignment="Center"/>
+                <Button Text="Browse Store"
+                        Command="{Binding GoToStoreCommand}"
+                        BackgroundColor="#FF4500"
+                        TextColor="White"
+                        CornerRadius="10"
+                        FontSize="15"
+                        FontAttributes="Bold"
+                        HeightRequest="48"
+                        Margin="0,8,0,0"/>
+            </VerticalStackLayout>
+
+            <!-- Cart list (only visible when not loading and has items) -->
+            <ScrollView IsVisible="{Binding HasItems}">
+                <VerticalStackLayout Padding="16" Spacing="12">
+
+                    <!-- Stock / price validation banner -->
+                    <Border IsVisible="{Binding HasValidationIssues}"
+                            BackgroundColor="#FEF2F2"
+                            StrokeThickness="1"
+                            Padding="12">
+                        <Border.Stroke>#FECACA</Border.Stroke>
+                        <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                        <HorizontalStackLayout Spacing="8">
+                            <Label Text="⚠️" FontSize="16" VerticalOptions="Start"/>
+                            <Label Text="{Binding ValidationMessage}"
+                                   FontSize="13" TextColor="#B91C1C"
+                                   VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                    </Border>
+
+                    <!-- ── ITEM LIST ─────────────────────────────── -->
+                    <CollectionView ItemsSource="{Binding CartItems}"
+                                    SelectionMode="None">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="pagemodels:CartItemViewModel">
+
+                                <Border BackgroundColor="White"
+                                        StrokeThickness="0"
+                                        Padding="12"
+                                        Margin="0,0,0,10">
+                                    <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                                    <Border.Shadow>
+                                        <Shadow Brush="#000000" Opacity="0.04" Radius="6" Offset="0,2"/>
+                                    </Border.Shadow>
+
+                                    <Grid ColumnDefinitions="72,*,Auto"
+                                          RowDefinitions="Auto,Auto"
+                                          ColumnSpacing="12"
+                                          RowSpacing="10">
+
+                                        <!-- Thumbnail -->
+                                        <Border Grid.Column="0" Grid.RowSpan="2"
+                                                BackgroundColor="#F3F4F6"
+                                                StrokeThickness="0"
+                                                WidthRequest="72" HeightRequest="72">
+                                            <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                                            <Image Source="{Binding ThumbnailUrl}"
+                                                   Aspect="AspectFill"
+                                                   WidthRequest="72" HeightRequest="72"/>
+                                        </Border>
+
+                                        <!-- Name / type / stock warning -->
+                                        <VerticalStackLayout Grid.Row="0" Grid.Column="1"
+                                                             Spacing="2"
+                                                             VerticalOptions="Center">
+                                            <Label Text="{Binding Name}"
+                                                   FontSize="14" FontAttributes="Bold"
+                                                   TextColor="#1F2937"
+                                                   LineBreakMode="TailTruncation"
+                                                   MaxLines="2"/>
+                                            <Label Text="{Binding ItemType}"
+                                                   FontSize="11" TextColor="#9CA3AF"/>
+                                            <!-- Low / out-of-stock warning -->
+                                            <Label Text="{Binding StockWarning}"
+                                                   FontSize="11" TextColor="#EF4444"
+                                                   IsVisible="{Binding HasStockWarning}"/>
+                                        </VerticalStackLayout>
+
+                                        <!-- Remove button -->
+                                        <Border Grid.Row="0" Grid.Column="2"
+                                                BackgroundColor="#FFF0ED"
+                                                StrokeThickness="0"
+                                                WidthRequest="32" HeightRequest="32"
+                                                VerticalOptions="Start">
+                                            <Border.StrokeShape><RoundRectangle CornerRadius="16"/></Border.StrokeShape>
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type pagemodels:CartPageModel}}, Path=RemoveItemCommand}"
+                                                    CommandParameter="{Binding .}"/>
+                                            </Border.GestureRecognizers>
+                                            <Label Text="×" FontSize="18" FontAttributes="Bold"
+                                                   TextColor="#FF4500"
+                                                   HorizontalOptions="Center"
+                                                   VerticalOptions="Center"/>
+                                        </Border>
+
+                                        <!-- Qty stepper + item total -->
+                                        <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                                              ColumnDefinitions="Auto,*,Auto"
+                                              VerticalOptions="Center">
+
+                                            <!-- Stepper pill -->
+                                            <Border Grid.Column="0"
+                                                    BackgroundColor="#F3F4F6"
+                                                    StrokeThickness="0"
+                                                    Padding="2,0">
+                                                <Border.StrokeShape><RoundRectangle CornerRadius="8"/></Border.StrokeShape>
+                                                <HorizontalStackLayout Spacing="0">
+
+                                                    <!-- Decrement -->
+                                                    <Border BackgroundColor="Transparent"
+                                                            StrokeThickness="0"
+                                                            WidthRequest="36" HeightRequest="36">
+                                                        <Border.GestureRecognizers>
+                                                            <TapGestureRecognizer
+                                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pagemodels:CartPageModel}}, Path=DecrementCommand}"
+                                                                CommandParameter="{Binding .}"/>
+                                                        </Border.GestureRecognizers>
+                                                        <Label Text="−" FontSize="20" FontAttributes="Bold"
+                                                               TextColor="#374151"
+                                                               HorizontalOptions="Center"
+                                                               VerticalOptions="Center"/>
+                                                    </Border>
+
+                                                    <!-- Quantity label -->
+                                                    <Label Text="{Binding Quantity}"
+                                                           FontSize="15" FontAttributes="Bold"
+                                                           TextColor="#1F2937"
+                                                           WidthRequest="30"
+                                                           HorizontalTextAlignment="Center"
+                                                           VerticalOptions="Center"/>
+
+                                                    <!-- Increment (dimmed when at stock limit) -->
+                                                    <Border BackgroundColor="Transparent"
+                                                            StrokeThickness="0"
+                                                            WidthRequest="36" HeightRequest="36">
+                                                        <Border.GestureRecognizers>
+                                                            <TapGestureRecognizer
+                                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pagemodels:CartPageModel}}, Path=IncrementCommand}"
+                                                                CommandParameter="{Binding .}"/>
+                                                        </Border.GestureRecognizers>
+                                                        <Label Text="+"
+                                                               FontSize="20" FontAttributes="Bold"
+                                                               TextColor="{Binding CanIncrement, Converter={StaticResource IncrementColor}}"
+                                                               HorizontalOptions="Center"
+                                                               VerticalOptions="Center"/>
+                                                    </Border>
+                                                </HorizontalStackLayout>
+                                            </Border>
+
+                                            <!-- Item total -->
+                                            <Label Grid.Column="2"
+                                                   Text="{Binding TotalPrice, StringFormat='GH₵{0:N2}'}"
+                                                   FontSize="15" FontAttributes="Bold"
+                                                   TextColor="#FF4500"
+                                                   HorizontalTextAlignment="End"
+                                                   VerticalOptions="Center"/>
+                                        </Grid>
+
+                                    </Grid>
+                                </Border>
+
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <!-- ── ORDER SUMMARY CARD ─────────────────────── -->
+                    <Border BackgroundColor="White"
+                            StrokeThickness="0"
+                            Padding="16">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                        <Border.Shadow>
+                            <Shadow Brush="#000000" Opacity="0.04" Radius="6" Offset="0,2"/>
+                        </Border.Shadow>
+
+                        <VerticalStackLayout Spacing="0">
+                            <Label Text="Order Summary"
+                                   FontSize="16" FontAttributes="Bold"
+                                   TextColor="#1F2937" Margin="0,0,0,12"/>
+
+                            <Grid ColumnDefinitions="*,Auto" Padding="0,6">
+                                <Label Text="Subtotal" FontSize="14" TextColor="#6B7280"/>
+                                <Label Grid.Column="1"
+                                       Text="{Binding Subtotal, StringFormat='GH₵{0:N2}'}"
+                                       FontSize="14" TextColor="#1F2937"/>
+                            </Grid>
+
+                            <BoxView BackgroundColor="#F3F4F6" HeightRequest="1"/>
+
+                            <Grid ColumnDefinitions="*,Auto" Padding="0,6">
+                                <Label Text="{Binding VatLabel}" FontSize="14" TextColor="#6B7280"/>
+                                <Label Grid.Column="1"
+                                       Text="{Binding VatAmount, StringFormat='GH₵{0:N2}'}"
+                                       FontSize="14" TextColor="#1F2937"/>
+                            </Grid>
+
+                            <BoxView BackgroundColor="#F3F4F6" HeightRequest="1"/>
+
+                            <Grid ColumnDefinitions="*,Auto" Padding="0,10">
+                                <Label Text="Estimated Total"
+                                       FontSize="16" FontAttributes="Bold"
+                                       TextColor="#1F2937"/>
+                                <Label Grid.Column="1"
+                                       Text="{Binding Total, StringFormat='GH₵{0:N2}'}"
+                                       FontSize="16" FontAttributes="Bold"
+                                       TextColor="#FF4500"/>
+                            </Grid>
+
+                            <Label Text="* Delivery fee calculated at checkout"
+                                   FontSize="11" TextColor="#9CA3AF"/>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- ── TRUST SIGNALS ──────────────────────────── -->
+                    <HorizontalStackLayout HorizontalOptions="Center"
+                                           Spacing="32" Padding="0,4">
+                        <VerticalStackLayout HorizontalOptions="Center" Spacing="4">
+                            <Label Text="🔒" FontSize="20" HorizontalOptions="Center"/>
+                            <Label Text="Secure" FontSize="11" TextColor="#6B7280"
+                                   HorizontalTextAlignment="Center"/>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout HorizontalOptions="Center" Spacing="4">
+                            <Label Text="🔄" FontSize="20" HorizontalOptions="Center"/>
+                            <Label Text="Easy Returns" FontSize="11" TextColor="#6B7280"
+                                   HorizontalTextAlignment="Center"/>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout HorizontalOptions="Center" Spacing="4">
+                            <Label Text="🎧" FontSize="20" HorizontalOptions="Center"/>
+                            <Label Text="24/7 Support" FontSize="11" TextColor="#6B7280"
+                                   HorizontalTextAlignment="Center"/>
+                        </VerticalStackLayout>
+                    </HorizontalStackLayout>
+
+                    <!-- Bottom padding so content clears the fixed button -->
+                    <BoxView HeightRequest="16" Color="Transparent"/>
+                </VerticalStackLayout>
+            </ScrollView>
+        </Grid>
+
+        <!-- ══════════════════════════════════════════
+             ROW 2 — FIXED BOTTOM BUTTON
+             ══════════════════════════════════════════ -->
+        <Border Grid.Row="2"
+                BackgroundColor="White"
+                StrokeThickness="0"
+                Padding="16,12"
+                IsVisible="{Binding HasItems}">
+            <Border.Shadow>
+                <Shadow Brush="#000000" Opacity="0.08" Radius="12" Offset="0,-4"/>
+            </Border.Shadow>
+
+            <VerticalStackLayout Spacing="8">
+                <!-- Quick total reminder -->
+                <Grid ColumnDefinitions="*,Auto">
+                    <Label Text="Total" FontSize="13" TextColor="#6B7280"
+                           VerticalOptions="Center"/>
+                    <Label Grid.Column="1"
+                           Text="{Binding Total, StringFormat='GH₵{0:N2}'}"
+                           FontSize="17" FontAttributes="Bold"
+                           TextColor="#1F2937"/>
+                </Grid>
+
+                <!-- Checkout button -->
+                <Button Text="Proceed to Checkout  →"
+                        Command="{Binding ProceedToCheckoutCommand}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}"
+                        BackgroundColor="#FF4500"
+                        TextColor="White"
+                        FontSize="16"
+                        FontAttributes="Bold"
+                        CornerRadius="12"
+                        HeightRequest="52"/>
+            </VerticalStackLayout>
+        </Border>
+
+    </Grid>
+</ContentPage>

@@ -88,6 +88,10 @@ namespace CraftConnect_Mobile_App
                 new ProfileApiService(sp.GetRequiredService<ApiConfig>()));
             builder.Services.AddSingleton<IStoreService, StoreService>(sp =>
                 new StoreService(sp.GetRequiredService<ApiConfig>()));
+            builder.Services.AddSingleton<ICartApiService, CartApiService>(sp =>
+                new CartApiService(sp.GetRequiredService<ApiConfig>()));
+            builder.Services.AddSingleton<IServiceService, ServiceService>(sp =>
+                new ServiceService(sp.GetRequiredService<ApiConfig>()));
 
             // ========================================
             // VIEWMODELS
@@ -97,11 +101,18 @@ namespace CraftConnect_Mobile_App
             builder.Services.AddTransient<GroupChatListPageModel>();
             builder.Services.AddTransient<ChatPageModel>();
             builder.Services.AddTransient<StorePageModel>(sp =>
-                new StorePageModel(sp.GetRequiredService<IStoreService>()));
+                new StorePageModel(
+                    sp.GetRequiredService<IStoreService>(),
+                    sp.GetRequiredService<ICartApiService>(),
+                    sp.GetRequiredService<IServiceService>()));
             builder.Services.AddTransient<OtpVerificationPageModel>();
             builder.Services.AddTransient<SettingsPageViewModel>();
             builder.Services.AddTransient<AiFeedChatPageModel>();
             builder.Services.AddTransient<UpdatesFeedPageModel>();
+            builder.Services.AddTransient<CartPageModel>(sp =>
+                new CartPageModel(sp.GetRequiredService<ICartApiService>()));
+            builder.Services.AddTransient<CheckoutPageModel>(sp =>
+                new CheckoutPageModel(sp.GetRequiredService<ICartApiService>()));
 
             // ========================================
             // PAGES - Core
@@ -115,21 +126,17 @@ namespace CraftConnect_Mobile_App
             builder.Services.AddTransient<AiFeedChatPage>();
             builder.Services.AddTransient<StorePage>();
             builder.Services.AddTransient<UpdatesFeedPage>();
+            builder.Services.AddTransient<CartPage>();
+            builder.Services.AddTransient<CheckoutPage>();
+            builder.Services.AddTransient<PaystackWebViewPage>();
 
             // ========================================
             // PAGES - Proposal flow
-            // NOTE: CreateProposalPage moved here from ViewModels section
-            //       where it was previously misregistered.
             // ========================================
             builder.Services.AddTransient<CreateProposalPage>();
 
             // ========================================
             // PAGES - Profile flow
-            // FIX: EditArtisanProfilePage was never registered in DI,
-            //      causing GetService<EditArtisanProfilePage>() to always
-            //      return null and showing an Error dialog when the user
-            //      tapped "Set Up Profile". Registered as Transient so
-            //      each push gets a fresh instance with _initialized = false.
             // ========================================
             builder.Services.AddTransient<EditArtisanProfilePage>();
 

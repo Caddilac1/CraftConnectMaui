@@ -1,0 +1,415 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pagemodels="clr-namespace:CraftConnect_Mobile_App.PageModels"
+             xmlns:controls="clr-namespace:CraftConnect_Mobile_App.Pages"
+             xmlns:converters="clr-namespace:CraftConnect_Mobile_App.Converters"
+             x:Class="CraftConnect_Mobile_App.Pages.CheckoutPage"
+             x:DataType="pagemodels:CheckoutPageModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#F8F9FA">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <!-- Active border: orange when true, grey when false -->
+            <converters:BoolToColorConverter x:Key="ActiveBorderColor"
+                                             TrueColor="#FF4500"
+                                             FalseColor="#E5E7EB"/>
+            <!-- Active background: light orange tint when true, white when false -->
+            <converters:BoolToColorConverter x:Key="ActiveBgColor"
+                                             TrueColor="#FFF4F0"
+                                             FalseColor="#FFFFFF"/>
+            <!-- Active label: orange when true, grey when false -->
+            <converters:BoolToColorConverter x:Key="ActiveLabelColor"
+                                             TrueColor="#FF4500"
+                                             FalseColor="#6B7280"/>
+            <converters:InverseBoolConverter x:Key="InverseBool"/>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- ══════════════════════════════════════
+             HEADER
+             ══════════════════════════════════════ -->
+        <Border Grid.Row="0"
+                BackgroundColor="White"
+                StrokeThickness="0"
+                Padding="16,12">
+            <Border.Shadow>
+                <Shadow Brush="#000000" Opacity="0.05" Radius="8" Offset="0,2"/>
+            </Border.Shadow>
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border Grid.Column="0"
+                        BackgroundColor="#F3F4F6"
+                        StrokeThickness="0"
+                        WidthRequest="40" HeightRequest="40">
+                    <Border.StrokeShape><RoundRectangle CornerRadius="20"/></Border.StrokeShape>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding GoBackCommand}"/>
+                    </Border.GestureRecognizers>
+                    <Label Text="←" FontSize="20" TextColor="#1F2937"
+                           HorizontalOptions="Center" VerticalOptions="Center"/>
+                </Border>
+                <Label Grid.Column="1" Text="Checkout"
+                       FontSize="20" FontAttributes="Bold" TextColor="#1F2937"
+                       HorizontalOptions="Center" VerticalOptions="Center"/>
+                <Label Grid.Column="2"
+                       Text="{Binding CartItemCount, StringFormat='{0} items'}"
+                       FontSize="13" TextColor="#6B7280" VerticalOptions="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- ══════════════════════════════════════
+             SCROLLABLE BODY
+             ══════════════════════════════════════ -->
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="16" Spacing="16">
+
+                <!-- ── Progress Steps ── -->
+                <Border BackgroundColor="White" StrokeThickness="0" Padding="16,12">
+                    <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                    <Border.Shadow><Shadow Brush="#000000" Opacity="0.05" Radius="8" Offset="0,2"/></Border.Shadow>
+                    <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*,Auto" ColumnSpacing="0">
+                        <Border Grid.Column="0" BackgroundColor="#22C55E"
+                                WidthRequest="36" HeightRequest="36" StrokeThickness="0">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="18"/></Border.StrokeShape>
+                            <Label Text="✓" FontSize="15" FontAttributes="Bold" TextColor="White"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                        <BoxView Grid.Column="1" BackgroundColor="#22C55E" HeightRequest="3" VerticalOptions="Center"/>
+                        <Border Grid.Column="2" BackgroundColor="#FF4500"
+                                WidthRequest="36" HeightRequest="36" StrokeThickness="0">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="18"/></Border.StrokeShape>
+                            <Label Text="2" FontSize="15" FontAttributes="Bold" TextColor="White"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                        <BoxView Grid.Column="3" BackgroundColor="#E5E7EB" HeightRequest="3" VerticalOptions="Center"/>
+                        <Border Grid.Column="4" BackgroundColor="#E5E7EB"
+                                WidthRequest="36" HeightRequest="36" StrokeThickness="0">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="18"/></Border.StrokeShape>
+                            <Label Text="3" FontSize="15" TextColor="#9CA3AF"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                        <BoxView Grid.Column="5" BackgroundColor="#E5E7EB" HeightRequest="3" VerticalOptions="Center"/>
+                        <Border Grid.Column="6" BackgroundColor="#E5E7EB"
+                                WidthRequest="36" HeightRequest="36" StrokeThickness="0">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="18"/></Border.StrokeShape>
+                            <Label Text="4" FontSize="15" TextColor="#9CA3AF"
+                                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- ── Order Items ── -->
+                <Border BackgroundColor="White" StrokeThickness="0" Padding="16">
+                    <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                    <Border.Shadow><Shadow Brush="#000000" Opacity="0.05" Radius="8" Offset="0,2"/></Border.Shadow>
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="🛒  Order Items"
+                               FontSize="16" FontAttributes="Bold" TextColor="#1F2937"/>
+                        <CollectionView ItemsSource="{Binding CartItems}" SelectionMode="None">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="pagemodels:CartDisplayItem">
+                                    <Grid ColumnDefinitions="64,*,Auto"
+                                          RowDefinitions="Auto,Auto"
+                                          ColumnSpacing="12"
+                                          Padding="0,8">
+                                        <Border Grid.Column="0" Grid.RowSpan="2"
+                                                BackgroundColor="#F3F4F6"
+                                                StrokeThickness="0"
+                                                WidthRequest="64" HeightRequest="64">
+                                            <Border.StrokeShape><RoundRectangle CornerRadius="8"/></Border.StrokeShape>
+                                            <Image Source="{Binding ProductImage}"
+                                                   Aspect="AspectFill"
+                                                   WidthRequest="64" HeightRequest="64"/>
+                                        </Border>
+                                        <Label Grid.Column="1" Grid.Row="0"
+                                               Text="{Binding ProductName}"
+                                               FontSize="14" FontAttributes="Bold"
+                                               TextColor="#1F2937"
+                                               LineBreakMode="TailTruncation"/>
+                                        <Label Grid.Column="1" Grid.Row="1"
+                                               Text="{Binding SellerName}"
+                                               FontSize="12" TextColor="#6B7280"/>
+                                        <VerticalStackLayout Grid.Column="2" Grid.RowSpan="2"
+                                                             VerticalOptions="Center"
+                                                             HorizontalOptions="End">
+                                            <Label Text="{Binding TotalPrice, StringFormat='GH₵{0:N2}'}"
+                                                   FontSize="14" FontAttributes="Bold"
+                                                   TextColor="#FF4500"
+                                                   HorizontalTextAlignment="End"/>
+                                            <Label Text="{Binding Quantity, StringFormat='Qty: {0}'}"
+                                                   FontSize="12" TextColor="#6B7280"
+                                                   HorizontalTextAlignment="End"/>
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- ── Delivery Type ── -->
+                <Border BackgroundColor="White" StrokeThickness="0" Padding="16">
+                    <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                    <Border.Shadow><Shadow Brush="#000000" Opacity="0.05" Radius="8" Offset="0,2"/></Border.Shadow>
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="🚚  Delivery Type"
+                               FontSize="16" FontAttributes="Bold" TextColor="#1F2937"/>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+
+                            <!-- Pickup tile -->
+                            <Border Grid.Column="0"
+                                    StrokeThickness="2"
+                                    Padding="12"
+                                    BackgroundColor="{Binding IsPickup, Converter={StaticResource ActiveBgColor}}">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                                <Border.Stroke>
+                                    <Binding Path="IsPickup" Converter="{StaticResource ActiveBorderColor}"/>
+                                </Border.Stroke>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SelectPickupCommand}"/>
+                                </Border.GestureRecognizers>
+                                <VerticalStackLayout Spacing="4" HorizontalOptions="Center">
+                                    <Label Text="🏪" FontSize="28" HorizontalOptions="Center"/>
+                                    <Label Text="In-Store Pickup"
+                                           FontSize="13" FontAttributes="Bold"
+                                           TextColor="{Binding IsPickup, Converter={StaticResource ActiveLabelColor}}"
+                                           HorizontalTextAlignment="Center"/>
+                                    <Label Text="Free"
+                                           FontSize="13" FontAttributes="Bold"
+                                           TextColor="#FF4500"
+                                           HorizontalTextAlignment="Center"/>
+                                </VerticalStackLayout>
+                            </Border>
+
+                            <!-- Delivery tile -->
+                            <Border Grid.Column="1"
+                                    StrokeThickness="2"
+                                    Padding="12"
+                                    BackgroundColor="{Binding IsDelivery, Converter={StaticResource ActiveBgColor}}">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                                <Border.Stroke>
+                                    <Binding Path="IsDelivery" Converter="{StaticResource ActiveBorderColor}"/>
+                                </Border.Stroke>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SelectDeliveryCommand}"/>
+                                </Border.GestureRecognizers>
+                                <VerticalStackLayout Spacing="4" HorizontalOptions="Center">
+                                    <Label Text="🚚" FontSize="28" HorizontalOptions="Center"/>
+                                    <Label Text="Home Delivery"
+                                           FontSize="13" FontAttributes="Bold"
+                                           TextColor="{Binding IsDelivery, Converter={StaticResource ActiveLabelColor}}"
+                                           HorizontalTextAlignment="Center"/>
+                                    <Label Text="{Binding DeliveryFeeText}"
+                                           FontSize="13" FontAttributes="Bold"
+                                           TextColor="#FF4500"
+                                           HorizontalTextAlignment="Center"/>
+                                </VerticalStackLayout>
+                            </Border>
+                        </Grid>
+
+                        <!-- Delivery address (shown when delivery selected) -->
+                        <VerticalStackLayout IsVisible="{Binding IsDelivery}" Spacing="8">
+                            <Label Text="Delivery Address"
+                                   FontSize="14" FontAttributes="Bold" TextColor="#374151"/>
+                            <Border BackgroundColor="#F9FAFB" StrokeThickness="1" Padding="12">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="8"/></Border.StrokeShape>
+                                <Border.Stroke>#E5E7EB</Border.Stroke>
+                                <Label Text="{Binding SelectedAddressText}"
+                                       FontSize="14" TextColor="#1F2937"
+                                       IsVisible="{Binding HasSelectedAddress}"/>
+                            </Border>
+                            <Label Text="No address selected yet."
+                                   FontSize="13" TextColor="#9CA3AF"
+                                   IsVisible="{Binding HasSelectedAddress, Converter={StaticResource InverseBool}}"/>
+                            <Button Text="📍  Select Delivery Address"
+                                    Command="{Binding SelectAddressCommand}"
+                                    BackgroundColor="White"
+                                    TextColor="#FF4500"
+                                    BorderColor="#FF4500"
+                                    BorderWidth="1.5"
+                                    CornerRadius="8"
+                                    FontSize="14"
+                                    HeightRequest="44"/>
+                        </VerticalStackLayout>
+
+                        <!-- Pickup note -->
+                        <Border IsVisible="{Binding IsPickup}"
+                                BackgroundColor="#FFF7ED"
+                                StrokeThickness="0"
+                                Padding="12">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="8"/></Border.StrokeShape>
+                            <Label Text="ℹ️  You can collect your order from our store location."
+                                   FontSize="13" TextColor="#92400E"/>
+                        </Border>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- ── Special Instructions ── -->
+                <Border BackgroundColor="White" StrokeThickness="0" Padding="16">
+                    <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                    <Border.Shadow><Shadow Brush="#000000" Opacity="0.05" Radius="8" Offset="0,2"/></Border.Shadow>
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="💬  Special Instructions (Optional)"
+                               FontSize="16" FontAttributes="Bold" TextColor="#1F2937"/>
+                        <Border BackgroundColor="#F9FAFB" StrokeThickness="1" Padding="4">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="8"/></Border.StrokeShape>
+                            <Border.Stroke>#E5E7EB</Border.Stroke>
+                            <Editor Text="{Binding DeliveryInstructions}"
+                                    Placeholder="Any special instructions for delivery..."
+                                    PlaceholderColor="#9CA3AF"
+                                    FontSize="14"
+                                    TextColor="#1F2937"
+                                    AutoSize="TextChanges"
+                                    MinimumHeightRequest="80"
+                                    BackgroundColor="Transparent"/>
+                        </Border>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- ── Payment Method ── -->
+                <Border BackgroundColor="White" StrokeThickness="0" Padding="16">
+                    <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                    <Border.Shadow><Shadow Brush="#000000" Opacity="0.05" Radius="8" Offset="0,2"/></Border.Shadow>
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="💳  Payment Method"
+                               FontSize="16" FontAttributes="Bold" TextColor="#1F2937"/>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+
+                            <!-- Card / Paystack tile -->
+                            <Border Grid.Column="0"
+                                    StrokeThickness="2"
+                                    Padding="12"
+                                    BackgroundColor="{Binding IsCardPayment, Converter={StaticResource ActiveBgColor}}">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                                <Border.Stroke>
+                                    <Binding Path="IsCardPayment" Converter="{StaticResource ActiveBorderColor}"/>
+                                </Border.Stroke>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SelectCardPaymentCommand}"/>
+                                </Border.GestureRecognizers>
+                                <VerticalStackLayout Spacing="4" HorizontalOptions="Center">
+                                    <Label Text="💳" FontSize="28" HorizontalOptions="Center"/>
+                                    <Label Text="Card Payment"
+                                           FontSize="13" FontAttributes="Bold"
+                                           TextColor="{Binding IsCardPayment, Converter={StaticResource ActiveLabelColor}}"
+                                           HorizontalTextAlignment="Center"/>
+                                    <Label Text="Visa · MoMo · MC"
+                                           FontSize="11" TextColor="#6B7280"
+                                           HorizontalTextAlignment="Center"/>
+                                </VerticalStackLayout>
+                            </Border>
+
+                            <!-- Cash tile -->
+                            <Border Grid.Column="1"
+                                    StrokeThickness="2"
+                                    Padding="12"
+                                    BackgroundColor="{Binding IsCashPayment, Converter={StaticResource ActiveBgColor}}">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                                <Border.Stroke>
+                                    <Binding Path="IsCashPayment" Converter="{StaticResource ActiveBorderColor}"/>
+                                </Border.Stroke>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SelectCashPaymentCommand}"/>
+                                </Border.GestureRecognizers>
+                                <VerticalStackLayout Spacing="4" HorizontalOptions="Center">
+                                    <Label Text="💵" FontSize="28" HorizontalOptions="Center"/>
+                                    <Label Text="Cash on Delivery"
+                                           FontSize="13" FontAttributes="Bold"
+                                           TextColor="{Binding IsCashPayment, Converter={StaticResource ActiveLabelColor}}"
+                                           HorizontalTextAlignment="Center"/>
+                                    <Label Text="Pay on arrival"
+                                           FontSize="11" TextColor="#6B7280"
+                                           HorizontalTextAlignment="Center"/>
+                                </VerticalStackLayout>
+                            </Border>
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- ── Price Breakdown ── -->
+                <Border BackgroundColor="White" StrokeThickness="0" Padding="16">
+                    <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                    <Border.Shadow><Shadow Brush="#000000" Opacity="0.05" Radius="8" Offset="0,2"/></Border.Shadow>
+                    <VerticalStackLayout Spacing="0">
+                        <Label Text="🧾  Order Summary"
+                               FontSize="16" FontAttributes="Bold"
+                               TextColor="#1F2937" Margin="0,0,0,12"/>
+                        <Grid ColumnDefinitions="*,Auto" Padding="0,8">
+                            <Label Grid.Column="0" Text="Subtotal" FontSize="14" TextColor="#6B7280"/>
+                            <Label Grid.Column="1"
+                                   Text="{Binding Subtotal, StringFormat='GH₵{0:N2}'}"
+                                   FontSize="14" TextColor="#1F2937"/>
+                        </Grid>
+                        <BoxView BackgroundColor="#F3F4F6" HeightRequest="1"/>
+                        <Grid ColumnDefinitions="*,Auto" Padding="0,8">
+                            <Label Grid.Column="0" Text="Delivery Fee" FontSize="14" TextColor="#6B7280"/>
+                            <Label Grid.Column="1"
+                                   Text="{Binding DeliveryFeeDisplay}"
+                                   FontSize="14" TextColor="#1F2937"/>
+                        </Grid>
+                        <BoxView BackgroundColor="#F3F4F6" HeightRequest="1"/>
+                        <Grid ColumnDefinitions="*,Auto" Padding="0,8">
+                            <Label Grid.Column="0"
+                                   Text="{Binding VatLabel}"
+                                   FontSize="14" TextColor="#6B7280"/>
+                            <Label Grid.Column="1"
+                                   Text="{Binding VatAmount, StringFormat='GH₵{0:N2}'}"
+                                   FontSize="14" TextColor="#1F2937"/>
+                        </Grid>
+                        <BoxView BackgroundColor="#1F2937" HeightRequest="1.5" Margin="0,4"/>
+                        <Grid ColumnDefinitions="*,Auto" Padding="0,10">
+                            <Label Grid.Column="0" Text="Total"
+                                   FontSize="17" FontAttributes="Bold" TextColor="#1F2937"/>
+                            <Label Grid.Column="1"
+                                   Text="{Binding GrandTotal, StringFormat='GH₵{0:N2}'}"
+                                   FontSize="17" FontAttributes="Bold" TextColor="#FF4500"/>
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- ── Trust Signals ── -->
+                <HorizontalStackLayout HorizontalOptions="Center" Spacing="32" Padding="0,4">
+                    <VerticalStackLayout HorizontalOptions="Center" Spacing="4">
+                        <Label Text="🔒" FontSize="22" HorizontalOptions="Center"/>
+                        <Label Text="SSL Secured" FontSize="11" TextColor="#6B7280" HorizontalTextAlignment="Center"/>
+                    </VerticalStackLayout>
+                    <VerticalStackLayout HorizontalOptions="Center" Spacing="4">
+                        <Label Text="🚚" FontSize="22" HorizontalOptions="Center"/>
+                        <Label Text="Fast Delivery" FontSize="11" TextColor="#6B7280" HorizontalTextAlignment="Center"/>
+                    </VerticalStackLayout>
+                    <VerticalStackLayout HorizontalOptions="Center" Spacing="4">
+                        <Label Text="🎧" FontSize="22" HorizontalOptions="Center"/>
+                        <Label Text="24/7 Support" FontSize="11" TextColor="#6B7280" HorizontalTextAlignment="Center"/>
+                    </VerticalStackLayout>
+                </HorizontalStackLayout>
+
+                <BoxView HeightRequest="16" Color="Transparent"/>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- ══════════════════════════════════════
+             FIXED BOTTOM CHECKOUT BUTTON
+             ══════════════════════════════════════ -->
+        <Border Grid.Row="2"
+                BackgroundColor="White"
+                StrokeThickness="0"
+                Padding="16,12">
+            <Border.Shadow>
+                <Shadow Brush="#000000" Opacity="0.08" Radius="12" Offset="0,-4"/>
+            </Border.Shadow>
+            <Button Text="{Binding CheckoutButtonText}"
+                    Command="{Binding CheckoutCommand}"
+                    IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}"
+                    BackgroundColor="#FF4500"
+                    TextColor="White"
+                    FontSize="16"
+                    FontAttributes="Bold"
+                    CornerRadius="12"
+                    HeightRequest="52"/>
+        </Border>
+
+    </Grid>
+</ContentPage>

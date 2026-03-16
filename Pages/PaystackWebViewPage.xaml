@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CraftConnect_Mobile_App.Pages.PaystackWebViewPage"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#F8F9FA">
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Header -->
+        <Border Grid.Row="0"
+                BackgroundColor="White"
+                StrokeThickness="0"
+                Padding="16,12">
+            <Border.Shadow>
+                <Shadow Brush="#000000" Opacity="0.05" Radius="8" Offset="0,2"/>
+            </Border.Shadow>
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border Grid.Column="0"
+                        BackgroundColor="#F3F4F6"
+                        StrokeThickness="0"
+                        WidthRequest="40" HeightRequest="40">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="20"/>
+                    </Border.StrokeShape>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnCancelTapped"/>
+                    </Border.GestureRecognizers>
+                    <Label Text="←" FontSize="20" TextColor="#1F2937"
+                           HorizontalOptions="Center" VerticalOptions="Center"/>
+                </Border>
+                <Label Grid.Column="1" Text="Secure Payment"
+                       FontSize="18" FontAttributes="Bold" TextColor="#1F2937"
+                       HorizontalOptions="Center" VerticalOptions="Center"/>
+                <HorizontalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Center">
+                    <Label Text="🔒" FontSize="14"/>
+                    <Label Text="SSL" FontSize="12" TextColor="#22C55E" FontAttributes="Bold"/>
+                </HorizontalStackLayout>
+            </Grid>
+        </Border>
+
+        <!-- WebView -->
+        <WebView x:Name="PaystackWebView"
+                 Grid.Row="1"
+                 Navigating="OnNavigating"
+                 Navigated="OnNavigated"/>
+
+        <!-- Loading overlay -->
+        <Border x:Name="LoadingOverlay"
+                Grid.Row="1"
+                BackgroundColor="White"
+                IsVisible="True"
+                ZIndex="10">
+            <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="16">
+                <ActivityIndicator IsRunning="True" Color="#FF4500" WidthRequest="48" HeightRequest="48"/>
+                <Label Text="Loading payment..." FontSize="15" TextColor="#6B7280" HorizontalOptions="Center"/>
+            </VerticalStackLayout>
+        </Border>
+
+        <!-- Bottom trust bar -->
+        <Border Grid.Row="2"
+                BackgroundColor="White"
+                StrokeThickness="0"
+                Padding="16,10">
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="24">
+                <Label Text="🔒 SSL Secured" FontSize="12" TextColor="#6B7280"/>
+                <Label Text="·" FontSize="12" TextColor="#D1D5DB"/>
+                <Label Text="Powered by Paystack" FontSize="12" TextColor="#6B7280"/>
+                <Label Text="·" FontSize="12" TextColor="#D1D5DB"/>
+                <Label Text="GHS only" FontSize="12" TextColor="#6B7280"/>
+            </HorizontalStackLayout>
+        </Border>
+
+    </Grid>
+</ContentPage>

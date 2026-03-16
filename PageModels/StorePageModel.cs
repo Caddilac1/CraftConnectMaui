@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
@@ -12,19 +13,12 @@ namespace CraftConnect_Mobile_App.PageModels
     public class StorePageModel : BasePageModel
     {
         private readonly IStoreService _storeService;
+        private readonly ICartApiService _cartApiService;
+        private readonly IServiceService _serviceService;
 
         // ── Collections ───────────────────────────────────────────────
-        // All items currently shown in the grid (products + services)
         public ObservableCollection<StoreItem> StoreItems { get; } = new();
-
-        // Full unfiltered product list — used when switching filters
-        private List<StoreItem> _allProducts = new();
-
-        // Cart (products only)
-        public ObservableCollection<CartItem> CartItems { get; } = new();
-
-        // Service bookings — populated when services endpoint is ready
-        public ObservableCollection<ServiceBooking> ServiceBookings { get; } = new();
+        private List<StoreItem> _allItems = new();
 
         // ── Commands ──────────────────────────────────────────────────
         public Command RefreshCommand { get; }
@@ -38,12 +32,7 @@ namespace CraftConnect_Mobile_App.PageModels
         public string SearchText
         {
             get => _searchText;
-            set
-            {
-                _searchText = value;
-                OnPropertyChanged();
-                ApplyFilter(_activeFilter);
-            }
+            set { _searchText = value; OnPropertyChanged(); ApplyFilter(_activeFilter); }
         }
 
         private int _cartItemCount;
@@ -67,21 +56,18 @@ namespace CraftConnect_Mobile_App.PageModels
             set { _hasError = value; OnPropertyChanged(); }
         }
 
-        private string _errorMessage = string.Empty;
-        public string ErrorMessage
-        {
-            get => _errorMessage;
-            set { _errorMessage = value; OnPropertyChanged(); }
-        }
-
-        // ── Safe page reference ───────────────────────────────────────
         private static Page? CurrentPage =>
             Application.Current?.Windows[0].Page;
 
         // ── Constructor ───────────────────────────────────────────────
-        public StorePageModel(IStoreService storeService)
+        public StorePageModel(
+            IStoreService storeService,
+            ICartApiService cartApiService,
+            IServiceService serviceService)
         {
             _storeService = storeService;
+            _cartApiService = cartApiService;
+            _serviceService = serviceService;
 
             RefreshCommand = new Command(async () => await LoadStoreItemsAsync());
             ItemTappedCommand = new Command<StoreItem>(async item => await ViewItemDetailsAsync(item));
@@ -89,51 +75,43 @@ namespace CraftConnect_Mobile_App.PageModels
             ViewCartCommand = new Command(async () => await NavigateToCartAsync());
             FilterCategoryCommand = new Command<string>(category => ApplyFilter(category));
 
-            Debug.WriteLine("[STORE PAGE MODEL] Initialized with IStoreService");
+            Debug.WriteLine("[STORE MODEL] ✅ Initialized");
         }
-
-        // ── Public API ────────────────────────────────────────────────
 
         public async Task InitializeAsync()
         {
             await LoadStoreItemsAsync();
+            await RefreshCartBadgeAsync();
         }
 
-        // ── Load products from API ────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════
+        // LOAD  —  products + services fetched in parallel inside StoreService
+        // ═══════════════════════════════════════════════════════════════
 
         private async Task LoadStoreItemsAsync()
         {
             if (IsBusy) return;
-
             try
             {
                 IsBusy = true;
                 HasError = false;
 
-                Debug.WriteLine("[STORE PAGE MODEL] 📡 Loading products from API...");
-
                 var result = await _storeService.GetProductsAsync(
-                    page: 1,
-                    pageSize: 40,    // load enough for a full first screen
-                    sortBy: "popular");
+                    page: 1, pageSize: 40, sortBy: "popular");
 
-                _allProducts = result.Items;
-
-                Debug.WriteLine($"[STORE PAGE MODEL] ✅ API returned {_allProducts.Count} products");
-
-                // Apply whatever filter is currently active
+                // result.Items already contains both products and services
+                _allItems = result.Items;
                 ApplyFilter(_activeFilter);
+
+                Debug.WriteLine($"[STORE MODEL] ✅ {_allItems.Count} total items loaded " +
+                    $"({_allItems.Count(i => i.Type == StoreItemType.Product)} products, " +
+                    $"{_allItems.Count(i => i.Type == StoreItemType.Service)} services)");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[STORE PAGE MODEL] ❌ Load error: {ex.Message}");
+                Debug.WriteLine($"[STORE MODEL] ❌ Load error: {ex.Message}");
                 HasError = true;
-                ErrorMessage = "Failed to load store items. Pull down to retry.";
-
-                await CurrentPage!.DisplayAlert(
-                    "Error",
-                    $"Failed to load store: {ex.Message}",
-                    "OK");
+                await CurrentPage!.DisplayAlert("Error", "Failed to load store items.", "OK");
             }
             finally
             {
@@ -141,26 +119,42 @@ namespace CraftConnect_Mobile_App.PageModels
             }
         }
 
-        // ── Filter logic ──────────────────────────────────────────────
-        // Keeps the category chips working while services are not yet
-        // from the API. Service items will be added to _allProducts
-        // when that endpoint is ready — the filter logic stays the same.
+        // ═══════════════════════════════════════════════════════════════
+        // CART BADGE
+        // ═══════════════════════════════════════════════════════════════
+
+        private async Task RefreshCartBadgeAsync()
+        {
+            try
+            {
+                var count = await _cartApiService.GetCartCountAsync();
+                CartItemCount = count?.TotalItems ?? 0;
+                Debug.WriteLine($"[STORE MODEL] 🛒 Badge count: {CartItemCount}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[STORE MODEL] ❌ RefreshBadge: {ex.Message}");
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // FILTER
+        // "All"      → products + services
+        // "Products" → products only
+        // "Services" → services only
+        // ═══════════════════════════════════════════════════════════════
 
         private void ApplyFilter(string category)
         {
             ActiveFilter = category;
 
-            IEnumerable<StoreItem> filtered = _allProducts;
-
-            // Category chip filter
-            filtered = category switch
+            IEnumerable<StoreItem> filtered = category switch
             {
-                "Products" => filtered.Where(i => i.Type == StoreItemType.Product),
-                "Services" => filtered.Where(i => i.Type == StoreItemType.Service),
-                _ => filtered   // "All" and any future chips
+                "Products" => _allItems.Where(i => i.Type == StoreItemType.Product),
+                "Services" => _allItems.Where(i => i.Type == StoreItemType.Service),
+                _ => _allItems   // "All"
             };
 
-            // Search text filter (applied on top of category)
             if (!string.IsNullOrWhiteSpace(_searchText))
             {
                 var q = _searchText.Trim().ToLower();
@@ -171,13 +165,12 @@ namespace CraftConnect_Mobile_App.PageModels
             }
 
             StoreItems.Clear();
-            foreach (var item in filtered)
-                StoreItems.Add(item);
-
-            Debug.WriteLine($"[STORE PAGE MODEL] Filter '{category}' → {StoreItems.Count} items shown");
+            foreach (var item in filtered) StoreItems.Add(item);
         }
 
-        // ── Item action dispatcher ────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════
+        // ITEM ACTION  —  routes to cart (product) or booking (service)
+        // ═══════════════════════════════════════════════════════════════
 
         private async Task HandleItemActionAsync(StoreItem item)
         {
@@ -189,74 +182,102 @@ namespace CraftConnect_Mobile_App.PageModels
                 await BookServiceAsync(item);
         }
 
-        // ── Add to cart ───────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════
+        // ADD TO CART
+        // Optimistic badge update — reverts if API call fails.
+        // ═══════════════════════════════════════════════════════════════
 
         private async Task AddToCartAsync(StoreItem product)
         {
-            try
+            if (product == null) return;
+
+            var token = await SecureStorage.GetAsync("auth_token");
+            if (string.IsNullOrEmpty(token))
             {
-                // Optimistic local update first for instant UI feedback
-                var existing = CartItems.FirstOrDefault(c => c.Item.Id == product.Id);
-                if (existing != null)
-                    existing.Quantity++;
-                else
-                    CartItems.Add(new CartItem { Id = Guid.NewGuid(), Item = product, Quantity = 1 });
-
-                CartItemCount = CartItems.Sum(c => c.Quantity);
-
-                // Then persist to API in the background
-                var success = await _storeService.AddToCartAsync(product.ApiProductId, 1);
-
-                if (!success)
-                {
-                    // Rollback optimistic update
-                    var added = CartItems.FirstOrDefault(c => c.Item.Id == product.Id);
-                    if (added != null)
-                    {
-                        if (added.Quantity > 1) added.Quantity--;
-                        else CartItems.Remove(added);
-                    }
-                    CartItemCount = CartItems.Sum(c => c.Quantity);
-
-                    await CurrentPage!.DisplayAlert("Error", "Could not add item to cart. Please try again.", "OK");
-                    return;
-                }
-
-                await CurrentPage!.DisplayAlert("✓ Added to Cart", $"{product.Name} added to your cart.", "OK");
+                await CurrentPage!.DisplayAlert(
+                    "Sign In Required",
+                    "Please sign in to add items to your cart.",
+                    "OK");
+                return;
             }
-            catch (Exception ex)
+
+            CartItemCount++;
+
+            var result = await _cartApiService.AddItemAsync(
+                productCompanyBusinessLocationId: product.ApiProductId,
+                comboProductId: null,
+                quantity: 1);
+
+            if (result == null)
             {
-                Debug.WriteLine($"[STORE PAGE MODEL] ❌ AddToCart error: {ex.Message}");
-                await CurrentPage!.DisplayAlert("Error", "Failed to add item to cart.", "OK");
+                CartItemCount--;
+                await CurrentPage!.DisplayAlert(
+                    "Error", "Could not add item to cart. Please try again.", "OK");
+                return;
             }
+
+            CartItemCount = result.ItemCount;
+            Debug.WriteLine($"[STORE MODEL] ✅ Added {product.Name}. Cart count: {CartItemCount}");
         }
 
-        // ── Book service ──────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════
+        // BOOK SERVICE
+        //
+        // Flow:
+        //  1. Check auth — redirect to login if not signed in
+        //  2. Check availability for today as a quick probe
+        //  3. Navigate to service detail / booking page
+        //     (replace DisplayAlert with Shell navigation once that page exists)
+        // ═══════════════════════════════════════════════════════════════
 
         private async Task BookServiceAsync(StoreItem service)
         {
+            if (service == null) return;
+
             try
             {
-                if (service.RequiresQuote)
+                // 1. Auth check
+                var token = await SecureStorage.GetAsync("auth_token");
+                if (string.IsNullOrEmpty(token))
                 {
                     await CurrentPage!.DisplayAlert(
-                        "Request Quote",
-                        $"A quote request for '{service.Name}' will be sent to {service.SellerName}.",
+                        "Sign In Required",
+                        "Please sign in to book a service.",
                         "OK");
+                    return;
                 }
-                else
+
+                // 2. Quick availability probe for today
+                var today = DateTime.Today;
+                var availability = await _serviceService.GetAvailabilityAsync(
+                    service.ApiServiceId, today);
+
+                string availabilityInfo = availability != null && availability.IsAvailable
+                    ? $"{availability.AvailableSlots.Count(s => s.IsAvailable)} slots available today"
+                    : "Check other dates for availability";
+
+                // 3. Navigate to booking page
+                // TODO: Replace DisplayAlert with:
+                //   await Shell.Current.GoToAsync(
+                //       $"servicedetail?id={service.ApiServiceId}");
+                // once ServiceDetailPage is built.
+                var confirm = await CurrentPage!.DisplayAlert(
+                    service.Name,
+                    $"{service.SellerName}\nPrice: {service.DisplayPrice}\n{availabilityInfo}",
+                    "Book Now",
+                    "Cancel");
+
+                if (confirm)
                 {
-                    await CurrentPage!.DisplayAlert(
-                        "Book Service",
-                        $"Booking '{service.Name}' — Duration: {service.Duration}\nSelect a date and time in the next step.",
-                        "Continue",
-                        "Cancel");
-                    // TODO: await Shell.Current.GoToAsync($"bookservice?serviceId={service.Id}");
+                    await Shell.Current.GoToAsync(
+                        $"servicedetail?id={service.ApiServiceId}");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[STORE PAGE MODEL] ❌ BookService error: {ex.Message}");
+                Debug.WriteLine($"[STORE MODEL] ❌ BookService: {ex.Message}");
+                await CurrentPage!.DisplayAlert(
+                    "Error", "Could not load service details. Please try again.", "OK");
             }
         }
 
@@ -265,28 +286,24 @@ namespace CraftConnect_Mobile_App.PageModels
         private async Task ViewItemDetailsAsync(StoreItem item)
         {
             if (item == null) return;
-            // TODO: await Shell.Current.GoToAsync($"itemdetails?itemId={item.ApiProductId}");
-            await CurrentPage!.DisplayAlert(
-                item.Name,
-                $"{item.Description}\n\nPrice: {item.DisplayPrice}\nSeller: {item.SellerName}\nRating: {item.Rating}⭐ ({item.ReviewCount} reviews)",
-                "OK");
+
+            if (item.Type == StoreItemType.Service)
+            {
+                await Shell.Current.GoToAsync(
+                    $"servicedetail?id={item.ApiServiceId}");
+            }
+            else
+            {
+                await Shell.Current.GoToAsync(
+                    $"productdetail?id={item.ApiProductId}");
+            }
         }
 
-        // ── Cart navigation ───────────────────────────────────────────
+        // ── Navigate to cart ──────────────────────────────────────────
 
         private async Task NavigateToCartAsync()
         {
-            if (CartItemCount == 0)
-            {
-                await CurrentPage!.DisplayAlert("Cart Empty", "Add some products to get started!", "OK");
-                return;
-            }
-
-            var summary = string.Join("\n", CartItems.Select(c => $"• {c.Item.Name} x{c.Quantity} — {c.Item.DisplayPrice}"));
-            var total = CartItems.Sum(c => c.Subtotal);
-
-            await CurrentPage!.DisplayAlert("Your Cart", $"{summary}\n\nTotal: ${total:N2}", "OK");
-            // TODO: await Shell.Current.GoToAsync("cart");
+            await Shell.Current.GoToAsync("cart");
         }
     }
 }

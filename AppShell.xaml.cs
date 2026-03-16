@@ -1,7 +1,5 @@
 ﻿using CraftConnect_Mobile_App.Pages;
 using CraftConnect_Mobile_App.Services;
-using System;
-using System.Linq;
 
 namespace CraftConnect_Mobile_App
 {
@@ -11,7 +9,7 @@ namespace CraftConnect_Mobile_App
         {
             InitializeComponent();
 
-            // Kill ALL Shell chrome — background, navbar, tabbar
+            // Kill ALL Shell chrome
             this.BackgroundColor = Colors.Transparent;
             Shell.SetBackgroundColor(this, Colors.Transparent);
             Shell.SetNavBarIsVisible(this, false);
@@ -19,25 +17,39 @@ namespace CraftConnect_Mobile_App
             Shell.SetTabBarBackgroundColor(this, Colors.Transparent);
             Shell.SetNavBarHasShadow(this, false);
 
-            Routing.RegisterRoute("chat", typeof(ChatPage));
-            Routing.RegisterRoute("store", typeof(StorePage));
+            // Auth
             Routing.RegisterRoute(nameof(OtpVerificationPage), typeof(OtpVerificationPage));
+            Routing.RegisterRoute(nameof(RegisterPage), typeof(RegisterPage));
+
+            // Chat
+            Routing.RegisterRoute("chat", typeof(ChatPage));
+
+            // Store
+            Routing.RegisterRoute("store", typeof(StorePage));
+
+            // Cart flow — registered as routes (not ShellContent) so GoToAsync("..")
+            // works correctly and the back arrow returns to the previous page
+            Routing.RegisterRoute("cart", typeof(CartPage));
+            Routing.RegisterRoute("CheckoutPage", typeof(CheckoutPage));
+
+            // AI / Feed
             Routing.RegisterRoute("aifeedchat", typeof(AiFeedChatPage));
+
+            // Misc
             Routing.RegisterRoute("ImageViewerPage", typeof(ImageViewerPage));
-            Routing.RegisterRoute("ProfileSettingsPage", typeof(Pages.ProfileSettingsPage));
-            Routing.RegisterRoute("EditProfilePage", typeof(Pages.EditProfilePage));
-            Routing.RegisterRoute("NotificationsSettingsPage", typeof(Pages.NotificationsSettingsPage));
-            Routing.RegisterRoute("PrivacySecurityPage", typeof(Pages.PrivacySecurityPage));
-            Routing.RegisterRoute("PaymentMethodsPage", typeof(Pages.PaymentMethodsPage));
-            Routing.RegisterRoute("HelpSupportPage", typeof(Pages.HelpSupportPage));
-            Routing.RegisterRoute(nameof(Pages.RegisterPage), typeof(Pages.RegisterPage));
+            Routing.RegisterRoute("ProfileSettingsPage", typeof(ProfileSettingsPage));
+            Routing.RegisterRoute("EditProfilePage", typeof(EditProfilePage));
+            Routing.RegisterRoute("NotificationsSettingsPage", typeof(NotificationsSettingsPage));
+            Routing.RegisterRoute("PrivacySecurityPage", typeof(PrivacySecurityPage));
+            Routing.RegisterRoute("PaymentMethodsPage", typeof(PaymentMethodsPage));
+            Routing.RegisterRoute("HelpSupportPage", typeof(HelpSupportPage));
+            Routing.RegisterRoute("paystackwebview", typeof(PaystackWebViewPage));
 
             this.Navigated += AppShell_Navigated;
         }
 
         private void AppShell_Navigated(object sender, ShellNavigatedEventArgs e)
         {
-            // Re-suppress Shell chrome on every navigation in case MAUI re-applies it
             Shell.SetTabBarIsVisible(this, false);
             Shell.SetTabBarBackgroundColor(this, Colors.Transparent);
             Shell.SetNavBarIsVisible(this, false);

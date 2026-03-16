@@ -10,37 +10,41 @@
     Shell.BackgroundColor="Transparent">
 
     <!-- Auth -->
-    <ShellContent
-        Route="LoginPage"
-        Shell.NavBarIsVisible="False"
-        Shell.TabBarIsVisible="False"
-        Shell.BackgroundColor="Transparent"
-        ContentTemplate="{DataTemplate pages:LoginPage}"/>
+    <ShellContent Route="LoginPage"
+                  Shell.NavBarIsVisible="False"
+                  Shell.TabBarIsVisible="False"
+                  Shell.BackgroundColor="Transparent"
+                  ContentTemplate="{DataTemplate pages:LoginPage}"/>
 
-    <!-- Main app -->
-    <ShellContent
-        Route="GroupChatListPage"
-        Shell.NavBarIsVisible="False"
-        Shell.TabBarIsVisible="False"
-        Shell.BackgroundColor="Transparent"
-        ContentTemplate="{DataTemplate pages:GroupChatListPage}"/>
-    <ShellContent
-        Route="UpdatesFeedPage"
-        Shell.NavBarIsVisible="False"
-        Shell.TabBarIsVisible="False"
-        Shell.BackgroundColor="Transparent"
-        ContentTemplate="{DataTemplate pages:UpdatesFeedPage}"/>
-    <ShellContent
-        Route="StorePage"
-        Shell.NavBarIsVisible="False"
-        Shell.TabBarIsVisible="False"
-        Shell.BackgroundColor="Transparent"
-        ContentTemplate="{DataTemplate pages:StorePage}"/>
-    <ShellContent
-        Route="SettingsPage"
-        Shell.NavBarIsVisible="False"
-        Shell.TabBarIsVisible="False"
-        Shell.BackgroundColor="Transparent"
-        ContentTemplate="{DataTemplate pages:SettingsPage}"/>
+    <!-- Main app tabs — these are top-level pages reachable via //RouteName -->
+    <ShellContent Route="GroupChatListPage"
+                  Shell.NavBarIsVisible="False"
+                  Shell.TabBarIsVisible="False"
+                  Shell.BackgroundColor="Transparent"
+                  ContentTemplate="{DataTemplate pages:GroupChatListPage}"/>
 
+    <ShellContent Route="UpdatesFeedPage"
+                  Shell.NavBarIsVisible="False"
+                  Shell.TabBarIsVisible="False"
+                  Shell.BackgroundColor="Transparent"
+                  ContentTemplate="{DataTemplate pages:UpdatesFeedPage}"/>
+
+    <ShellContent Route="StorePage"
+                  Shell.NavBarIsVisible="False"
+                  Shell.TabBarIsVisible="False"
+                  Shell.BackgroundColor="Transparent"
+                  ContentTemplate="{DataTemplate pages:StorePage}"/>
+
+    <ShellContent Route="SettingsPage"
+                  Shell.NavBarIsVisible="False"
+                  Shell.TabBarIsVisible="False"
+                  Shell.BackgroundColor="Transparent"
+                  ContentTemplate="{DataTemplate pages:SettingsPage}"/>
+
+    <!--
+        CartPage and CheckoutPage are NOT ShellContent here.
+        They are registered via Routing.RegisterRoute in AppShell.xaml.cs
+        so that GoToAsync("cart") pushes them onto the navigation stack
+        and GoToAsync("..") pops back correctly.
+    -->
 </Shell>
