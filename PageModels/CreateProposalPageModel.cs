@@ -1,4 +1,4 @@
-﻿using CraftConnect_Mobile_App.Services;
+using CraftConnect_Mobile_App.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -61,6 +61,10 @@ namespace CraftConnect_Mobile_App.PageModels
         // ▌ FORM FIELDS
         // ══════════════════════════════════════════════════════════════
 
+        /// <summary>
+        /// The workmanship (labour/craft cost) amount entered by the artisan.
+        /// Exposed as ProposedPrice to keep the service layer contract unchanged.
+        /// </summary>
         public string ProposedPrice
         {
             get => _proposedPrice;
@@ -165,17 +169,39 @@ namespace CraftConnect_Mobile_App.PageModels
         /// Call from OnAppearing. Pass the feed list from your navigation/service layer.
         /// Optionally pre-select a feed when arriving from a feed detail page.
         /// </summary>
-        public void Initialize(List<(string Id, string DisplayName)> feeds, string? preselectedFeedId = null)
+        // Replace just the Initialize method:
+
+        public void Initialize(
+            List<(string Id, string DisplayName)> feeds,
+            string? preselectedFeedId = null,
+            string? preselectedFeedTitle = null)   // ← NEW param
         {
             AvailableFeeds.Clear();
+
+            // If the preselected feed isn't in the list, add it so it's always present
+            if (!string.IsNullOrEmpty(preselectedFeedId))
+            {
+                var exists = feeds.Any(f => f.Id == preselectedFeedId);
+                if (!exists && !string.IsNullOrEmpty(preselectedFeedTitle))
+                {
+                    feeds = new List<(string, string)>(feeds)
+            {
+                (preselectedFeedId, preselectedFeedTitle)
+            };
+                    Debug.WriteLine($"[PROPOSAL PM] Injected preselected feed into list: {preselectedFeedTitle}");
+                }
+            }
 
             foreach (var f in feeds)
                 AvailableFeeds.Add(new FeedPickerItem { Id = f.Id, DisplayName = f.DisplayName });
 
             if (!string.IsNullOrEmpty(preselectedFeedId))
+            {
                 SelectedFeed = AvailableFeeds.FirstOrDefault(f => f.Id == preselectedFeedId);
+                Debug.WriteLine($"[PROPOSAL PM] SelectedFeed = {SelectedFeed?.DisplayName ?? "NOT FOUND"}");
+            }
 
-            Debug.WriteLine($"[PROPOSAL PM] Initialized with {feeds.Count} feeds. Preselected: {preselectedFeedId ?? "none"}");
+            Debug.WriteLine($"[PROPOSAL PM] Initialized with {AvailableFeeds.Count} feeds.");
         }
 
         /// <summary>
@@ -226,9 +252,9 @@ namespace CraftConnect_Mobile_App.PageModels
                 return "Please select a project.";
 
             if (string.IsNullOrWhiteSpace(ProposedPrice)
-                || !decimal.TryParse(ProposedPrice, out var price)
-                || price <= 0)
-                return "Please enter a valid proposed price.";
+                || !decimal.TryParse(ProposedPrice, out var workmanship)
+                || workmanship <= 0)
+                return "Please enter a valid workmanship amount.";
 
             if (!EstimatedDuration.HasValue)
                 return "Please select an estimated completion date.";
@@ -274,7 +300,7 @@ namespace CraftConnect_Mobile_App.PageModels
                     QuoteDocumentFileName = QuoteDocumentFileName
                 };
 
-                Debug.WriteLine($"[PROPOSAL PM] Submitting — FeedId: {request.UserFeedId}, Price: {request.ProposedPrice}");
+                Debug.WriteLine($"[PROPOSAL PM] Submitting — FeedId: {request.UserFeedId}, Workmanship: {request.ProposedPrice}");
 
                 var result = await _proposalService.CreateProposalAsync(request);
 

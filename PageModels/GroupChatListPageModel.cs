@@ -12,7 +12,18 @@ namespace CraftConnect_Mobile_App.PageModels
     {
         private readonly IChatService _chatService;
 
-        public ObservableCollection<GroupChatItem> Groups { get; } = new();
+        // ── Fix: full property with backing field so RefreshGroupsList()
+        //    can reassign it and the CollectionView binding updates. ─────
+        private ObservableCollection<GroupChatItem> _groups = new();
+        public ObservableCollection<GroupChatItem> Groups
+        {
+            get => _groups;
+            set
+            {
+                _groups = value;
+                OnPropertyChanged();
+            }
+        }
 
         public Command LoadCommand { get; }
         public Command RefreshUnreadCommand { get; }
@@ -87,9 +98,12 @@ namespace CraftConnect_Mobile_App.PageModels
                 foreach (var item in list)
                 {
                     // Log each group's unread count so we can confirm API is sending it
-                    Debug.WriteLine($"[GROUP CHAT LIST VM] Group: '{item.Name}' | UnreadCount={item.UnreadCount} | HasUnread={item.HasUnreadMessages}");
+                    Debug.WriteLine($"[GROUP CHAT LIST VM] Group: '{item.Name}' | UnreadCount={item.UnreadCount} | HasUnread={item.HasUnreadMessages} | IsGroup={item.IsGroup}");
                     Groups.Add(item);
                 }
+
+                // Cache the full list for filtering / searching
+                CacheGroups();
 
                 // Also fetch the overall total for the nav badge
                 TotalUnreadCount = await _chatService.GetTotalUnreadCountAsync();
@@ -146,8 +160,8 @@ namespace CraftConnect_Mobile_App.PageModels
                     if (i < Groups.Count)
                     {
                         // Update the existing item's unread count so the UI refreshes.
-                        // NOTE: This only works if GroupChatItem implements
-                        // INotifyPropertyChanged on UnreadCount (see note below).
+                        // NOTE: This only works because GroupChatItem implements
+                        // INotifyPropertyChanged on UnreadCount.
                         Groups[i].UnreadCount = updated.UnreadCount;
                         Groups[i].LastMessageIsRead = updated.LastMessageIsRead;
                     }
@@ -157,12 +171,73 @@ namespace CraftConnect_Mobile_App.PageModels
                     }
                 }
 
+                // Re-cache with fresh data so filters stay accurate
+                CacheGroups();
+
                 Debug.WriteLine($"[GROUP CHAT LIST VM] ✅ Unread refreshed. Total={TotalUnreadCount}");
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[GROUP CHAT LIST VM] ❌ Error refreshing unread: {ex.Message}");
             }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // FILTERING & SEARCH
+        // ═══════════════════════════════════════════════════════════════
+
+        // Keep a reference to the full unfiltered list
+        private List<GroupChatItem> _allGroups = new();
+        private string _currentSearch = "";
+        private string _currentFilter = "All";
+
+        /// <summary>
+        /// Snapshots the current Groups list so filters/search work against
+        /// the full dataset. Call after every load or refresh.
+        /// </summary>
+        private void CacheGroups()
+        {
+            _allGroups = Groups?.ToList() ?? new List<GroupChatItem>();
+        }
+
+        /// <summary>Called by the view when a filter chip is tapped.</summary>
+        public void ApplyFilter(string filter)
+        {
+            _currentFilter = filter;
+            RefreshGroupsList();
+        }
+
+        /// <summary>Called by the view when the search text changes.</summary>
+        public void ApplySearch(string query)
+        {
+            _currentSearch = query ?? "";
+            RefreshGroupsList();
+        }
+
+        private void RefreshGroupsList()
+        {
+            var filtered = _allGroups.AsEnumerable();
+
+            // Filter chip
+            filtered = _currentFilter switch
+            {
+                "Unread" => filtered.Where(g => g.HasUnreadMessages),
+                "Groups" => filtered.Where(g => g.IsGroup),
+                "Personal" => filtered.Where(g => !g.IsGroup),
+                _ => filtered   // "All" — no filter
+            };
+
+            // Search query
+            if (!string.IsNullOrWhiteSpace(_currentSearch))
+            {
+                var q = _currentSearch.ToLowerInvariant();
+                filtered = filtered.Where(g =>
+                    (g.Name?.ToLowerInvariant().Contains(q) ?? false) ||
+                    (g.LastMessage?.ToLowerInvariant().Contains(q) ?? false));
+            }
+
+            // Fix CS0200: assign via the property setter, not the readonly field
+            Groups = new ObservableCollection<GroupChatItem>(filtered);
         }
 
         // ═══════════════════════════════════════════════════════════════

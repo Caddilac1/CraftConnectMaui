@@ -1,6 +1,11 @@
 ﻿using CraftConnect_Mobile_App.PageModels;
+using Microsoft.Maui.Controls.Shapes;
 using Plugin.Maui.Audio;
 using System.Diagnostics;
+
+// Alias to avoid ambiguity between
+// Microsoft.Maui.Controls.Shapes.Path and System.IO.Path
+using IOPath = System.IO.Path;
 
 namespace CraftConnect_Mobile_App.Pages
 {
@@ -17,7 +22,7 @@ namespace CraftConnect_Mobile_App.Pages
             InitializeComponent();
             _viewModel = viewModel;
             BindingContext = _viewModel;
-            Debug.WriteLine("[AI CHAT PAGE] Constructor - Page initialized");
+            Debug.WriteLine("[SUPPORT CHAT] Page initialized");
         }
 
         // ─────────────────────────────────────────────────────────
@@ -27,27 +32,27 @@ namespace CraftConnect_Mobile_App.Pages
         protected override async void OnAppearing()
         {
             base.OnAppearing();
-            Debug.WriteLine("[AI CHAT PAGE] OnAppearing");
+            Debug.WriteLine("[SUPPORT CHAT] OnAppearing");
 
             try
             {
                 await Task.Delay(100);
                 await _viewModel.InitializeAsync();
-                Debug.WriteLine("[AI CHAT PAGE] ✅ Initialization complete");
+                Debug.WriteLine("[SUPPORT CHAT] ✅ Ready");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[AI CHAT PAGE] ❌ Error: {ex.Message}");
-                await DisplayAlert("Error", $"Failed to initialize: {ex.Message}", "OK");
+                Debug.WriteLine($"[SUPPORT CHAT] ❌ Error: {ex.Message}");
+                await DisplayAlert("Connection Error",
+                    "We couldn't connect to CraftConnect Support right now. Please try again.", "OK");
             }
         }
 
         protected override async void OnDisappearing()
         {
             base.OnDisappearing();
-            Debug.WriteLine("[AI CHAT PAGE] OnDisappearing");
+            Debug.WriteLine("[SUPPORT CHAT] OnDisappearing");
 
-            // Safety: stop any in-progress recording if user navigates away
             if (_viewModel.IsRecording)
                 await StopRecordingAndDiscard();
         }
@@ -58,37 +63,28 @@ namespace CraftConnect_Mobile_App.Pages
 
         private async void OnBackButtonTapped(object sender, EventArgs e)
         {
-            Debug.WriteLine("[AI CHAT PAGE] Back button tapped");
+            Debug.WriteLine("[SUPPORT CHAT] Back tapped");
 
-            // Stop recording first if active
             if (_viewModel.IsRecording)
                 await StopRecordingAndDiscard();
 
             var confirm = await DisplayAlert(
-                "Exit Chat",
-                "Are you sure you want to exit? Your progress will be saved.",
-                "Yes",
-                "No");
+                "Leave Chat",
+                "Are you sure you want to leave? Your progress will be saved.",
+                "Leave", "Stay");
 
             if (confirm)
                 await Shell.Current.GoToAsync("..");
         }
 
         // ─────────────────────────────────────────────────────────
-        // Send / Mic tap — central dispatcher
+        // Send / Mic — central dispatcher
         // ─────────────────────────────────────────────────────────
 
-        /// <summary>
-        /// Single handler for the combined send/mic button.
-        /// • Text present  → send the text message
-        /// • No text, idle → start recording
-        /// • No text, recording → stop + send voice note
-        /// </summary>
         private async void OnSendMicTapped(object sender, EventArgs e)
         {
             if (!string.IsNullOrWhiteSpace(_viewModel.MessageText))
             {
-                // Normal text send
                 await _viewModel.SendMessageCommand.ExecuteAsync(null);
                 return;
             }
@@ -105,32 +101,30 @@ namespace CraftConnect_Mobile_App.Pages
 
         private async Task StartRecording()
         {
-            // Check / request microphone permission
             var status = await Permissions.RequestAsync<Permissions.Microphone>();
             if (status != PermissionStatus.Granted)
             {
                 await DisplayAlert("Permission Required",
-                    "Microphone access is needed to record voice messages.", "OK");
+                    "Microphone access is needed to send voice messages.", "OK");
                 return;
             }
 
             try
             {
-                // Build a temp path for the audio file
                 var fileName = $"voice_{DateTime.Now:yyyyMMdd_HHmmss}.m4a";
-                _recordingFilePath = Path.Combine(FileSystem.CacheDirectory, fileName);
+                _recordingFilePath = IOPath.Combine(FileSystem.CacheDirectory, fileName);
 
                 _recorder = AudioManager.Current.CreateRecorder();
                 await _recorder.StartAsync(_recordingFilePath);
 
                 _viewModel.StartRecordingState();
-                _ = AnimateRecordingDot();          // pulsing dot (fire-and-forget)
+                _ = AnimateRecordingDot();
 
-                Debug.WriteLine($"[AI CHAT PAGE] 🎙 Recording started → {_recordingFilePath}");
+                Debug.WriteLine($"[SUPPORT CHAT] 🎙 Recording → {_recordingFilePath}");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[AI CHAT PAGE] ❌ StartRecording error: {ex.Message}");
+                Debug.WriteLine($"[SUPPORT CHAT] ❌ StartRecording error: {ex.Message}");
                 await DisplayAlert("Error", "Could not start recording. Please try again.", "OK");
             }
         }
@@ -144,7 +138,7 @@ namespace CraftConnect_Mobile_App.Pages
                 await _recorder.StopAsync();
                 _viewModel.StopRecordingState();
 
-                Debug.WriteLine("[AI CHAT PAGE] ⏹ Recording stopped");
+                Debug.WriteLine("[SUPPORT CHAT] ⏹ Recording stopped");
 
                 if (string.IsNullOrEmpty(_recordingFilePath) || !File.Exists(_recordingFilePath))
                 {
@@ -152,12 +146,11 @@ namespace CraftConnect_Mobile_App.Pages
                     return;
                 }
 
-                // Hand off to the view model for upload / transcription
                 await _viewModel.SendVoiceMessageAsync(_recordingFilePath);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[AI CHAT PAGE] ❌ StopRecording error: {ex.Message}");
+                Debug.WriteLine($"[SUPPORT CHAT] ❌ StopRecording error: {ex.Message}");
                 _viewModel.StopRecordingState();
                 await DisplayAlert("Error", "Failed to process recording. Please try again.", "OK");
             }
@@ -186,11 +179,10 @@ namespace CraftConnect_Mobile_App.Pages
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[AI CHAT PAGE] ❌ StopRecordingAndDiscard error: {ex.Message}");
+                Debug.WriteLine($"[SUPPORT CHAT] ❌ StopRecordingAndDiscard error: {ex.Message}");
             }
         }
 
-        /// <summary>Pulsing opacity animation on the red dot while recording.</summary>
         private async Task AnimateRecordingDot()
         {
             while (_viewModel.IsRecording)
@@ -208,7 +200,7 @@ namespace CraftConnect_Mobile_App.Pages
 
         private async void OnAttachmentButtonTapped(object sender, EventArgs e)
         {
-            Debug.WriteLine("[AI CHAT PAGE] Attachment button tapped");
+            Debug.WriteLine("[SUPPORT CHAT] Attachment tapped");
 
             AttachmentOverlay.IsVisible = true;
 
@@ -258,12 +250,12 @@ namespace CraftConnect_Mobile_App.Pages
 
         private void OnEmojiButtonTapped(object sender, EventArgs e)
         {
-            Debug.WriteLine("[AI CHAT PAGE] Emoji button tapped");
-            DisplayAlert("Info", "Emoji picker coming soon!", "OK");
+            Debug.WriteLine("[SUPPORT CHAT] Emoji tapped");
+            DisplayAlert("Coming Soon", "Emoji picker will be available soon!", "OK");
         }
 
         // ─────────────────────────────────────────────────────────
-        // File / photo pickers (unchanged)
+        // File / photo pickers
         // ─────────────────────────────────────────────────────────
 
         private async Task PickDocument(string fileType)
@@ -273,11 +265,10 @@ namespace CraftConnect_Mobile_App.Pages
                 var customFileType = new FilePickerFileType(
                     new Dictionary<DevicePlatform, IEnumerable<string>>
                     {
-                        { DevicePlatform.iOS,    new[] { "public.pdf", "public.image", "public.data" } },
+                        { DevicePlatform.iOS,     new[] { "public.pdf", "public.image", "public.data" } },
                         { DevicePlatform.Android, new[] { "application/pdf", "image/*", "*/*" } },
-                        { DevicePlatform.WinUI,  new[] { ".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx" } }
-                    }
-                );
+                        { DevicePlatform.WinUI,   new[] { ".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx" } }
+                    });
 
                 var options = new PickOptions
                 {
@@ -289,12 +280,12 @@ namespace CraftConnect_Mobile_App.Pages
                 if (file != null)
                 {
                     await _viewModel.AttachFile(file, fileType);
-                    Debug.WriteLine($"[AI CHAT PAGE] ✅ File attached: {file.FileName}");
+                    Debug.WriteLine($"[SUPPORT CHAT] ✅ File attached: {file.FileName}");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[AI CHAT PAGE] ❌ Error picking file: {ex.Message}");
+                Debug.WriteLine($"[SUPPORT CHAT] ❌ PickDocument error: {ex.Message}");
                 await DisplayAlert("Error", "Failed to attach file. Please try again.", "OK");
             }
         }
@@ -309,17 +300,17 @@ namespace CraftConnect_Mobile_App.Pages
                     if (file != null)
                     {
                         await _viewModel.AttachFile(file, "photo");
-                        Debug.WriteLine($"[AI CHAT PAGE] ✅ Photo captured: {file.FileName}");
+                        Debug.WriteLine($"[SUPPORT CHAT] ✅ Photo captured: {file.FileName}");
                     }
                 }
                 else
                 {
-                    await DisplayAlert("Not Supported", "Camera is not available on this device", "OK");
+                    await DisplayAlert("Not Supported", "Camera is not available on this device.", "OK");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[AI CHAT PAGE] ❌ Error taking photo: {ex.Message}");
+                Debug.WriteLine($"[SUPPORT CHAT] ❌ TakePhoto error: {ex.Message}");
                 await DisplayAlert("Error", "Failed to capture photo. Please try again.", "OK");
             }
         }
@@ -332,12 +323,12 @@ namespace CraftConnect_Mobile_App.Pages
                 if (file != null)
                 {
                     await _viewModel.AttachFile(file, "photo");
-                    Debug.WriteLine($"[AI CHAT PAGE] ✅ Photo selected: {file.FileName}");
+                    Debug.WriteLine($"[SUPPORT CHAT] ✅ Photo selected: {file.FileName}");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[AI CHAT PAGE] ❌ Error picking photo: {ex.Message}");
+                Debug.WriteLine($"[SUPPORT CHAT] ❌ PickPhoto error: {ex.Message}");
                 await DisplayAlert("Error", "Failed to select photo. Please try again.", "OK");
             }
         }

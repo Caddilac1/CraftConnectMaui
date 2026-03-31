@@ -33,7 +33,7 @@ namespace CraftConnect_Mobile_App
             Routing.RegisterRoute("CheckoutPage", typeof(CheckoutPage));
 
             // AI / Feed
-            Routing.RegisterRoute("aifeedchat", typeof(AiFeedChatPage));
+            Routing.RegisterRoute("addgroup", typeof(AiFeedChatPage));
 
             // Misc
             Routing.RegisterRoute("ImageViewerPage", typeof(ImageViewerPage));
@@ -44,6 +44,8 @@ namespace CraftConnect_Mobile_App
             Routing.RegisterRoute("PaymentMethodsPage", typeof(PaymentMethodsPage));
             Routing.RegisterRoute("HelpSupportPage", typeof(HelpSupportPage));
             Routing.RegisterRoute("paystackwebview", typeof(PaystackWebViewPage));
+            Routing.RegisterRoute("CreateInvoicePage", typeof(CreateInvoicePage));
+            Routing.RegisterRoute("ReviewInvoicePage", typeof(ReviewInvoicePage));
 
             this.Navigated += AppShell_Navigated;
         }

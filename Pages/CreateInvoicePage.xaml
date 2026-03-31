@@ -1,0 +1,589 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CraftConnect_Mobile_App.Pages.CreateInvoicePage"
+             Title=""
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#F0F4FF">
+
+    <!-- Row 0 = nav bar, Row 1 = feed subtitle strip, Row 2 = scrollable form, Row 3 = sticky footer -->
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+        <!-- ══ COMPACT TOP NAV BAR ══════════════════════════════════════ -->
+        <Grid Grid.Row="0"
+              BackgroundColor="#FFFFFF"
+              ColumnDefinitions="Auto,*,Auto">
+            <Grid.Padding>
+                <OnPlatform x:TypeArguments="Thickness">
+                    <On Platform="iOS"     Value="14,48,14,10"/>
+                    <On Platform="Android" Value="14,16,14,10"/>
+                    <On Platform="Default" Value="14,12,14,10"/>
+                </OnPlatform>
+            </Grid.Padding>
+            <Grid.Shadow>
+                <Shadow Brush="#2563EB" Offset="0,2" Radius="6" Opacity="0.06"/>
+            </Grid.Shadow>
+
+            <!-- Back chevron -->
+            <Border Grid.Column="0"
+                    WidthRequest="38" HeightRequest="38"
+                    BackgroundColor="Transparent"
+                    Stroke="#E2E8FF" StrokeThickness="1.5">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12"/>
+                </Border.StrokeShape>
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnBackClicked"/>
+                </Border.GestureRecognizers>
+                <!-- SVG: chevron-left -->
+                <Path Data="M14 7L9 12L14 17"
+                      Stroke="#1A2340" StrokeThickness="2"
+                      StrokeLineCap="Round" StrokeLineJoin="Round"
+                      WidthRequest="16" HeightRequest="16"
+                      Aspect="Uniform"
+                      HorizontalOptions="Center" VerticalOptions="Center"/>
+            </Border>
+
+            <!-- Title -->
+            <Label Grid.Column="1"
+                   Text="Create Invoice"
+                   FontSize="16" FontAttributes="Bold" TextColor="#0D0D0D"
+                   HorizontalOptions="Center" VerticalOptions="Center"/>
+
+            <!-- Step badge -->
+            <Border Grid.Column="2"
+                    BackgroundColor="#EEF2FF"
+                    StrokeThickness="1.5" Stroke="#2563EB"
+                    VerticalOptions="Center">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="18"/>
+                </Border.StrokeShape>
+                <HorizontalStackLayout Padding="10,5" Spacing="4">
+                    <!-- SVG: list-ordered -->
+                    <Path Data="M8 6H21M8 12H21M8 18H21M3 6H3.01M3 12H3.01M3 18H3.01"
+                          Stroke="#2563EB" StrokeThickness="2"
+                          StrokeLineCap="Round" StrokeLineJoin="Round"
+                          WidthRequest="11" HeightRequest="11"
+                          Aspect="Uniform" VerticalOptions="Center"/>
+                    <Label Text="Step 2 of 3" FontSize="12" FontAttributes="Bold"
+                           TextColor="#2563EB" VerticalOptions="Center"/>
+                </HorizontalStackLayout>
+            </Border>
+
+        </Grid>
+
+        <!-- Divider — sits at the bottom of Row 0 -->
+        <BoxView Grid.Row="0" HeightRequest="1" BackgroundColor="#E2E8FF" VerticalOptions="End"/>
+
+        <!-- ══ FEED SUBTITLE STRIP ═══════════════════════════════════════
+             Lives in its own Row 1 so it never overlaps the nav bar.
+             Hidden entirely when there is no feed title text.            -->
+        <Border x:Name="FeedTitleStrip"
+                Grid.Row="1"
+                BackgroundColor="#EEF2FF"
+                StrokeThickness="0"
+                Padding="14,5"
+                IsVisible="False">
+            <Label x:Name="FeedTitleLabel"
+                   FontSize="11" TextColor="#2563EB"
+                   HorizontalOptions="Center"/>
+        </Border>
+
+        <!-- ══ SCROLLABLE FORM ══════════════════════════════════════════ -->
+        <ScrollView Grid.Row="2">
+            <VerticalStackLayout Padding="14,16,14,12" Spacing="12">
+
+                <!-- Error banner -->
+                <Border IsVisible="{Binding HasError}"
+                        BackgroundColor="#FEF2F2" Stroke="#FCA5A5"
+                        StrokeThickness="1" Padding="12,10">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10"/>
+                    </Border.StrokeShape>
+                    <HorizontalStackLayout Spacing="8">
+                        <!-- SVG: alert-circle -->
+                        <Path Data="M12 8V12M12 16H12.01M2 12C2 6.5 6.5 2 12 2C17.5 2 22 6.5 22 12C22 17.5 17.5 22 12 22C6.5 22 2 17.5 2 12Z"
+                              Stroke="#DC2626" StrokeThickness="1.8"
+                              StrokeLineCap="Round" StrokeLineJoin="Round"
+                              WidthRequest="16" HeightRequest="16"
+                              Aspect="Uniform" VerticalOptions="Start" Margin="0,1,0,0"/>
+                        <Label Text="{Binding ErrorMessage}" FontSize="13" TextColor="#DC2626"
+                               HorizontalOptions="Fill"/>
+                    </HorizontalStackLayout>
+                </Border>
+
+                <!-- ── SECTION 1: Products ───────────────────────────── -->
+                <Border BackgroundColor="White"
+                        Stroke="#E2E8FF" StrokeThickness="1"
+                        Padding="14,12">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="14"/>
+                    </Border.StrokeShape>
+                    <Border.Shadow>
+                        <Shadow Brush="#2563EB" Offset="0,2" Radius="8" Opacity="0.05"/>
+                    </Border.Shadow>
+                    <VerticalStackLayout Spacing="12">
+
+                        <!-- Section header -->
+                        <HorizontalStackLayout Spacing="10">
+                            <Border BackgroundColor="#2563EB"
+                                    WidthRequest="32" HeightRequest="32"
+                                    StrokeThickness="0">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10"/>
+                                </Border.StrokeShape>
+                                <Border.Shadow>
+                                    <Shadow Brush="#2563EB" Offset="0,2" Radius="6" Opacity="0.35"/>
+                                </Border.Shadow>
+                                <!-- SVG: package / box -->
+                                <Path Data="M21 8L12 3L3 8M21 8V16L12 21M21 8L12 13M3 8V16L12 21M3 8L12 13M12 13V21"
+                                      Stroke="White" StrokeThickness="1.6"
+                                      StrokeLineCap="Round" StrokeLineJoin="Round"
+                                      WidthRequest="17" HeightRequest="17"
+                                      Aspect="Uniform"
+                                      HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
+                            <Label Text="Products" FontSize="15" FontAttributes="Bold"
+                                   TextColor="#0D0D0D" VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+
+                        <!-- Line items -->
+                        <CollectionView ItemsSource="{Binding LineItems}">
+                            <CollectionView.EmptyView>
+                                <VerticalStackLayout HorizontalOptions="Center" Spacing="6" Padding="0,12">
+                                    <!-- SVG: inbox empty -->
+                                    <Path Data="M5 3H19L21 9H3L5 3ZM3 9V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V9M9 13H15"
+                                          Stroke="#9BAABB" StrokeThickness="1.6"
+                                          StrokeLineCap="Round" StrokeLineJoin="Round"
+                                          WidthRequest="28" HeightRequest="28"
+                                          Aspect="Uniform" HorizontalOptions="Center"/>
+                                    <Label Text="No products added yet"
+                                           FontSize="13" TextColor="#9BAABB"
+                                           HorizontalOptions="Center"/>
+                                    <Label Text="Tap 'Add Product' below to get started"
+                                           FontSize="11" TextColor="#B0BEC8"
+                                           HorizontalOptions="Center"/>
+                                </VerticalStackLayout>
+                            </CollectionView.EmptyView>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,0,10"
+                                            Stroke="#E2E8FF" StrokeThickness="1"
+                                            Padding="12,10">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="10"/>
+                                        </Border.StrokeShape>
+                                        <Grid RowDefinitions="Auto,Auto,Auto"
+                                              ColumnDefinitions="*,Auto"
+                                              RowSpacing="8">
+
+                                            <!-- Product name -->
+                                            <Label Grid.Row="0" Grid.Column="0"
+                                                   Text="{Binding ProductName}"
+                                                   FontSize="14" FontAttributes="Bold"
+                                                   TextColor="#0D0D0D"/>
+
+                                            <!-- Remove button — SVG x-circle -->
+                                            <Path Grid.Row="0" Grid.Column="1"
+                                                  Data="M12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2ZM15 9L9 15M9 9L15 15"
+                                                  Stroke="#EF4444" StrokeThickness="1.8"
+                                                  StrokeLineCap="Round" StrokeLineJoin="Round"
+                                                  WidthRequest="18" HeightRequest="18"
+                                                  Aspect="Uniform" VerticalOptions="Center"
+                                                  Margin="8,0,0,0">
+                                                <Path.GestureRecognizers>
+                                                    <TapGestureRecognizer
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.RemoveLineItemCommand}"
+                                                        CommandParameter="{Binding .}"/>
+                                                </Path.GestureRecognizers>
+                                            </Path>
+
+                                            <!-- Unit price → line total -->
+                                            <HorizontalStackLayout Grid.Row="1" Grid.Column="0"
+                                                                   Grid.ColumnSpan="2" Spacing="4">
+                                                <Label Text="Unit:" FontSize="12" TextColor="#6B7280"/>
+                                                <Label Text="{Binding UnitPrice, StringFormat='₵{0:N2}'}"
+                                                       FontSize="12" FontAttributes="Bold" TextColor="#0D0D0D"/>
+                                                <!-- SVG: arrow-right small -->
+                                                <Path Data="M5 12H14M10 8L14 12L10 16"
+                                                      Stroke="#9BAABB" StrokeThickness="1.6"
+                                                      StrokeLineCap="Round" StrokeLineJoin="Round"
+                                                      WidthRequest="12" HeightRequest="12"
+                                                      Aspect="Uniform" VerticalOptions="Center"/>
+                                                <Label Text="{Binding LineTotal, StringFormat='₵{0:N2}'}"
+                                                       FontSize="12" FontAttributes="Bold"
+                                                       TextColor="#2563EB"/>
+                                            </HorizontalStackLayout>
+
+                                            <!-- Qty + Discount -->
+                                            <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                                                  ColumnDefinitions="Auto,*,Auto,*"
+                                                  ColumnSpacing="8">
+
+                                                <Label Grid.Column="0" Text="Qty"
+                                                       FontSize="12" TextColor="#6B7280"
+                                                       VerticalOptions="Center"/>
+                                                <Border Grid.Column="1"
+                                                        StrokeThickness="1.5" Stroke="#DDE4EC"
+                                                        HeightRequest="38">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="8"/>
+                                                    </Border.StrokeShape>
+                                                    <Entry Text="{Binding Quantity}"
+                                                           Keyboard="Numeric"
+                                                           FontSize="13" TextColor="#0D0D0D"
+                                                           BackgroundColor="Transparent"
+                                                           Margin="8,0"
+                                                           HorizontalTextAlignment="Center"/>
+                                                </Border>
+
+                                                <Label Grid.Column="2" Text="Disc %"
+                                                       FontSize="12" TextColor="#6B7280"
+                                                       VerticalOptions="Center"/>
+                                                <Border Grid.Column="3"
+                                                        StrokeThickness="1.5" Stroke="#DDE4EC"
+                                                        HeightRequest="38">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="8"/>
+                                                    </Border.StrokeShape>
+                                                    <Entry Text="{Binding DiscountPercent}"
+                                                           Keyboard="Numeric"
+                                                           Placeholder="0"
+                                                           FontSize="13" TextColor="#0D0D0D"
+                                                           BackgroundColor="Transparent"
+                                                           Margin="8,0"
+                                                           HorizontalTextAlignment="Center"/>
+                                                </Border>
+
+                                            </Grid>
+
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+
+                        <!-- Add product button -->
+                        <Border StrokeThickness="1.5" Stroke="#2563EB" HeightRequest="46">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12"/>
+                            </Border.StrokeShape>
+                            <Grid ColumnDefinitions="Auto,Auto" HorizontalOptions="Center"
+                                  ColumnSpacing="6" VerticalOptions="Center">
+                                <!-- SVG: plus-circle -->
+                                <Path Grid.Column="0"
+                                      Data="M12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2ZM12 8V16M8 12H16"
+                                      Stroke="#2563EB" StrokeThickness="1.8"
+                                      StrokeLineCap="Round" StrokeLineJoin="Round"
+                                      WidthRequest="16" HeightRequest="16"
+                                      Aspect="Uniform" VerticalOptions="Center"/>
+                                <Label Grid.Column="1" Text="Add Product"
+                                       TextColor="#2563EB" FontSize="14" FontAttributes="Bold"
+                                       VerticalOptions="Center"/>
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnAddProductClicked"/>
+                                </Grid.GestureRecognizers>
+                            </Grid>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnAddProductClicked"/>
+                            </Border.GestureRecognizers>
+                        </Border>
+
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- ── SECTION 2: Totals & Settings ─────────────────── -->
+                <Border BackgroundColor="White"
+                        Stroke="#E2E8FF" StrokeThickness="1"
+                        Padding="14,12">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="14"/>
+                    </Border.StrokeShape>
+                    <Border.Shadow>
+                        <Shadow Brush="#2563EB" Offset="0,2" Radius="8" Opacity="0.05"/>
+                    </Border.Shadow>
+                    <VerticalStackLayout Spacing="12">
+
+                        <!-- Section header -->
+                        <HorizontalStackLayout Spacing="10">
+                            <Border WidthRequest="32" HeightRequest="32" StrokeThickness="0">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10"/>
+                                </Border.StrokeShape>
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#3B82F6" Offset="0"/>
+                                        <GradientStop Color="#1D4ED8" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <Border.Shadow>
+                                    <Shadow Brush="#2563EB" Offset="0,2" Radius="6" Opacity="0.35"/>
+                                </Border.Shadow>
+                                <!-- SVG: calculator / totals -->
+                                <Path Data="M5 3H19C20.1 3 21 3.9 21 5V19C21 20.1 20.1 21 19 21H5C3.9 21 3 20.1 3 19V5C3 3.9 3.9 3 5 3ZM8 8H16M8 12H11M13 12H16M8 16H11M13 16H16"
+                                      Stroke="White" StrokeThickness="1.6"
+                                      StrokeLineCap="Round" StrokeLineJoin="Round"
+                                      WidthRequest="17" HeightRequest="17"
+                                      Aspect="Uniform"
+                                      HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
+                            <Label Text="Totals &amp; Settings" FontSize="15" FontAttributes="Bold"
+                                   TextColor="#0D0D0D" VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+
+                        <!-- Workmanship -->
+                        <VerticalStackLayout Spacing="5">
+                            <HorizontalStackLayout Spacing="4">
+                                <Label Text="Workmanship / Labour (₵)" FontSize="12" TextColor="#6B7280"/>
+                                <Border BackgroundColor="#EEF2FF" StrokeThickness="0" Padding="5,2">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="6"/>
+                                    </Border.StrokeShape>
+                                    <Label Text="pre-filled" FontSize="10" TextColor="#2563EB" FontAttributes="Bold"/>
+                                </Border>
+                            </HorizontalStackLayout>
+                            <Border StrokeThickness="1.5" Stroke="#DDE4EC">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10"/>
+                                </Border.StrokeShape>
+                                <Grid ColumnDefinitions="Auto,*" Padding="12,0">
+                                    <Label Grid.Column="0" Text="₵" FontSize="15" TextColor="#6B7280"
+                                           VerticalOptions="Center" Margin="0,0,6,0"/>
+                                    <Entry Grid.Column="1"
+                                           Text="{Binding Workmanship}"
+                                           Keyboard="Numeric" Placeholder="0.00"
+                                           TextColor="#0D0D0D" PlaceholderColor="#B0BEC8"
+                                           FontSize="14" HeightRequest="46"
+                                           BackgroundColor="Transparent"/>
+                                </Grid>
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Overall discount -->
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Overall Discount % (optional)" FontSize="12" TextColor="#6B7280"/>
+                            <Border StrokeThickness="1.5" Stroke="#DDE4EC">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10"/>
+                                </Border.StrokeShape>
+                                <Grid ColumnDefinitions="Auto,*" Padding="12,0">
+                                    <!-- SVG: tag / percent -->
+                                    <Path Grid.Column="0"
+                                          Data="M19 5L5 19M9 7C9 8.1 8.1 9 7 9C5.9 9 5 8.1 5 7C5 5.9 5.9 5 7 5C8.1 5 9 5.9 9 7ZM19 17C19 18.1 18.1 19 17 19C15.9 19 15 18.1 15 17C15 15.9 15.9 15 17 15C18.1 15 19 15.9 19 17Z"
+                                          Stroke="#6B7280" StrokeThickness="1.6"
+                                          StrokeLineCap="Round" StrokeLineJoin="Round"
+                                          WidthRequest="15" HeightRequest="15"
+                                          Aspect="Uniform" VerticalOptions="Center"
+                                          Margin="0,0,6,0"/>
+                                    <Entry Grid.Column="1"
+                                           Text="{Binding OverallDiscount}"
+                                           Keyboard="Numeric" Placeholder="0"
+                                           TextColor="#0D0D0D" PlaceholderColor="#B0BEC8"
+                                           FontSize="14" HeightRequest="46"
+                                           BackgroundColor="Transparent"/>
+                                </Grid>
+                            </Border>
+                            <HorizontalStackLayout Spacing="4">
+                                <Path Data="M12 16V12M12 8H12.01"
+                                      Stroke="#2563EB" StrokeThickness="2"
+                                      StrokeLineCap="Round"
+                                      WidthRequest="10" HeightRequest="10"
+                                      Aspect="Uniform" VerticalOptions="Center"/>
+                                <Label Text="Applied to material cost after per-item discounts"
+                                       FontSize="11" TextColor="#6B7280"/>
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+
+                        <!-- Notes -->
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Notes (optional)" FontSize="12" TextColor="#6B7280"/>
+                            <Border StrokeThickness="1.5" Stroke="#DDE4EC">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10"/>
+                                </Border.StrokeShape>
+                                <Editor Text="{Binding Notes}"
+                                        Placeholder="Any additional notes for this invoice..."
+                                        PlaceholderColor="#B0BEC8" TextColor="#0D0D0D"
+                                        FontSize="14" HeightRequest="100" Margin="12,8"
+                                        BackgroundColor="Transparent" AutoSize="Disabled"/>
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- ── Live totals card ──────────────────────── -->
+                        <Border Padding="14,12" StrokeThickness="1" Stroke="#BFDBFE">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12"/>
+                            </Border.StrokeShape>
+                            <Border.Background>
+                                <SolidColorBrush Color="#EFF6FF"/>
+                            </Border.Background>
+                            <VerticalStackLayout Spacing="10">
+
+                                <!-- Material cost row -->
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <HorizontalStackLayout Grid.Column="0" Spacing="6">
+                                        <!-- SVG: layers -->
+                                        <Path Data="M12 2L2 7L12 12L22 7L12 2ZM2 17L12 22L22 17M2 12L12 17L22 12"
+                                              Stroke="#6B7280" StrokeThickness="1.5"
+                                              StrokeLineCap="Round" StrokeLineJoin="Round"
+                                              WidthRequest="13" HeightRequest="13"
+                                              Aspect="Uniform" VerticalOptions="Center"/>
+                                        <Label Text="Material Cost" FontSize="13" TextColor="#6B7280"
+                                               VerticalOptions="Center"/>
+                                    </HorizontalStackLayout>
+                                    <Label Grid.Column="1"
+                                           Text="{Binding MaterialCost, StringFormat='₵{0:N2}'}"
+                                           FontSize="13" FontAttributes="Bold" TextColor="#0D0D0D"/>
+                                </Grid>
+
+                                <!-- Discount row (conditional) -->
+                                <Grid ColumnDefinitions="*,Auto"
+                                      IsVisible="{Binding HasOverallDiscount}">
+                                    <HorizontalStackLayout Grid.Column="0" Spacing="6">
+                                        <!-- SVG: minus-circle -->
+                                        <Path Data="M12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2ZM8 12H16"
+                                              Stroke="#F59E0B" StrokeThickness="1.6"
+                                              StrokeLineCap="Round" StrokeLineJoin="Round"
+                                              WidthRequest="13" HeightRequest="13"
+                                              Aspect="Uniform" VerticalOptions="Center"/>
+                                        <Label Text="Discount Applied"
+                                               FontSize="13" TextColor="#F59E0B"
+                                               VerticalOptions="Center"/>
+                                    </HorizontalStackLayout>
+                                    <Label Grid.Column="1"
+                                           Text="{Binding DiscountAmount, StringFormat='−₵{0:N2}'}"
+                                           FontSize="13" FontAttributes="Bold" TextColor="#F59E0B"/>
+                                </Grid>
+
+                                <!-- Workmanship row -->
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <HorizontalStackLayout Grid.Column="0" Spacing="6">
+                                        <!-- SVG: tool / wrench -->
+                                        <Path Data="M14.7 6.3L18 3L21 6L17.7 9.3C18.5 10.7 18.9 12.3 18.7 14C18.2 17.3 15.5 20 12.2 20.5C8.1 21.1 4.5 18.1 4 14C3.5 10 6.2 6.4 10 5.7C11.7 5.4 13.4 5.6 14.7 6.3Z"
+                                              Stroke="#6B7280" StrokeThickness="1.5"
+                                              StrokeLineCap="Round" StrokeLineJoin="Round"
+                                              WidthRequest="13" HeightRequest="13"
+                                              Aspect="Uniform" VerticalOptions="Center"/>
+                                        <Label Text="Workmanship" FontSize="13" TextColor="#6B7280"
+                                               VerticalOptions="Center"/>
+                                    </HorizontalStackLayout>
+                                    <Label Grid.Column="1"
+                                           Text="{Binding Workmanship, StringFormat='₵{0}'}"
+                                           FontSize="13" FontAttributes="Bold" TextColor="#0D0D0D"/>
+                                </Grid>
+
+                                <!-- Divider -->
+                                <BoxView HeightRequest="1" Color="#BFDBFE"/>
+
+                                <!-- Grand total row -->
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <HorizontalStackLayout Grid.Column="0" Spacing="6">
+                                        <!-- SVG: check-circle -->
+                                        <Path Data="M22 12C22 17.5 17.5 22 12 22C6.5 22 2 17.5 2 12C2 6.5 6.5 2 12 2C17.5 2 22 6.5 22 12ZM8 12L11 15L16 9"
+                                              Stroke="#2563EB" StrokeThickness="1.8"
+                                              StrokeLineCap="Round" StrokeLineJoin="Round"
+                                              WidthRequest="15" HeightRequest="15"
+                                              Aspect="Uniform" VerticalOptions="Center"/>
+                                        <Label Text="Grand Total"
+                                               FontSize="15" FontAttributes="Bold" TextColor="#2563EB"
+                                               VerticalOptions="Center"/>
+                                    </HorizontalStackLayout>
+                                    <Label Grid.Column="1"
+                                           Text="{Binding GrandTotal, StringFormat='₵{0:N2}'}"
+                                           FontSize="15" FontAttributes="Bold" TextColor="#2563EB"/>
+                                </Grid>
+
+                            </VerticalStackLayout>
+                        </Border>
+
+                    </VerticalStackLayout>
+                </Border>
+
+                <BoxView HeightRequest="6" Color="Transparent"/>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- ══ SLIM STICKY FOOTER (2 buttons) ══════════════════════════ -->
+        <Grid Grid.Row="3"
+              BackgroundColor="White"
+              ColumnDefinitions="*,*"
+              ColumnSpacing="10">
+            <Grid.Shadow>
+                <Shadow Brush="#2563EB" Offset="0,-2" Radius="8" Opacity="0.07"/>
+            </Grid.Shadow>
+            <Grid.Padding>
+                <OnPlatform x:TypeArguments="Thickness">
+                    <On Platform="Android" Value="16,10,16,20"/>
+                    <On Platform="iOS"     Value="16,10,16,28"/>
+                    <On Platform="Default" Value="16,10,16,14"/>
+                </OnPlatform>
+            </Grid.Padding>
+
+            <!-- Back — ghost outlined -->
+            <Border Grid.Column="0" HeightRequest="46"
+                    Stroke="#E2E8FF" StrokeThickness="1.5">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="13"/>
+                </Border.StrokeShape>
+                <Grid ColumnDefinitions="Auto,Auto" HorizontalOptions="Center"
+                      ColumnSpacing="6" VerticalOptions="Center">
+                    <!-- SVG: chevron-left -->
+                    <Path Grid.Column="0"
+                          Data="M14 7L9 12L14 17"
+                          Stroke="#1A2340" StrokeThickness="2"
+                          StrokeLineCap="Round" StrokeLineJoin="Round"
+                          WidthRequest="13" HeightRequest="13"
+                          Aspect="Uniform" VerticalOptions="Center"/>
+                    <Label Grid.Column="1" Text="Back"
+                           TextColor="#1A2340" FontSize="14" FontAttributes="Bold"
+                           VerticalOptions="Center"/>
+                    <Grid.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnBackClicked"/>
+                    </Grid.GestureRecognizers>
+                </Grid>
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnBackClicked"/>
+                </Border.GestureRecognizers>
+            </Border>
+
+            <!-- Generate & Preview — solid blue gradient -->
+            <Border Grid.Column="1" HeightRequest="46" StrokeThickness="0">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="13"/>
+                </Border.StrokeShape>
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#3B82F6" Offset="0"/>
+                        <GradientStop Color="#1D4ED8" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Border.Shadow>
+                    <Shadow Brush="#2563EB" Offset="0,3" Radius="8" Opacity="0.38"/>
+                </Border.Shadow>
+                <Grid ColumnDefinitions="Auto,Auto" HorizontalOptions="Center"
+                      ColumnSpacing="6" VerticalOptions="Center">
+                    <Label Grid.Column="0" Text="Generate"
+                           TextColor="White" FontSize="14" FontAttributes="Bold"
+                           VerticalOptions="Center"/>
+                    <!-- SVG: eye / preview -->
+                    <Path Grid.Column="1"
+                          Data="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12ZM12 9C10.3 9 9 10.3 9 12C9 13.7 10.3 15 12 15C13.7 15 15 13.7 15 12C15 10.3 13.7 9 12 9Z"
+                          Stroke="White" StrokeThickness="1.8"
+                          StrokeLineCap="Round" StrokeLineJoin="Round"
+                          WidthRequest="15" HeightRequest="15"
+                          Aspect="Uniform" VerticalOptions="Center"/>
+                    <Grid.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding GenerateCommand}"/>
+                    </Grid.GestureRecognizers>
+                </Grid>
+
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding GenerateCommand}"/>
+                </Border.GestureRecognizers>
+            </Border>
+
+        </Grid>
+
+    </Grid>
+</ContentPage>

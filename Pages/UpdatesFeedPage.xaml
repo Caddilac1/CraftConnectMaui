@@ -4,56 +4,77 @@
              xmlns:controls="clr-namespace:CraftConnect_Mobile_App.Pages"
              x:Class="CraftConnect_Mobile_App.Pages.UpdatesFeedPage"
              Title="Updates"
-             BackgroundColor="#F5F6FA">
+             BackgroundColor="#F0F4FF">
 
     <Grid RowDefinitions="Auto,*,Auto">
+
         <!-- ========================================
              HEADER SECTION
              ======================================== -->
         <Grid Grid.Row="0"
               BackgroundColor="#FFFFFF"
-              Padding="16,12"
+              Padding="20,52,20,16"
               ColumnDefinitions="*,Auto">
 
             <Label Grid.Column="0"
                    Text="Updates"
-                   FontSize="24"
+                   FontSize="32"
                    FontAttributes="Bold"
-                   TextColor="#1A1D1F"
+                   TextColor="#0D0D0D"
                    VerticalOptions="Center"/>
 
-            <HorizontalStackLayout Grid.Column="1" Spacing="12">
-                <Label Text="🔍"
-                       FontSize="24"
-                       VerticalOptions="Center">
-                    <Label.GestureRecognizers>
-                        <TapGestureRecognizer Tapped="OnSearchClicked"/>
-                    </Label.GestureRecognizers>
-                </Label>
+            <HorizontalStackLayout Grid.Column="1" Spacing="10" VerticalOptions="Center">
 
-                <Label Text="⚙️"
-                       FontSize="24"
-                       VerticalOptions="Center">
-                    <Label.GestureRecognizers>
+                <!-- Search button — ghost/outlined style (passive action) -->
+                <Border WidthRequest="42" HeightRequest="42"
+                        BackgroundColor="Transparent"
+                        Stroke="#E2E8FF"
+                        StrokeThickness="1.5">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="13"/>
+                    </Border.StrokeShape>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnSearchClicked"/>
+                    </Border.GestureRecognizers>
+                    <Image Source="icon_search.svg"
+                           WidthRequest="18" HeightRequest="18"
+                           HorizontalOptions="Center" VerticalOptions="Center"/>
+                </Border>
+
+                <!-- Filter button — solid blue with glow shadow (active/state-changing action) -->
+                <Border WidthRequest="42" HeightRequest="42"
+                        BackgroundColor="#2563EB"
+                        StrokeThickness="0">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="13"/>
+                    </Border.StrokeShape>
+                    <Border.Shadow>
+                        <Shadow Brush="#2563EB" Offset="0,4" Radius="10" Opacity="0.40"/>
+                    </Border.Shadow>
+                    <Border.GestureRecognizers>
                         <TapGestureRecognizer Tapped="OnFilterClicked"/>
-                    </Label.GestureRecognizers>
-                </Label>
+                    </Border.GestureRecognizers>
+                    <Image Source="icon_settings.svg"
+                           WidthRequest="18" HeightRequest="18"
+                           HorizontalOptions="Center" VerticalOptions="Center"/>
+                </Border>
+
             </HorizontalStackLayout>
         </Grid>
 
         <!-- Divider -->
         <BoxView Grid.Row="0"
                  HeightRequest="1"
-                 BackgroundColor="#E9ECEF"
+                 BackgroundColor="#E2E8FF"
                  VerticalOptions="End"/>
 
         <!-- ========================================
-             MAIN CONTENT - HORIZONTAL SCROLLING
+             MAIN CONTENT
              ======================================== -->
         <RefreshView Grid.Row="1"
                      IsRefreshing="{Binding IsRefreshing}"
                      Command="{Binding RefreshCommand}"
-                     RefreshColor="#5F67EA">
+                     RefreshColor="#2563EB">
 
             <ScrollView Orientation="Vertical"
                         x:Name="MainScrollView">
@@ -64,38 +85,42 @@
                         <Label Text="Featured Feeds"
                                FontSize="18"
                                FontAttributes="Bold"
-                               TextColor="#1A1D1F"
-                               Margin="16,0"/>
+                               TextColor="#0D0D0D"
+                               Margin="20,0"/>
 
                         <ScrollView Orientation="Horizontal"
-                                   HorizontalScrollBarVisibility="Never"
-                                   Margin="16,0">
+                                    HorizontalScrollBarVisibility="Never"
+                                    Margin="20,0">
                             <HorizontalStackLayout Spacing="12">
                                 <BindableLayout.ItemsSource>
                                     <Binding Path="FeaturedFeeds"/>
                                 </BindableLayout.ItemsSource>
                                 <BindableLayout.ItemTemplate>
                                     <DataTemplate>
-                                        <Frame WidthRequest="280"
-                                               HeightRequest="180"
-                                               CornerRadius="12"
-                                               HasShadow="False"
-                                               Padding="0"
-                                               BackgroundColor="White"
-                                               BorderColor="Transparent">
-                                            <Frame.GestureRecognizers>
-                                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.FeedTappedCommand}"
-                                                                    CommandParameter="{Binding .}"/>
-                                            </Frame.GestureRecognizers>
+                                        <Border WidthRequest="280"
+                                                HeightRequest="180"
+                                                StrokeThickness="0"
+                                                BackgroundColor="White">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="16"/>
+                                            </Border.StrokeShape>
+                                            <Border.Shadow>
+                                                <Shadow Brush="#2563EB" Offset="0,3" Radius="10" Opacity="0.08"/>
+                                            </Border.Shadow>
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.FeedTappedCommand}"
+                                                    CommandParameter="{Binding .}"/>
+                                            </Border.GestureRecognizers>
                                             <Grid>
                                                 <Image Source="{Binding ImageUrl}" Aspect="AspectFill"/>
                                                 <VerticalStackLayout Padding="12"
-                                                                   Spacing="4"
-                                                                   VerticalOptions="End"
-                                                                   BackgroundColor="#CC000000">
+                                                                     Spacing="4"
+                                                                     VerticalOptions="End"
+                                                                     BackgroundColor="#CC000000">
                                                     <Label Text="{Binding Category}"
                                                            FontSize="10"
-                                                           TextColor="#5F67EA"
+                                                           TextColor="#60A5FA"
                                                            FontAttributes="Bold"/>
                                                     <Label Text="{Binding Title}"
                                                            FontSize="14"
@@ -105,7 +130,7 @@
                                                            LineBreakMode="TailTruncation"/>
                                                 </VerticalStackLayout>
                                             </Grid>
-                                        </Frame>
+                                        </Border>
                                     </DataTemplate>
                                 </BindableLayout.ItemTemplate>
                             </HorizontalStackLayout>
@@ -114,45 +139,45 @@
 
                     <!-- All Feeds Section -->
                     <VerticalStackLayout Spacing="12">
-                        <HorizontalStackLayout Margin="16,0"
-                                              Spacing="8"
-                                              VerticalOptions="Center">
-                            <Label Text="All Updates"
-                                   FontSize="18"
-                                   FontAttributes="Bold"
-                                   TextColor="#1A1D1F"
-                                   HorizontalOptions="StartAndExpand"/>
-                            <Label Text="{Binding FeedCount}"
-                                   FontSize="12"
-                                   TextColor="#6B7280"/>
-                        </HorizontalStackLayout>
+
+                        <!-- Section header — feed count label removed -->
+                        <Label Text="All Updates"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               TextColor="#0D0D0D"
+                               Margin="20,0"/>
 
                         <ScrollView x:Name="FeedsScrollView"
-                                   Orientation="Horizontal"
-                                   HorizontalScrollBarVisibility="Never"
-                                   Margin="16,0"
-                                   Scrolled="OnFeedsScrolled">
+                                    Orientation="Horizontal"
+                                    HorizontalScrollBarVisibility="Never"
+                                    Margin="20,0"
+                                    Scrolled="OnFeedsScrolled">
                             <HorizontalStackLayout Spacing="16">
                                 <BindableLayout.ItemsSource>
                                     <Binding Path="AllFeeds"/>
                                 </BindableLayout.ItemsSource>
                                 <BindableLayout.ItemTemplate>
                                     <DataTemplate>
-                                        <Frame WidthRequest="320"
-                                               HeightRequest="540"
-                                               CornerRadius="16"
-                                               HasShadow="False"
-                                               Padding="16"
-                                               BackgroundColor="White"
-                                               BorderColor="Transparent"
-                                               VerticalOptions="Start">
+                                        <Border WidthRequest="320"
+                                                StrokeThickness="0"
+                                                BackgroundColor="White"
+                                                Padding="16"
+                                                VerticalOptions="Start">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="18"/>
+                                            </Border.StrokeShape>
+                                            <Border.Shadow>
+                                                <Shadow Brush="#2563EB" Offset="0,2" Radius="10" Opacity="0.07"/>
+                                            </Border.Shadow>
 
                                             <VerticalStackLayout Spacing="10">
+
+                                                <!-- Author + time row -->
                                                 <HorizontalStackLayout Spacing="8">
                                                     <Label Text="{Binding Author}"
                                                            FontSize="14"
                                                            FontAttributes="Bold"
-                                                           TextColor="#1A1D1F"
+                                                           TextColor="#0D0D0D"
                                                            VerticalOptions="Center"/>
                                                     <Label Text="•" FontSize="12" TextColor="#6B7280" VerticalOptions="Center"/>
                                                     <Label Text="{Binding TimeAgo}"
@@ -161,143 +186,182 @@
                                                            VerticalOptions="Center"/>
                                                 </HorizontalStackLayout>
 
-                                                <Frame CornerRadius="12"
-                                                       Padding="0"
-                                                       HasShadow="False"
-                                                       IsClippedToBounds="True"
-                                                       BorderColor="Transparent"
-                                                       HeightRequest="180">
+                                                <!-- Feed image -->
+                                                <Border StrokeThickness="0"
+                                                        HeightRequest="180">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="12"/>
+                                                    </Border.StrokeShape>
                                                     <Image Source="{Binding ImageUrl}" Aspect="AspectFill"/>
-                                                </Frame>
+                                                </Border>
 
-                                                <Border BackgroundColor="#EEF0FF"
-                                                       Padding="10,6"
-                                                       StrokeThickness="0"
-                                                       HorizontalOptions="Start">
+                                                <!-- Category badge -->
+                                                <Border BackgroundColor="#EEF2FF"
+                                                        Padding="10,6"
+                                                        StrokeThickness="0"
+                                                        HorizontalOptions="Start">
                                                     <Border.StrokeShape>
                                                         <RoundRectangle CornerRadius="6"/>
                                                     </Border.StrokeShape>
                                                     <Label Text="{Binding Category}"
                                                            FontSize="11"
-                                                           TextColor="#5F67EA"
+                                                           TextColor="#2563EB"
                                                            FontAttributes="Bold"/>
                                                 </Border>
 
+                                                <!-- Title -->
                                                 <Label Text="{Binding Title}"
                                                        FontSize="16"
                                                        FontAttributes="Bold"
-                                                       TextColor="#1A1D1F"
+                                                       TextColor="#0D0D0D"
                                                        MaxLines="2"
                                                        LineBreakMode="TailTruncation">
                                                     <Label.GestureRecognizers>
-                                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.FeedTappedCommand}"
-                                                                            CommandParameter="{Binding .}"/>
+                                                        <TapGestureRecognizer
+                                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.FeedTappedCommand}"
+                                                            CommandParameter="{Binding .}"/>
                                                     </Label.GestureRecognizers>
                                                 </Label>
 
+                                                <!-- Description -->
                                                 <Label Text="{Binding Description}"
                                                        FontSize="13"
                                                        TextColor="#6B7280"
                                                        MaxLines="2"
                                                        LineBreakMode="TailTruncation"/>
 
-                                                <HorizontalStackLayout Spacing="4" IsVisible="{Binding Location, Converter={StaticResource IsNotNullOrEmptyConverter}}">
-                                                    <Label Text="📍" FontSize="13"/>
-                                                    <Label Text="{Binding Location}" FontSize="13" TextColor="#6B7280"/>
+                                                <!-- Location row -->
+                                                <HorizontalStackLayout Spacing="4"
+                                                                       IsVisible="{Binding Location, Converter={StaticResource IsNotNullOrEmptyConverter}}">
+                                                    <Image Source="icon_location.svg"
+                                                           WidthRequest="14" HeightRequest="14"
+                                                           VerticalOptions="Center"/>
+                                                    <Label Text="{Binding Location}"
+                                                           FontSize="13"
+                                                           TextColor="#6B7280"
+                                                           VerticalOptions="Center"/>
                                                 </HorizontalStackLayout>
 
+                                                <!-- Stats row: views, likes, comments -->
                                                 <HorizontalStackLayout Spacing="16">
                                                     <HorizontalStackLayout Spacing="4">
-                                                        <Label Text="👁️" FontSize="13"/>
-                                                        <Label Text="{Binding ViewsCount}" FontSize="13" TextColor="#6B7280"/>
+                                                        <Image Source="icon_eye.svg"
+                                                               WidthRequest="14" HeightRequest="14"
+                                                               VerticalOptions="Center"/>
+                                                        <Label Text="{Binding ViewsCount}"
+                                                               FontSize="13" TextColor="#6B7280"
+                                                               VerticalOptions="Center"/>
                                                     </HorizontalStackLayout>
                                                     <HorizontalStackLayout Spacing="4">
-                                                        <Label Text="👍" FontSize="13"/>
-                                                        <Label Text="{Binding LikesCount}" FontSize="13" TextColor="#6B7280"/>
+                                                        <Image Source="icon_like.svg"
+                                                               WidthRequest="14" HeightRequest="14"
+                                                               VerticalOptions="Center"/>
+                                                        <Label Text="{Binding LikesCount}"
+                                                               FontSize="13" TextColor="#6B7280"
+                                                               VerticalOptions="Center"/>
                                                     </HorizontalStackLayout>
                                                     <HorizontalStackLayout Spacing="4">
-                                                        <Label Text="💬" FontSize="13"/>
-                                                        <Label Text="{Binding CommentsCount}" FontSize="13" TextColor="#6B7280"/>
+                                                        <Image Source="icon_comment.svg"
+                                                               WidthRequest="14" HeightRequest="14"
+                                                               VerticalOptions="Center"/>
+                                                        <Label Text="{Binding CommentsCount}"
+                                                               FontSize="13" TextColor="#6B7280"
+                                                               VerticalOptions="Center"/>
                                                     </HorizontalStackLayout>
                                                 </HorizontalStackLayout>
 
-                                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,8,0,0">
+                                                <!-- Action buttons -->
+                                                <Grid ColumnDefinitions="*,Auto,Auto"
+                                                      ColumnSpacing="8"
+                                                      Margin="0,8,0,0">
+
+                                                    <!-- Send Proposal — blue primary -->
                                                     <Button Grid.Column="0"
-                                                            Text="📨 Send Proposal"
-                                                            BackgroundColor="#5F67EA"
+                                                            Text="Send Proposal"
+                                                            BackgroundColor="#2563EB"
                                                             TextColor="White"
                                                             FontSize="13"
                                                             FontAttributes="Bold"
-                                                            CornerRadius="8"
+                                                            CornerRadius="10"
                                                             HeightRequest="44"
                                                             Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.SendProposalCommand}"
-                                                            CommandParameter="{Binding .}"/>
+                                                            CommandParameter="{Binding .}"
+                                                            ImageSource="icon_send.svg"
+                                                            ContentLayout="Left, 6"/>
+
+                                                    <!-- Like button -->
                                                     <Button Grid.Column="1"
-                                                            Text="👍"
-                                                            BackgroundColor="#F3F4F6"
-                                                            TextColor="#1A1D1F"
-                                                            FontSize="18"
-                                                            CornerRadius="8"
+                                                            BackgroundColor="#EEF2FF"
+                                                            CornerRadius="10"
                                                             WidthRequest="44"
                                                             HeightRequest="44"
-                                                            Padding="0"
+                                                            Padding="10"
                                                             Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.LikeFeedCommand}"
-                                                            CommandParameter="{Binding .}"/>
+                                                            CommandParameter="{Binding .}"
+                                                            ImageSource="icon_like_btn.svg"/>
+
+                                                    <!-- Bookmark button -->
                                                     <Button Grid.Column="2"
-                                                            Text="{Binding FavoriteIcon}"
-                                                            BackgroundColor="#F3F4F6"
-                                                            FontSize="18"
-                                                            CornerRadius="8"
+                                                            BackgroundColor="#EEF2FF"
+                                                            CornerRadius="10"
                                                             WidthRequest="44"
                                                             HeightRequest="44"
-                                                            Padding="0"
+                                                            Padding="10"
                                                             Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.AddToFavoriteCommand}"
-                                                            CommandParameter="{Binding .}"/>
+                                                            CommandParameter="{Binding .}"
+                                                            ImageSource="icon_bookmark.svg"/>
+
                                                 </Grid>
                                             </VerticalStackLayout>
-                                        </Frame>
+                                        </Border>
                                     </DataTemplate>
                                 </BindableLayout.ItemTemplate>
                             </HorizontalStackLayout>
                         </ScrollView>
 
+                        <!-- Scroll indicator dots -->
                         <HorizontalStackLayout x:Name="ScrollIndicators"
-                                              HorizontalOptions="Center"
-                                              Spacing="6"
-                                              Margin="0,12,0,16"
-                                              BackgroundColor="Transparent"
-                                              IsVisible="{Binding AllFeeds.Count}"/>
+                                               HorizontalOptions="Center"
+                                               Spacing="6"
+                                               Margin="0,12,0,16"
+                                               BackgroundColor="Transparent"
+                                               IsVisible="{Binding AllFeeds.Count}"/>
                     </VerticalStackLayout>
 
+                    <!-- Loading more indicator -->
                     <ActivityIndicator IsRunning="{Binding IsLoadingMore}"
-                                     IsVisible="{Binding IsLoadingMore}"
-                                     Color="#5F67EA"
-                                     HeightRequest="50"
-                                     Margin="16,0,16,20"/>
+                                       IsVisible="{Binding IsLoadingMore}"
+                                       Color="#2563EB"
+                                       HeightRequest="50"
+                                       Margin="16,0,16,20"/>
 
+                    <!-- Empty state -->
                     <VerticalStackLayout IsVisible="{Binding IsEmpty}"
-                                        Spacing="16"
-                                        Padding="32"
-                                        VerticalOptions="Center"
-                                        HorizontalOptions="Center">
-                        <Label Text="📭" FontSize="64" HorizontalOptions="Center"/>
+                                         Spacing="16"
+                                         Padding="32"
+                                         VerticalOptions="Center"
+                                         HorizontalOptions="Center">
+                        <Image Source="icon_empty_inbox.svg"
+                               WidthRequest="72" HeightRequest="72"
+                               HorizontalOptions="Center"/>
                         <Label Text="No updates available"
                                FontSize="18"
                                FontAttributes="Bold"
-                               TextColor="#1A1D1F"
+                               TextColor="#0D0D0D"
                                HorizontalOptions="Center"/>
                         <Label Text="Check back later for new feeds"
                                FontSize="14"
                                TextColor="#6B7280"
                                HorizontalOptions="Center"/>
                         <Button Text="Refresh"
-                               BackgroundColor="#5F67EA"
-                               TextColor="#FFFFFF"
-                               CornerRadius="8"
-                               Padding="24,12"
-                               HorizontalOptions="Center"
-                               Command="{Binding RefreshCommand}"/>
+                                BackgroundColor="#2563EB"
+                                TextColor="#FFFFFF"
+                                CornerRadius="10"
+                                Padding="24,12"
+                                HorizontalOptions="Center"
+                                Command="{Binding RefreshCommand}"/>
                     </VerticalStackLayout>
+
                 </VerticalStackLayout>
             </ScrollView>
         </RefreshView>
@@ -305,7 +369,6 @@
         <!-- ========================================
              BOTTOM NAVIGATION
              ======================================== -->
-        <!-- CHANGE: added x:Name="BottomNav" -->
         <controls:BottomNavBar x:Name="BottomNav"
                                Grid.Row="2"
                                ActiveTab="Updates"/>

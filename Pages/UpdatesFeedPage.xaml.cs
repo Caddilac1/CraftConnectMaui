@@ -11,6 +11,10 @@ namespace CraftConnect_Mobile_App.Pages
         private bool _isScrolling = false;
         private bool _initialized = false;
 
+        // Blue palette — matches the rest of the app
+        private static readonly Color ActiveDot = Color.FromArgb("#2563EB");
+        private static readonly Color InactiveDot = Color.FromArgb("#D1D5DB");
+
         public UpdatesFeedPage(UpdatesFeedPageModel viewModel)
         {
             InitializeComponent();
@@ -37,7 +41,7 @@ namespace CraftConnect_Mobile_App.Pages
             _viewModel.NavigateToEditProfile -= OnNavigateToEditProfile;
             _viewModel.NavigateToEditProfile += OnNavigateToEditProfile;
 
-            // SPEED FIX: page renders immediately, data loads in background.
+            // Page renders immediately; data loads in background
             if (!_initialized)
             {
                 _initialized = true;
@@ -70,6 +74,8 @@ namespace CraftConnect_Mobile_App.Pages
         // SEND PROPOSAL → user HAS a profile
         // ══════════════════════════════════════════════════════════════
 
+        // Replace just OnNavigateToCreateProposal:
+
         private async void OnNavigateToCreateProposal(object? sender, SendProposalNavigationArgs args)
         {
             try
@@ -88,6 +94,7 @@ namespace CraftConnect_Mobile_App.Pages
                     ?? new List<(string, string)>();
 
                 createPage.PreselectedFeedId = args.FeedId;
+                createPage.PreselectedFeedTitle = args.FeedTitle;   // ← NEW
 
                 await Navigation.PushAsync(createPage);
             }
@@ -164,9 +171,7 @@ namespace CraftConnect_Mobile_App.Pages
                         WidthRequest = 8,
                         HeightRequest = 8,
                         CornerRadius = 4,
-                        BackgroundColor = i == 0
-                            ? Color.FromArgb("#5F67EA")
-                            : Color.FromArgb("#D1D5DB"),
+                        BackgroundColor = i == 0 ? ActiveDot : InactiveDot,
                         HorizontalOptions = LayoutOptions.Center,
                         VerticalOptions = LayoutOptions.Center,
                         Margin = new Thickness(2, 0)
@@ -234,17 +239,14 @@ namespace CraftConnect_Mobile_App.Pages
                 if (feedCount <= 5)
                 {
                     for (int i = 0; i < _indicatorDots.Count; i++)
-                        _indicatorDots[i].BackgroundColor = i == activeIndex
-                            ? Color.FromArgb("#5F67EA")
-                            : Color.FromArgb("#D1D5DB");
+                        _indicatorDots[i].BackgroundColor = i == activeIndex ? ActiveDot : InactiveDot;
                 }
                 else
                 {
                     var windowStart = Math.Max(0, Math.Min(activeIndex - 2, feedCount - 5));
                     for (int i = 0; i < _indicatorDots.Count; i++)
-                        _indicatorDots[i].BackgroundColor = (windowStart + i) == activeIndex
-                            ? Color.FromArgb("#5F67EA")
-                            : Color.FromArgb("#D1D5DB");
+                        _indicatorDots[i].BackgroundColor =
+                            (windowStart + i) == activeIndex ? ActiveDot : InactiveDot;
                 }
             }
             catch (Exception ex)

@@ -92,6 +92,9 @@ namespace CraftConnect_Mobile_App
                 new CartApiService(sp.GetRequiredService<ApiConfig>()));
             builder.Services.AddSingleton<IServiceService, ServiceService>(sp =>
                 new ServiceService(sp.GetRequiredService<ApiConfig>()));
+            builder.Services.AddSingleton<InvoiceService>();
+            builder.Services.AddTransient<CreateInvoicePage>();
+            builder.Services.AddTransient<ReviewInvoicePage>();
 
             // ========================================
             // VIEWMODELS

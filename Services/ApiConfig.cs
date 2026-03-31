@@ -3,6 +3,6 @@
     // Simple configuration class for API settings
     public class ApiConfig
     {
-        public string BaseUrl { get; set; } = "https://10.112.170.112:7231";
+        public string BaseUrl { get; set; } = "https://192.168.1.85:7231";
     }
 }

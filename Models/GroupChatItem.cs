@@ -38,6 +38,13 @@ namespace CraftConnect_Mobile_App.Models
         public bool LastMessageIsRead { get; set; }
         public bool LastMessageIsDelivered { get; set; }
 
+        // ── Chat type ─────────────────────────────────────────────────
+        /// <summary>
+        /// True for group chats, false for personal / DM chats.
+        /// Set this when mapping your API response to GroupChatItem.
+        /// </summary>
+        public bool IsGroup { get; set; }
+
         // ── Chat status properties ────────────────────────────────────
         // UnreadCount uses INotifyPropertyChanged so the UI badge updates
         // when RefreshUnreadCountsAsync assigns a new value without full reload.

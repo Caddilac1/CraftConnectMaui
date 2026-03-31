@@ -570,11 +570,15 @@ namespace CraftConnect_Mobile_App.Services
             return sb.ToString();
         }
 
-        // Maps a product API response to the unified StoreItem
+        // Maps a product API response to the unified StoreItem.
+        // ✅ ApiProductId uses dto.ProductId (the real PK the invoice
+        //    controller looks up with _context.Product.FindAsync).
+        //    ProductCompanyBusinessLocationId is the junction-table ID
+        //    used only for cart operations — do NOT use it for invoices.
         private static StoreItem MapProductToStoreItem(ProductSummaryApiDto dto) => new()
         {
             Id = MakeGuid(dto.ProductCompanyBusinessLocationId),
-            ApiProductId = dto.ProductCompanyBusinessLocationId,
+            ApiProductId = dto.ProductId,                          // ✅ real ProductId for invoice line items
             ApiServiceId = 0,
             Name = dto.Name,
             Description = dto.Description ?? string.Empty,
@@ -609,7 +613,7 @@ namespace CraftConnect_Mobile_App.Services
             ReviewCount = dto.TotalReviews,
             StockQuantity = null,       // services have no stock
             RequiresQuote = false,
-            Duration = null        // pulled on detail page if needed
+            Duration = null             // pulled on detail page if needed
         };
 
         // Stable Guid from an int — same pattern as original StoreService

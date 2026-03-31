@@ -46,7 +46,6 @@ namespace CraftConnect_Mobile_App.Pages
             catch (Exception ex)
             {
                 Debug.WriteLine($"[STORE PAGE] ❌ Load error: {ex.Message}");
-                // Show error on UI thread
                 await MainThread.InvokeOnMainThreadAsync(async () =>
                     await DisplayAlert("Error", $"Failed to load store: {ex.Message}", "OK"));
             }

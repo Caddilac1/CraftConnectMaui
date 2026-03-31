@@ -4,83 +4,125 @@
              x:Class="CraftConnect_Mobile_App.Pages.CreateProposalPage"
              Title=""
              Shell.NavBarIsVisible="False"
-             BackgroundColor="#F0F4F8">
+             BackgroundColor="#F0F4FF">
 
+    <!-- KeyboardCoversContent keeps the footer pinned; scroll adjusts internally -->
     <Grid RowDefinitions="Auto,*,Auto">
 
-        <!-- ══ TOP NAV BAR ══════════════════════════════════════════════ -->
+        <!-- ══ COMPACT TOP NAV BAR ══════════════════════════════════════ -->
         <Grid Grid.Row="0"
-              BackgroundColor="#1B2B3A"
-              Padding="16,48,16,14"
+              BackgroundColor="#FFFFFF"
               ColumnDefinitions="Auto,*,Auto">
+            <Grid.Padding>
+                <OnPlatform x:TypeArguments="Thickness">
+                    <On Platform="iOS"     Value="14,48,14,10"/>
+                    <On Platform="Android" Value="14,16,14,10"/>
+                    <On Platform="Default" Value="14,12,14,10"/>
+                </OnPlatform>
+            </Grid.Padding>
+            <Grid.Shadow>
+                <Shadow Brush="#2563EB" Offset="0,2" Radius="6" Opacity="0.06"/>
+            </Grid.Shadow>
 
-            <Button Grid.Column="0"
-                    Text="❮"
-                    FontSize="18"
-                    TextColor="White"
+            <!-- Back chevron — compact ghost -->
+            <Border Grid.Column="0"
+                    WidthRequest="38" HeightRequest="38"
                     BackgroundColor="Transparent"
-                    WidthRequest="44"
-                    HeightRequest="44"
-                    Padding="0"
-                    VerticalOptions="Center"
-                    Clicked="OnBackClicked"/>
-
-            <VerticalStackLayout Grid.Column="1" Spacing="1"
-                                 HorizontalOptions="Start" VerticalOptions="Center"
-                                 Margin="12,0,0,0">
-                <Label Text="Create Proposal" FontSize="17" FontAttributes="Bold" TextColor="White"/>
-                <Label Text="Professional proposal builder" FontSize="12" TextColor="#8AABB8"/>
-            </VerticalStackLayout>
-
-            <Border Grid.Column="2" StrokeThickness="1.5" VerticalOptions="Center">
-                <Border.Stroke>
-                    <SolidColorBrush Color="#2DC98E"/>
-                </Border.Stroke>
+                    Stroke="#E2E8FF"
+                    StrokeThickness="1.5">
                 <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="20"/>
+                    <RoundRectangle CornerRadius="12"/>
                 </Border.StrokeShape>
-                <HorizontalStackLayout Padding="12,6" Spacing="5">
-                    <Label Text="✦" FontSize="11" TextColor="#2DC98E" VerticalOptions="Center"/>
-                    <Label Text="Premium" FontSize="13" FontAttributes="Bold" TextColor="#2DC98E" VerticalOptions="Center"/>
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnBackClicked"/>
+                </Border.GestureRecognizers>
+                <!-- SVG: chevron-left -->
+                <Path Data="M14 7L9 12L14 17"
+                      Stroke="#1A2340" StrokeThickness="2"
+                      StrokeLineCap="Round" StrokeLineJoin="Round"
+                      WidthRequest="16" HeightRequest="16"
+                      Aspect="Uniform"
+                      HorizontalOptions="Center" VerticalOptions="Center"/>
+            </Border>
+
+            <!-- Title only — no subtitle -->
+            <Label Grid.Column="1"
+                   Text="Create Proposal"
+                   FontSize="16" FontAttributes="Bold" TextColor="#0D0D0D"
+                   HorizontalOptions="Center" VerticalOptions="Center"/>
+
+            <!-- Premium badge -->
+            <Border Grid.Column="2"
+                    BackgroundColor="#EEF2FF"
+                    StrokeThickness="1.5"
+                    Stroke="#2563EB"
+                    VerticalOptions="Center">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="18"/>
+                </Border.StrokeShape>
+                <HorizontalStackLayout Padding="10,5" Spacing="4">
+                    <!-- SVG: star / sparkle -->
+                    <Path Data="M12 2L13.8 8.2H20.2L15 11.9L16.8 18.1L12 14.4L7.2 18.1L9 11.9L3.8 8.2H10.2Z"
+                          Fill="#2563EB"
+                          WidthRequest="11" HeightRequest="11"
+                          Aspect="Uniform" VerticalOptions="Center"/>
+                    <Label Text="Premium" FontSize="12" FontAttributes="Bold" TextColor="#2563EB" VerticalOptions="Center"/>
                 </HorizontalStackLayout>
             </Border>
 
         </Grid>
 
+        <!-- Divider -->
+        <BoxView Grid.Row="0" HeightRequest="1" BackgroundColor="#E2E8FF" VerticalOptions="End"/>
+
         <!-- ══ SCROLLABLE FORM ══════════════════════════════════════════ -->
         <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="16,20,16,16" Spacing="16">
+            <VerticalStackLayout Padding="14,16,14,12" Spacing="12">
 
                 <!-- ── SECTION 1: Project Details ───────────────────── -->
-                <Border BackgroundColor="White" Stroke="#E8EDF2" StrokeThickness="1" Padding="18,16">
+                <Border BackgroundColor="White"
+                        Stroke="#E2E8FF" StrokeThickness="1"
+                        Padding="14,12">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="16"/>
+                        <RoundRectangle CornerRadius="14"/>
                     </Border.StrokeShape>
-                    <VerticalStackLayout Spacing="14">
+                    <Border.Shadow>
+                        <Shadow Brush="#2563EB" Offset="0,2" Radius="8" Opacity="0.05"/>
+                    </Border.Shadow>
+                    <VerticalStackLayout Spacing="12">
 
-                        <HorizontalStackLayout Spacing="12">
-                            <Border BackgroundColor="#4A90D9" WidthRequest="38" HeightRequest="38" Padding="0" StrokeThickness="0">
+                        <HorizontalStackLayout Spacing="10">
+                            <Border BackgroundColor="#2563EB"
+                                    WidthRequest="32" HeightRequest="32"
+                                    StrokeThickness="0">
                                 <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="12"/>
+                                    <RoundRectangle CornerRadius="10"/>
                                 </Border.StrokeShape>
-                                <Label Text="📋" FontSize="18" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                <Border.Shadow>
+                                    <Shadow Brush="#2563EB" Offset="0,2" Radius="6" Opacity="0.35"/>
+                                </Border.Shadow>
+                                <!-- SVG: clipboard -->
+                                <Path Data="M9 5H7C5.9 5 5 5.9 5 7V19C5 20.1 5.9 21 7 21H17C18.1 21 19 20.1 19 19V7C19 5.9 18.1 5 17 5H15M9 5C9 5.6 9.4 6 10 6H14C14.6 6 15 5.6 15 5M9 5C9 4.4 9.4 4 10 4H14C14.6 4 15 4.4 15 5M12 12H15M12 16H15M9 12H9.01M9 16H9.01"
+                                      Stroke="White" StrokeThickness="1.6"
+                                      StrokeLineCap="Round" StrokeLineJoin="Round"
+                                      WidthRequest="17" HeightRequest="17"
+                                      Aspect="Uniform"
+                                      HorizontalOptions="Center" VerticalOptions="Center"/>
                             </Border>
-                            <Label Text="Project Details" FontSize="17" FontAttributes="Bold" TextColor="#1B2B3A" VerticalOptions="Center"/>
+                            <Label Text="Project Details" FontSize="15" FontAttributes="Bold"
+                                   TextColor="#0D0D0D" VerticalOptions="Center"/>
                         </HorizontalStackLayout>
 
-                        <VerticalStackLayout Spacing="6">
-                            <Label Text="Select Project" FontSize="13" TextColor="#6B7D8D"/>
-                            <Border StrokeThickness="1.5">
-                                <Border.Stroke>
-                                    <SolidColorBrush Color="#DDE4EC"/>
-                                </Border.Stroke>
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Select Project" FontSize="12" TextColor="#6B7280"/>
+                            <Border StrokeThickness="1.5" Stroke="#DDE4EC">
                                 <Border.StrokeShape>
                                     <RoundRectangle CornerRadius="10"/>
                                 </Border.StrokeShape>
                                 <Picker x:Name="ProjectPicker"
                                         Title="Select a project..."
-                                        TextColor="#1B2B3A" TitleColor="#9BAABB" FontSize="14"
-                                        BackgroundColor="Transparent" HeightRequest="50" Margin="12,0"
+                                        TextColor="#0D0D0D" TitleColor="#9BAABB" FontSize="14"
+                                        BackgroundColor="Transparent" HeightRequest="46" Margin="12,0"
                                         SelectedIndexChanged="OnProjectSelected"/>
                             </Border>
                         </VerticalStackLayout>
@@ -88,125 +130,169 @@
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- ── SECTION 2: Pricing & Timeline ────────────────── -->
-                <Border BackgroundColor="White" Stroke="#E8EDF2" StrokeThickness="1" Padding="18,16">
+                <!-- ── SECTION 2: Workmanship & Timeline ────────────── -->
+                <Border BackgroundColor="White"
+                        Stroke="#E2E8FF" StrokeThickness="1"
+                        Padding="14,12">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="16"/>
+                        <RoundRectangle CornerRadius="14"/>
                     </Border.StrokeShape>
-                    <VerticalStackLayout Spacing="14">
+                    <Border.Shadow>
+                        <Shadow Brush="#2563EB" Offset="0,2" Radius="8" Opacity="0.05"/>
+                    </Border.Shadow>
+                    <VerticalStackLayout Spacing="12">
 
-                        <HorizontalStackLayout Spacing="12">
-                            <Border BackgroundColor="#F5A623" WidthRequest="38" HeightRequest="38" Padding="0" StrokeThickness="0">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="12"/>
-                                </Border.StrokeShape>
-                                <Label Text="$" FontSize="20" FontAttributes="Bold" TextColor="White"
-                                       HorizontalOptions="Center" VerticalOptions="Center"/>
-                            </Border>
-                            <Label Text="Pricing &amp; Timeline" FontSize="17" FontAttributes="Bold"
-                                   TextColor="#1B2B3A" VerticalOptions="Center"/>
-                        </HorizontalStackLayout>
-
-                        <VerticalStackLayout Spacing="6">
-                            <Label Text="Proposed Price (GHS)" FontSize="13" TextColor="#6B7D8D"/>
-                            <Border StrokeThickness="1.5">
-                                <Border.Stroke>
-                                    <SolidColorBrush Color="#DDE4EC"/>
-                                </Border.Stroke>
+                        <HorizontalStackLayout Spacing="10">
+                            <Border WidthRequest="32" HeightRequest="32" StrokeThickness="0">
                                 <Border.StrokeShape>
                                     <RoundRectangle CornerRadius="10"/>
                                 </Border.StrokeShape>
-                                <Grid ColumnDefinitions="Auto,*" Padding="14,0">
-                                    <Label Grid.Column="0" Text="₵" FontSize="16" TextColor="#6B7D8D"
-                                           VerticalOptions="Center" Margin="0,0,8,0"/>
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#3B82F6" Offset="0"/>
+                                        <GradientStop Color="#1D4ED8" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <Border.Shadow>
+                                    <Shadow Brush="#2563EB" Offset="0,2" Radius="6" Opacity="0.35"/>
+                                </Border.Shadow>
+                                <!-- SVG: currency (GHS cedi-like) -->
+                                <Path Data="M12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22C17.5 22 22 17.5 22 12M12 7V12M12 12L16 10M12 12L16 14"
+                                      Stroke="White" StrokeThickness="1.7"
+                                      StrokeLineCap="Round" StrokeLineJoin="Round"
+                                      WidthRequest="17" HeightRequest="17"
+                                      Aspect="Uniform"
+                                      HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
+                            <Label Text="Workmanship &amp; Timeline" FontSize="15" FontAttributes="Bold"
+                                   TextColor="#0D0D0D" VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+
+                        <!-- Two fields side-by-side on wider screens; stacked on narrow -->
+                        <Grid ColumnDefinitions="*,12,*" RowDefinitions="Auto,Auto">
+
+                            <!-- Workmanship label -->
+                            <Label Grid.Column="0" Grid.Row="0"
+                                   Text="Workmanship (GHS)" FontSize="12" TextColor="#6B7280" Margin="0,0,0,5"/>
+
+                            <!-- Completion Date label -->
+                            <Label Grid.Column="2" Grid.Row="0"
+                                   Text="Est. Completion" FontSize="12" TextColor="#6B7280" Margin="0,0,0,5"/>
+
+                            <!-- Price entry -->
+                            <Border Grid.Column="0" Grid.Row="1"
+                                    StrokeThickness="1.5" Stroke="#DDE4EC">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10"/>
+                                </Border.StrokeShape>
+                                <Grid ColumnDefinitions="Auto,*" Padding="10,0">
+                                    <Label Grid.Column="0" Text="₵" FontSize="15" TextColor="#6B7280"
+                                           VerticalOptions="Center" Margin="0,0,6,0"/>
                                     <Entry Grid.Column="1" x:Name="PriceEntry"
                                            Placeholder="0.00" Keyboard="Numeric"
-                                           TextColor="#1B2B3A" PlaceholderColor="#B0BEC8"
-                                           FontSize="15" HeightRequest="50"
+                                           TextColor="#0D0D0D" PlaceholderColor="#B0BEC8"
+                                           FontSize="14" HeightRequest="46"
                                            BackgroundColor="Transparent"
                                            TextChanged="OnPriceChanged"/>
                                 </Grid>
                             </Border>
-                        </VerticalStackLayout>
 
-                        <VerticalStackLayout Spacing="6">
-                            <Label Text="Estimated Completion Date" FontSize="13" TextColor="#6B7D8D"/>
-
-                            <!--
-                                Tapping this row pushes DatePickerModalPage.
-                                No hidden DatePicker needed — the modal contains
-                                a fully rendered DatePicker that Focus() can open reliably.
-                            -->
-                            <Border StrokeThickness="1.5">
-                                <Border.Stroke>
-                                    <SolidColorBrush Color="#DDE4EC"/>
-                                </Border.Stroke>
+                            <!-- Date picker -->
+                            <Border Grid.Column="2" Grid.Row="1"
+                                    StrokeThickness="1.5" Stroke="#DDE4EC">
                                 <Border.StrokeShape>
                                     <RoundRectangle CornerRadius="10"/>
                                 </Border.StrokeShape>
-                                <Grid ColumnDefinitions="Auto,*,Auto" Padding="14,0" HeightRequest="50">
-                                    <Label Grid.Column="0" Text="📅" FontSize="16"
-                                           VerticalOptions="Center" Margin="0,0,8,0"/>
+                                <Grid ColumnDefinitions="Auto,*,Auto" Padding="10,0" HeightRequest="46">
+                                    <!-- SVG: calendar -->
+                                    <Path Grid.Column="0"
+                                          Data="M8 2V5M16 2V5M3 8H21M5 4H19C20.1 4 21 4.9 21 6V19C21 20.1 20.1 21 19 21H5C3.9 21 3 20.1 3 19V6C3 4.9 3.9 4 5 4Z"
+                                          Stroke="#6B7280" StrokeThickness="1.6"
+                                          StrokeLineCap="Round" StrokeLineJoin="Round"
+                                          WidthRequest="15" HeightRequest="15"
+                                          Aspect="Uniform" VerticalOptions="Center"
+                                          Margin="0,0,6,0"/>
                                     <Label Grid.Column="1" x:Name="DateLabel"
-                                           Text="Select date..." TextColor="#B0BEC8"
-                                           FontSize="14" VerticalOptions="Center"/>
-                                    <Label Grid.Column="2" Text="▼" FontSize="11"
-                                           TextColor="#9BAABB" VerticalOptions="Center"/>
+                                           Text="Pick date" TextColor="#B0BEC8"
+                                           FontSize="13" VerticalOptions="Center"/>
+                                    <!-- SVG: chevron-down -->
+                                    <Path Grid.Column="2"
+                                          Data="M6 9L12 15L18 9"
+                                          Stroke="#9BAABB" StrokeThickness="1.8"
+                                          StrokeLineCap="Round" StrokeLineJoin="Round"
+                                          WidthRequest="11" HeightRequest="11"
+                                          Aspect="Uniform" VerticalOptions="Center"/>
                                     <Grid.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnDatePickerTapped"/>
                                     </Grid.GestureRecognizers>
                                 </Grid>
                             </Border>
 
-                        </VerticalStackLayout>
+                        </Grid>
 
                     </VerticalStackLayout>
                 </Border>
 
                 <!-- ── SECTION 3: Proposal Details ──────────────────── -->
-                <Border BackgroundColor="White" Stroke="#E8EDF2" StrokeThickness="1" Padding="18,16">
+                <Border BackgroundColor="White"
+                        Stroke="#E2E8FF" StrokeThickness="1"
+                        Padding="14,12">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="16"/>
+                        <RoundRectangle CornerRadius="14"/>
                     </Border.StrokeShape>
-                    <VerticalStackLayout Spacing="14">
+                    <Border.Shadow>
+                        <Shadow Brush="#2563EB" Offset="0,2" Radius="8" Opacity="0.05"/>
+                    </Border.Shadow>
+                    <VerticalStackLayout Spacing="12">
 
-                        <HorizontalStackLayout Spacing="12">
-                            <Border WidthRequest="38" HeightRequest="38" Padding="0" StrokeThickness="0">
+                        <HorizontalStackLayout Spacing="10">
+                            <Border WidthRequest="32" HeightRequest="32" StrokeThickness="0">
                                 <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="12"/>
+                                    <RoundRectangle CornerRadius="10"/>
                                 </Border.StrokeShape>
                                 <Border.Background>
                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                        <GradientStop Color="#4DA6E8" Offset="0"/>
-                                        <GradientStop Color="#2E6FD8" Offset="1"/>
+                                        <GradientStop Color="#60A5FA" Offset="0"/>
+                                        <GradientStop Color="#2563EB" Offset="1"/>
                                     </LinearGradientBrush>
                                 </Border.Background>
-                                <Label Text="📄" FontSize="18" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                <Border.Shadow>
+                                    <Shadow Brush="#2563EB" Offset="0,2" Radius="6" Opacity="0.35"/>
+                                </Border.Shadow>
+                                <!-- SVG: file-text -->
+                                <Path Data="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2ZM14 2V8H20M16 13H8M16 17H8M10 9H8"
+                                      Stroke="White" StrokeThickness="1.6"
+                                      StrokeLineCap="Round" StrokeLineJoin="Round"
+                                      WidthRequest="17" HeightRequest="17"
+                                      Aspect="Uniform"
+                                      HorizontalOptions="Center" VerticalOptions="Center"/>
                             </Border>
-                            <Label Text="Proposal Details" FontSize="17" FontAttributes="Bold"
-                                   TextColor="#1B2B3A" VerticalOptions="Center"/>
+                            <Label Text="Proposal Details" FontSize="15" FontAttributes="Bold"
+                                   TextColor="#0D0D0D" VerticalOptions="Center"/>
                         </HorizontalStackLayout>
 
-                        <VerticalStackLayout Spacing="6">
-                            <Label Text="Cover Letter / Message" FontSize="13" TextColor="#6B7D8D"/>
-                            <Border StrokeThickness="1.5">
-                                <Border.Stroke>
-                                    <SolidColorBrush Color="#DDE4EC"/>
-                                </Border.Stroke>
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Cover Letter / Message" FontSize="12" TextColor="#6B7280"/>
+                            <Border StrokeThickness="1.5" Stroke="#DDE4EC">
                                 <Border.StrokeShape>
                                     <RoundRectangle CornerRadius="10"/>
                                 </Border.StrokeShape>
                                 <Editor x:Name="CoverLetterEditor"
-                                        Placeholder="Introduce yourself, explain your approach, and why you're the best fit for this project..."
+                                        Placeholder="Introduce yourself, explain your approach, and why you're the best fit..."
                                         Text="{Binding Message, Mode=TwoWay}"
-                                        PlaceholderColor="#B0BEC8" TextColor="#1B2B3A"
-                                        FontSize="14" HeightRequest="160" Margin="14,10"
+                                        PlaceholderColor="#B0BEC8" TextColor="#0D0D0D"
+                                        FontSize="14" HeightRequest="140" Margin="12,8"
                                         BackgroundColor="Transparent" AutoSize="Disabled"/>
                             </Border>
                             <HorizontalStackLayout Spacing="4">
-                                <Label Text="✦" FontSize="10" TextColor="#9BAABB" VerticalOptions="Center"/>
+                                <!-- SVG: info dot -->
+                                <Path Data="M12 16V12M12 8H12.01"
+                                      Stroke="#2563EB" StrokeThickness="2"
+                                      StrokeLineCap="Round"
+                                      WidthRequest="10" HeightRequest="10"
+                                      Aspect="Uniform" VerticalOptions="Center"/>
                                 <Label Text="Share your experience and how you plan to approach this project"
-                                       FontSize="11" TextColor="#9BAABB"/>
+                                       FontSize="11" TextColor="#6B7280"/>
                             </HorizontalStackLayout>
                         </VerticalStackLayout>
 
@@ -214,37 +300,54 @@
                 </Border>
 
                 <!-- ── SECTION 4: Terms & Conditions ────────────────── -->
-                <Border BackgroundColor="White" Stroke="#E8EDF2" StrokeThickness="1" Padding="18,16">
+                <Border BackgroundColor="White"
+                        Stroke="#E2E8FF" StrokeThickness="1"
+                        Padding="14,12">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="16"/>
+                        <RoundRectangle CornerRadius="14"/>
                     </Border.StrokeShape>
-                    <VerticalStackLayout Spacing="14">
+                    <Border.Shadow>
+                        <Shadow Brush="#2563EB" Offset="0,2" Radius="8" Opacity="0.05"/>
+                    </Border.Shadow>
+                    <VerticalStackLayout Spacing="12">
 
-                        <HorizontalStackLayout Spacing="12">
-                            <Border BackgroundColor="#7C3AED" WidthRequest="38" HeightRequest="38" Padding="0" StrokeThickness="0">
+                        <HorizontalStackLayout Spacing="10">
+                            <Border WidthRequest="32" HeightRequest="32" StrokeThickness="0">
                                 <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="12"/>
+                                    <RoundRectangle CornerRadius="10"/>
                                 </Border.StrokeShape>
-                                <Label Text="🛡" FontSize="18" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#93C5FD" Offset="0"/>
+                                        <GradientStop Color="#3B82F6" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <Border.Shadow>
+                                    <Shadow Brush="#2563EB" Offset="0,2" Radius="6" Opacity="0.28"/>
+                                </Border.Shadow>
+                                <!-- SVG: shield-check -->
+                                <Path Data="M12 3L4 7V12C4 16.4 7.4 20.5 12 21C16.6 20.5 20 16.4 20 12V7L12 3ZM9 12L11 14L15 10"
+                                      Stroke="White" StrokeThickness="1.6"
+                                      StrokeLineCap="Round" StrokeLineJoin="Round"
+                                      WidthRequest="17" HeightRequest="17"
+                                      Aspect="Uniform"
+                                      HorizontalOptions="Center" VerticalOptions="Center"/>
                             </Border>
-                            <Label Text="Terms &amp; Conditions" FontSize="17" FontAttributes="Bold"
-                                   TextColor="#1B2B3A" VerticalOptions="Center"/>
+                            <Label Text="Terms &amp; Conditions" FontSize="15" FontAttributes="Bold"
+                                   TextColor="#0D0D0D" VerticalOptions="Center"/>
                         </HorizontalStackLayout>
 
-                        <VerticalStackLayout Spacing="6">
-                            <Label Text="Terms &amp; Conditions" FontSize="13" TextColor="#6B7D8D"/>
-                            <Border StrokeThickness="1.5">
-                                <Border.Stroke>
-                                    <SolidColorBrush Color="#DDE4EC"/>
-                                </Border.Stroke>
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Outline your terms, warranties, and revision policies" FontSize="12" TextColor="#6B7280"/>
+                            <Border StrokeThickness="1.5" Stroke="#DDE4EC">
                                 <Border.StrokeShape>
                                     <RoundRectangle CornerRadius="10"/>
                                 </Border.StrokeShape>
                                 <Editor x:Name="TermsEditor"
-                                        Placeholder="Outline your terms, warranties, guarantees, revision policies, and other conditions..."
+                                        Placeholder="Warranties, guarantees, revision policies, and other conditions..."
                                         Text="{Binding TermsConditions, Mode=TwoWay}"
-                                        PlaceholderColor="#B0BEC8" TextColor="#1B2B3A"
-                                        FontSize="14" HeightRequest="140" Margin="14,10"
+                                        PlaceholderColor="#B0BEC8" TextColor="#0D0D0D"
+                                        FontSize="14" HeightRequest="120" Margin="12,8"
                                         BackgroundColor="Transparent" AutoSize="Disabled"/>
                             </Border>
                         </VerticalStackLayout>
@@ -253,37 +356,54 @@
                 </Border>
 
                 <!-- ── SECTION 5: Payment Terms ─────────────────────── -->
-                <Border BackgroundColor="White" Stroke="#E8EDF2" StrokeThickness="1" Padding="18,16">
+                <Border BackgroundColor="White"
+                        Stroke="#E2E8FF" StrokeThickness="1"
+                        Padding="14,12">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="16"/>
+                        <RoundRectangle CornerRadius="14"/>
                     </Border.StrokeShape>
-                    <VerticalStackLayout Spacing="14">
+                    <Border.Shadow>
+                        <Shadow Brush="#2563EB" Offset="0,2" Radius="8" Opacity="0.05"/>
+                    </Border.Shadow>
+                    <VerticalStackLayout Spacing="12">
 
-                        <HorizontalStackLayout Spacing="12">
-                            <Border BackgroundColor="#10B981" WidthRequest="38" HeightRequest="38" Padding="0" StrokeThickness="0">
+                        <HorizontalStackLayout Spacing="10">
+                            <Border WidthRequest="32" HeightRequest="32" StrokeThickness="0">
                                 <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="12"/>
+                                    <RoundRectangle CornerRadius="10"/>
                                 </Border.StrokeShape>
-                                <Label Text="💳" FontSize="18" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#BFDBFE" Offset="0"/>
+                                        <GradientStop Color="#2563EB" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <Border.Shadow>
+                                    <Shadow Brush="#2563EB" Offset="0,2" Radius="6" Opacity="0.26"/>
+                                </Border.Shadow>
+                                <!-- SVG: credit-card -->
+                                <Path Data="M2 7C2 5.9 2.9 5 4 5H20C21.1 5 22 5.9 22 7V17C22 18.1 21.1 19 20 19H4C2.9 19 2 18.1 2 17V7ZM2 10H22M6 15H8M10 15H12"
+                                      Stroke="White" StrokeThickness="1.6"
+                                      StrokeLineCap="Round" StrokeLineJoin="Round"
+                                      WidthRequest="17" HeightRequest="17"
+                                      Aspect="Uniform"
+                                      HorizontalOptions="Center" VerticalOptions="Center"/>
                             </Border>
-                            <Label Text="Payment Terms" FontSize="17" FontAttributes="Bold"
-                                   TextColor="#1B2B3A" VerticalOptions="Center"/>
+                            <Label Text="Payment Terms" FontSize="15" FontAttributes="Bold"
+                                   TextColor="#0D0D0D" VerticalOptions="Center"/>
                         </HorizontalStackLayout>
 
-                        <VerticalStackLayout Spacing="6">
-                            <Label Text="Payment Schedule" FontSize="13" TextColor="#6B7D8D"/>
-                            <Border StrokeThickness="1.5">
-                                <Border.Stroke>
-                                    <SolidColorBrush Color="#DDE4EC"/>
-                                </Border.Stroke>
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Payment Schedule" FontSize="12" TextColor="#6B7280"/>
+                            <Border StrokeThickness="1.5" Stroke="#DDE4EC">
                                 <Border.StrokeShape>
                                     <RoundRectangle CornerRadius="10"/>
                                 </Border.StrokeShape>
                                 <Editor x:Name="PaymentTermsEditor"
-                                        Placeholder="Specify payment schedule, milestones, deposit requirements, etc..."
+                                        Placeholder="Payment schedule, milestones, deposit requirements..."
                                         Text="{Binding PaymentTerms, Mode=TwoWay}"
-                                        PlaceholderColor="#B0BEC8" TextColor="#1B2B3A"
-                                        FontSize="14" HeightRequest="130" Margin="14,10"
+                                        PlaceholderColor="#B0BEC8" TextColor="#0D0D0D"
+                                        FontSize="14" HeightRequest="110" Margin="12,8"
                                         BackgroundColor="Transparent" AutoSize="Disabled"/>
                             </Border>
                         </VerticalStackLayout>
@@ -292,198 +412,293 @@
                 </Border>
 
                 <!-- ── SECTION 6: Supporting Documents ──────────────── -->
-                <Border BackgroundColor="White" Stroke="#E8EDF2" StrokeThickness="1" Padding="18,16">
+                <Border BackgroundColor="White"
+                        Stroke="#E2E8FF" StrokeThickness="1"
+                        Padding="14,12">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="16"/>
+                        <RoundRectangle CornerRadius="14"/>
                     </Border.StrokeShape>
-                    <VerticalStackLayout Spacing="14">
+                    <Border.Shadow>
+                        <Shadow Brush="#2563EB" Offset="0,2" Radius="8" Opacity="0.05"/>
+                    </Border.Shadow>
+                    <VerticalStackLayout Spacing="12">
 
-                        <HorizontalStackLayout Spacing="12">
-                            <Border WidthRequest="38" HeightRequest="38" Padding="0" StrokeThickness="0">
+                        <HorizontalStackLayout Spacing="10">
+                            <Border WidthRequest="32" HeightRequest="32" StrokeThickness="0">
                                 <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="12"/>
+                                    <RoundRectangle CornerRadius="10"/>
                                 </Border.StrokeShape>
                                 <Border.Background>
                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                        <GradientStop Color="#F472B6" Offset="0"/>
-                                        <GradientStop Color="#EC4899" Offset="1"/>
+                                        <GradientStop Color="#93C5FD" Offset="0"/>
+                                        <GradientStop Color="#1D4ED8" Offset="1"/>
                                     </LinearGradientBrush>
                                 </Border.Background>
-                                <Label Text="📎" FontSize="18" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                <Border.Shadow>
+                                    <Shadow Brush="#2563EB" Offset="0,2" Radius="6" Opacity="0.28"/>
+                                </Border.Shadow>
+                                <!-- SVG: paperclip -->
+                                <Path Data="M21.44 11.05L12.25 20.24C10.42 22.07 7.52 22.07 5.69 20.24C3.86 18.41 3.86 15.51 5.69 13.68L14.88 4.49C16.07 3.3 18.01 3.3 19.2 4.49C20.39 5.68 20.39 7.62 19.2 8.81L10.01 18C9.42 18.59 8.45 18.59 7.86 18C7.27 17.41 7.27 16.44 7.86 15.85L16.34 7.38"
+                                      Stroke="White" StrokeThickness="1.6"
+                                      StrokeLineCap="Round" StrokeLineJoin="Round"
+                                      WidthRequest="17" HeightRequest="17"
+                                      Aspect="Uniform"
+                                      HorizontalOptions="Center" VerticalOptions="Center"/>
                             </Border>
-                            <Label Text="Supporting Documents" FontSize="17" FontAttributes="Bold"
-                                   TextColor="#1B2B3A" VerticalOptions="Center"/>
+                            <Label Text="Supporting Documents" FontSize="15" FontAttributes="Bold"
+                                   TextColor="#0D0D0D" VerticalOptions="Center"/>
+                            <Label Text="Optional" FontSize="11" TextColor="#9BAABB"
+                                   VerticalOptions="Center" Margin="0,2,0,0"/>
                         </HorizontalStackLayout>
 
-                        <VerticalStackLayout Spacing="6">
-                            <Label Text="Quote Document (Optional)" FontSize="13" TextColor="#6B7D8D"/>
-
-                            <Border x:Name="UploadBorder" StrokeThickness="1.5" HeightRequest="130">
-                                <Border.Stroke>
-                                    <SolidColorBrush Color="#B0C8DC"/>
-                                </Border.Stroke>
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="10"/>
-                                </Border.StrokeShape>
-                                <Border.Background>
-                                    <SolidColorBrush Color="#FAFCFE"/>
-                                </Border.Background>
-                                <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="8">
-                                    <Path Data="M12 16V8M12 8L9 11M12 8L15 11M4 20H20"
-                                          Stroke="#2DC98E" StrokeThickness="2"
-                                          StrokeLineCap="Round" StrokeLineJoin="Round"
-                                          WidthRequest="28" HeightRequest="28"
-                                          Aspect="Uniform" HorizontalOptions="Center"/>
-                                    <HorizontalStackLayout HorizontalOptions="Center" Spacing="4">
-                                        <Label Text="Tap to upload" FontSize="13" FontAttributes="Bold" TextColor="#F5A623"/>
-                                        <Label Text="or select file" FontSize="13" TextColor="#6B7D8D"/>
-                                    </HorizontalStackLayout>
-                                    <Label Text="PDF, DOC, DOCX up to 10MB"
-                                           FontSize="11" TextColor="#9BAABB" HorizontalOptions="Center"/>
-                                    <VerticalStackLayout.GestureRecognizers>
-                                        <TapGestureRecognizer Tapped="OnPickDocumentClicked"/>
-                                    </VerticalStackLayout.GestureRecognizers>
-                                </VerticalStackLayout>
-                                <Border.GestureRecognizers>
+                        <!-- Upload drop zone -->
+                        <Border x:Name="UploadBorder"
+                                StrokeThickness="1.5"
+                                Stroke="#BFDBFE"
+                                HeightRequest="100">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="10"/>
+                            </Border.StrokeShape>
+                            <Border.Background>
+                                <SolidColorBrush Color="#F5F8FF"/>
+                            </Border.Background>
+                            <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="6">
+                                <!-- SVG: upload cloud -->
+                                <Path Data="M12 16V8M12 8L9 11M12 8L15 11M4 20H20"
+                                      Stroke="#2563EB" StrokeThickness="2"
+                                      StrokeLineCap="Round" StrokeLineJoin="Round"
+                                      WidthRequest="24" HeightRequest="24"
+                                      Aspect="Uniform" HorizontalOptions="Center"/>
+                                <HorizontalStackLayout HorizontalOptions="Center" Spacing="3">
+                                    <Label Text="Tap to upload" FontSize="13" FontAttributes="Bold" TextColor="#2563EB"/>
+                                    <Label Text="or select file" FontSize="13" TextColor="#6B7280"/>
+                                </HorizontalStackLayout>
+                                <Label Text="PDF, DOC, DOCX · max 10 MB"
+                                       FontSize="11" TextColor="#9BAABB" HorizontalOptions="Center"/>
+                                <VerticalStackLayout.GestureRecognizers>
                                     <TapGestureRecognizer Tapped="OnPickDocumentClicked"/>
-                                </Border.GestureRecognizers>
-                            </Border>
+                                </VerticalStackLayout.GestureRecognizers>
+                            </VerticalStackLayout>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnPickDocumentClicked"/>
+                            </Border.GestureRecognizers>
+                        </Border>
 
-                            <Border x:Name="FilePicked" IsVisible="False" StrokeThickness="1.5" Padding="14,12">
-                                <Border.Stroke>
-                                    <SolidColorBrush Color="#2DC98E"/>
-                                </Border.Stroke>
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="10"/>
-                                </Border.StrokeShape>
-                                <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <Label Grid.Column="0" Text="📄" FontSize="22"
-                                           VerticalOptions="Center" Margin="0,0,10,0"/>
-                                    <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
-                                        <Label x:Name="FileNameLabel" Text="document.pdf"
-                                               FontSize="13" FontAttributes="Bold"
-                                               TextColor="#1B2B3A" LineBreakMode="TailTruncation"/>
-                                        <Label x:Name="FileSizeLabel" Text="2.4 MB"
-                                               FontSize="11" TextColor="#9BAABB"/>
-                                    </VerticalStackLayout>
-                                    <Label Grid.Column="2" Text="✕" FontSize="16"
-                                           TextColor="#EF4444" VerticalOptions="Center" Padding="8,0">
-                                        <Label.GestureRecognizers>
-                                            <TapGestureRecognizer Tapped="OnRemoveDocumentClicked"/>
-                                        </Label.GestureRecognizers>
-                                    </Label>
-                                </Grid>
-                            </Border>
+                        <!-- File picked state -->
+                        <Border x:Name="FilePicked"
+                                IsVisible="False"
+                                StrokeThickness="1.5"
+                                Stroke="#2563EB"
+                                Padding="12,10">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="10"/>
+                            </Border.StrokeShape>
+                            <Border.Background>
+                                <SolidColorBrush Color="#EEF2FF"/>
+                            </Border.Background>
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <!-- SVG: file -->
+                                <Path Grid.Column="0"
+                                      Data="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z"
+                                      Fill="#2563EB" Stroke="#2563EB" StrokeThickness="0.5"
+                                      WidthRequest="22" HeightRequest="22"
+                                      Aspect="Uniform" VerticalOptions="Center" Margin="0,0,10,0"/>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                    <Label x:Name="FileNameLabel" Text="document.pdf"
+                                           FontSize="13" FontAttributes="Bold"
+                                           TextColor="#0D0D0D" LineBreakMode="TailTruncation"/>
+                                    <Label x:Name="FileSizeLabel" Text="2.4 MB"
+                                           FontSize="11" TextColor="#6B7280"/>
+                                </VerticalStackLayout>
+                                <!-- SVG: x-circle -->
+                                <Path Grid.Column="2"
+                                      Data="M12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2ZM15 9L9 15M9 9L15 15"
+                                      Stroke="#EF4444" StrokeThickness="1.8"
+                                      StrokeLineCap="Round" StrokeLineJoin="Round"
+                                      WidthRequest="20" HeightRequest="20"
+                                      Aspect="Uniform" VerticalOptions="Center" Margin="8,0,0,0">
+                                    <Path.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnRemoveDocumentClicked"/>
+                                    </Path.GestureRecognizers>
+                                </Path>
+                            </Grid>
+                        </Border>
 
-                        </VerticalStackLayout>
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- ── SECTION 7: Proposal Tips ──────────────────────── -->
-                <Border Stroke="#F5C842" StrokeThickness="1" Padding="18,16">
+                <!-- ── SECTION 7: Proposal Tips (collapsible feel, compact) ── -->
+                <Border Stroke="#BFDBFE" StrokeThickness="1" Padding="14,12">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="16"/>
+                        <RoundRectangle CornerRadius="14"/>
                     </Border.StrokeShape>
                     <Border.Background>
-                        <SolidColorBrush Color="#FEF9E7"/>
+                        <SolidColorBrush Color="#EFF6FF"/>
                     </Border.Background>
-                    <VerticalStackLayout Spacing="14">
+                    <VerticalStackLayout Spacing="12">
 
-                        <HorizontalStackLayout Spacing="12">
-                            <Border BackgroundColor="#F5A623" WidthRequest="38" HeightRequest="38" Padding="0" StrokeThickness="0">
+                        <HorizontalStackLayout Spacing="10">
+                            <Border BackgroundColor="#2563EB"
+                                    WidthRequest="32" HeightRequest="32"
+                                    StrokeThickness="0">
                                 <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="12"/>
+                                    <RoundRectangle CornerRadius="10"/>
                                 </Border.StrokeShape>
-                                <Label Text="✦" FontSize="18" TextColor="White"
-                                       HorizontalOptions="Center" VerticalOptions="Center"/>
+                                <Border.Shadow>
+                                    <Shadow Brush="#2563EB" Offset="0,2" Radius="6" Opacity="0.35"/>
+                                </Border.Shadow>
+                                <!-- SVG: lightbulb -->
+                                <Path Data="M9 21H15M12 3C8.7 3 6 5.7 6 9C6 11 7 12.8 8.5 14L9 17H15L15.5 14C17 12.8 18 11 18 9C18 5.7 15.3 3 12 3Z"
+                                      Stroke="White" StrokeThickness="1.6"
+                                      StrokeLineCap="Round" StrokeLineJoin="Round"
+                                      WidthRequest="17" HeightRequest="17"
+                                      Aspect="Uniform"
+                                      HorizontalOptions="Center" VerticalOptions="Center"/>
                             </Border>
-                            <Label Text="Proposal Tips" FontSize="17" FontAttributes="Bold"
-                                   TextColor="#92400E" VerticalOptions="Center"/>
+                            <Label Text="Proposal Tips" FontSize="15" FontAttributes="Bold"
+                                   TextColor="#1E3A5F" VerticalOptions="Center"/>
                         </HorizontalStackLayout>
 
-                        <VerticalStackLayout Spacing="12">
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <Label Grid.Column="0" Text="✓" FontSize="14" TextColor="#F5A623" VerticalOptions="Start" Margin="0,1,0,0"/>
-                                <VerticalStackLayout Grid.Column="1" Spacing="2">
-                                    <Label Text="Be Specific:" FontSize="13" FontAttributes="Bold" TextColor="#B45309"/>
-                                    <Label Text="Clearly outline what you will deliver and when" FontSize="12" TextColor="#78350F"/>
+                        <!-- Tips as a 2×2 grid to save vertical space -->
+                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto"
+                              RowSpacing="10" ColumnSpacing="10">
+
+                            <Border Grid.Column="0" Grid.Row="0"
+                                    BackgroundColor="#DBEAFE" StrokeThickness="0" Padding="10,8">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10"/>
+                                </Border.StrokeShape>
+                                <VerticalStackLayout Spacing="3">
+                                    <Label Text="Be Specific" FontSize="12" FontAttributes="Bold" TextColor="#1E3A5F"/>
+                                    <Label Text="Clearly outline deliverables and timeline" FontSize="11" TextColor="#3B5B80"/>
                                 </VerticalStackLayout>
-                            </Grid>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <Label Grid.Column="0" Text="✓" FontSize="14" TextColor="#F5A623" VerticalOptions="Start" Margin="0,1,0,0"/>
-                                <VerticalStackLayout Grid.Column="1" Spacing="2">
-                                    <Label Text="Show Value:" FontSize="13" FontAttributes="Bold" TextColor="#B45309"/>
-                                    <Label Text="Explain why your solution is worth the investment" FontSize="12" TextColor="#78350F"/>
+                            </Border>
+
+                            <Border Grid.Column="1" Grid.Row="0"
+                                    BackgroundColor="#DBEAFE" StrokeThickness="0" Padding="10,8">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10"/>
+                                </Border.StrokeShape>
+                                <VerticalStackLayout Spacing="3">
+                                    <Label Text="Show Value" FontSize="12" FontAttributes="Bold" TextColor="#1E3A5F"/>
+                                    <Label Text="Justify why your work is worth the cost" FontSize="11" TextColor="#3B5B80"/>
                                 </VerticalStackLayout>
-                            </Grid>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <Label Grid.Column="0" Text="✓" FontSize="14" TextColor="#F5A623" VerticalOptions="Start" Margin="0,1,0,0"/>
-                                <VerticalStackLayout Grid.Column="1" Spacing="2">
-                                    <Label Text="Clear Terms:" FontSize="13" FontAttributes="Bold" TextColor="#B45309"/>
-                                    <Label Text="Define payment schedules and project milestones" FontSize="12" TextColor="#78350F"/>
+                            </Border>
+
+                            <Border Grid.Column="0" Grid.Row="1"
+                                    BackgroundColor="#DBEAFE" StrokeThickness="0" Padding="10,8">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10"/>
+                                </Border.StrokeShape>
+                                <VerticalStackLayout Spacing="3">
+                                    <Label Text="Clear Terms" FontSize="12" FontAttributes="Bold" TextColor="#1E3A5F"/>
+                                    <Label Text="Define milestones and payment steps" FontSize="11" TextColor="#3B5B80"/>
                                 </VerticalStackLayout>
-                            </Grid>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <Label Grid.Column="0" Text="✓" FontSize="14" TextColor="#F5A623" VerticalOptions="Start" Margin="0,1,0,0"/>
-                                <VerticalStackLayout Grid.Column="1" Spacing="2">
-                                    <Label Text="Professionalism:" FontSize="13" FontAttributes="Bold" TextColor="#B45309"/>
-                                    <Label Text="Proofread your proposal before submitting" FontSize="12" TextColor="#78350F"/>
+                            </Border>
+
+                            <Border Grid.Column="1" Grid.Row="1"
+                                    BackgroundColor="#DBEAFE" StrokeThickness="0" Padding="10,8">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10"/>
+                                </Border.StrokeShape>
+                                <VerticalStackLayout Spacing="3">
+                                    <Label Text="Proofread" FontSize="12" FontAttributes="Bold" TextColor="#1E3A5F"/>
+                                    <Label Text="Review before submitting to clients" FontSize="11" TextColor="#3B5B80"/>
                                 </VerticalStackLayout>
-                            </Grid>
-                        </VerticalStackLayout>
+                            </Border>
+
+                        </Grid>
 
                     </VerticalStackLayout>
                 </Border>
 
-                <BoxView HeightRequest="8" Color="Transparent"/>
+                <!-- Bottom breathing room so last card isn't flush with footer -->
+                <BoxView HeightRequest="6" Color="Transparent"/>
 
             </VerticalStackLayout>
         </ScrollView>
 
-        <!-- ══ STICKY BOTTOM BUTTONS ════════════════════════════════════ -->
+        <!-- ══ SLIM STICKY FOOTER (2 buttons only) ══════════════════════
+             Removed "← List" — the back chevron in the header already
+             handles going back, so the footer only needs Invoice + Submit.
+             Height cut from 52→46 px; bar padding tightened.
+        ══════════════════════════════════════════════════════════════════ -->
         <Grid Grid.Row="2"
               BackgroundColor="White"
               ColumnDefinitions="*,*"
-              ColumnSpacing="12">
+              ColumnSpacing="10">
+            <Grid.Shadow>
+                <Shadow Brush="#2563EB" Offset="0,-2" Radius="8" Opacity="0.07"/>
+            </Grid.Shadow>
             <Grid.Padding>
                 <OnPlatform x:TypeArguments="Thickness">
-                    <On Platform="Android" Value="16,12,16,24"/>
-                    <On Platform="Default" Value="16,12,16,16"/>
+                    <On Platform="Android" Value="16,10,16,20"/>
+                    <On Platform="iOS"     Value="16,10,16,28"/>
+                    <On Platform="Default" Value="16,10,16,14"/>
                 </OnPlatform>
             </Grid.Padding>
 
-            <Border Grid.Column="0" HeightRequest="52" StrokeThickness="2">
-                <Border.Stroke>
-                    <SolidColorBrush Color="#6B48FF"/>
-                </Border.Stroke>
+            <!-- Add Invoice — outlined blue -->
+            <Border Grid.Column="0" HeightRequest="46"
+                    Stroke="#2563EB" StrokeThickness="1.5">
                 <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="14"/>
+                    <RoundRectangle CornerRadius="13"/>
                 </Border.StrokeShape>
-                <Button Text="Back to List"
-                        BackgroundColor="Transparent" TextColor="#6B48FF"
-                        FontSize="14" FontAttributes="Bold"
-                        Clicked="OnBackToListClicked"/>
+                <Grid ColumnDefinitions="Auto,Auto" HorizontalOptions="Center"
+                      ColumnSpacing="6" VerticalOptions="Center">
+                    <!-- SVG: receipt -->
+                    <Path Grid.Column="0"
+                          Data="M4 2V22L7 20L10 22L12 20L14 22L17 20L20 22V2M9 7H15M9 11H13"
+                          Stroke="#2563EB" StrokeThickness="1.8"
+                          StrokeLineCap="Round" StrokeLineJoin="Round"
+                          WidthRequest="16" HeightRequest="16"
+                          Aspect="Uniform" VerticalOptions="Center"/>
+                    <Label Grid.Column="1" Text="Invoice"
+                           TextColor="#2563EB" FontSize="14" FontAttributes="Bold"
+                           VerticalOptions="Center"/>
+                    <Grid.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnAddInvoiceClicked_Tap"/>
+                    </Grid.GestureRecognizers>
+                </Grid>
+                <!-- Invisible button layer keeps the Clicked handler -->
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnAddInvoiceClicked_Tap"/>
+                </Border.GestureRecognizers>
             </Border>
 
-            <Border Grid.Column="1" HeightRequest="52" StrokeThickness="0">
+            <!-- Submit Proposal — solid blue gradient -->
+            <Border Grid.Column="1" HeightRequest="46" StrokeThickness="0">
                 <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="14"/>
+                    <RoundRectangle CornerRadius="13"/>
                 </Border.StrokeShape>
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                        <GradientStop Color="#F5A623" Offset="0"/>
-                        <GradientStop Color="#E08A00" Offset="1"/>
+                        <GradientStop Color="#3B82F6" Offset="0"/>
+                        <GradientStop Color="#1D4ED8" Offset="1"/>
                     </LinearGradientBrush>
                 </Border.Background>
-                <Button x:Name="SubmitButton"
-                        BackgroundColor="Transparent" TextColor="White"
-                        FontSize="14" FontAttributes="Bold"
-                        Clicked="OnSubmitProposalClicked">
-                    <Button.ImageSource>
-                        <FontImageSource Glyph="➤" Color="White" Size="14"/>
-                    </Button.ImageSource>
-                    <Button.Text>Submit Proposal</Button.Text>
-                </Button>
+                <Border.Shadow>
+                    <Shadow Brush="#2563EB" Offset="0,3" Radius="8" Opacity="0.38"/>
+                </Border.Shadow>
+                <Grid ColumnDefinitions="Auto,Auto" HorizontalOptions="Center"
+                      ColumnSpacing="6" VerticalOptions="Center">
+                    <Label Grid.Column="0" Text="Submit"
+                           TextColor="White" FontSize="14" FontAttributes="Bold"
+                           VerticalOptions="Center"/>
+                    <!-- SVG: send / arrow-right -->
+                    <Path Grid.Column="1"
+                          Data="M5 12H19M13 6L19 12L13 18"
+                          Stroke="White" StrokeThickness="2"
+                          StrokeLineCap="Round" StrokeLineJoin="Round"
+                          WidthRequest="15" HeightRequest="15"
+                          Aspect="Uniform" VerticalOptions="Center"/>
+                    <Grid.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnSubmitProposalClicked_Tap"/>
+                    </Grid.GestureRecognizers>
+                </Grid>
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnSubmitProposalClicked_Tap"/>
+                </Border.GestureRecognizers>
             </Border>
 
         </Grid>

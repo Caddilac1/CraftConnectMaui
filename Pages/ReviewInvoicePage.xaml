@@ -1,0 +1,386 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CraftConnect_Mobile_App.Pages.ReviewInvoicePage"
+             Title=""
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#F0F4F8">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- ══ SLIM TOP NAV ══════════════════════════════════════════ -->
+        <Grid Grid.Row="0"
+              BackgroundColor="#0F1E2B"
+              Padding="4,44,12,4"
+              ColumnDefinitions="44,*,Auto">
+
+            <ImageButton Grid.Column="0"
+                         Source="icon_back.svg"
+                         WidthRequest="36" HeightRequest="36"
+                         Padding="8"
+                         BackgroundColor="Transparent"
+                         Clicked="OnBackClicked"
+                         VerticalOptions="Center"/>
+
+            <VerticalStackLayout Grid.Column="1"
+                                 Spacing="1"
+                                 VerticalOptions="Center"
+                                 Margin="2,0,0,0">
+                <Label Text="Review Invoice"
+                       FontSize="14" FontAttributes="Bold"
+                       TextColor="White"/>
+                <Label Text="Step 3 of 3 · Confirm &amp; Send"
+                       FontSize="10" TextColor="#7A9EB0"/>
+            </VerticalStackLayout>
+
+            <Border Grid.Column="2"
+                    StrokeThickness="1"
+                    VerticalOptions="Center">
+                <Border.Stroke>
+                    <SolidColorBrush Color="#2DC98E"/>
+                </Border.Stroke>
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="16"/>
+                </Border.StrokeShape>
+                <Label Text="3 / 3"
+                       FontSize="10" FontAttributes="Bold"
+                       TextColor="#2DC98E"
+                       Padding="9,4"/>
+            </Border>
+        </Grid>
+
+        <!-- ══ SCROLL BODY ════════════════════════════════════════════ -->
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="12,14,12,12" Spacing="12">
+
+                <!-- Loading -->
+                <ActivityIndicator IsRunning="{Binding IsLoading}"
+                                   IsVisible="{Binding IsLoading}"
+                                   Color="#1B6B4A"
+                                   HorizontalOptions="Center"
+                                   Margin="0,32"/>
+
+                <!-- Error banner -->
+                <Border IsVisible="{Binding HasError}"
+                        BackgroundColor="#FEF2F2"
+                        Stroke="#FCA5A5"
+                        StrokeThickness="1"
+                        Padding="12,10">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10"/>
+                    </Border.StrokeShape>
+                    <HorizontalStackLayout Spacing="8">
+                        <Label Text="⚠" FontSize="13" TextColor="#DC2626"
+                               VerticalOptions="Center"/>
+                        <Label Text="{Binding ErrorMessage}"
+                               FontSize="12" TextColor="#DC2626"
+                               VerticalOptions="Center"/>
+                    </HorizontalStackLayout>
+                </Border>
+
+                <!-- Success banner -->
+                <Border IsVisible="{Binding HasSuccess}"
+                        BackgroundColor="#F0FDF4"
+                        Stroke="#86EFAC"
+                        StrokeThickness="1"
+                        Padding="12,10">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10"/>
+                    </Border.StrokeShape>
+                    <HorizontalStackLayout Spacing="8">
+                        <Label Text="✓" FontSize="13" TextColor="#16A34A"
+                               VerticalOptions="Center"/>
+                        <Label Text="{Binding SuccessMessage}"
+                               FontSize="12" TextColor="#16A34A"
+                               VerticalOptions="Center"/>
+                    </HorizontalStackLayout>
+                </Border>
+
+                <!-- ════════════════════════════════════════════════════
+                     INVOICE CARD
+                     ════════════════════════════════════════════════════ -->
+                <Border IsVisible="{Binding HasInvoice}"
+                        BackgroundColor="White"
+                        Stroke="#DDE3EA"
+                        StrokeThickness="1"
+                        Shadow="{Shadow Brush=#12000000, Offset='0,3', Radius=10}">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16"/>
+                    </Border.StrokeShape>
+
+                    <VerticalStackLayout Spacing="0">
+
+                        <!-- Header strip -->
+                        <Grid BackgroundColor="#1B6B4A"
+                              Padding="16,12,16,12"
+                              ColumnDefinitions="*,Auto">
+
+                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                <Label Text="AGOOHA"
+                                       FontSize="16" FontAttributes="Bold"
+                                       TextColor="White"/>
+                                <Label Text="CraftConnect · Professional Services"
+                                       FontSize="9.5" TextColor="#9ECFB8"/>
+                                <Label Text="{Binding Invoice.InvoiceNumber, StringFormat='Invoice #{0}'}"
+                                       FontSize="9.5" TextColor="#9ECFB8"
+                                       Margin="0,1,0,0"/>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="1"
+                                                 Spacing="4"
+                                                 HorizontalOptions="End"
+                                                 VerticalOptions="Center">
+                                <Border BackgroundColor="#2D9B6E" StrokeThickness="0">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="6"/>
+                                    </Border.StrokeShape>
+                                    <Label Text="ESTIMATE"
+                                           FontSize="9" FontAttributes="Bold"
+                                           TextColor="White" Padding="8,4"/>
+                                </Border>
+                                <Label Text="{Binding Invoice.CreatedAt, StringFormat='{0:dd MMM yyyy}'}"
+                                       FontSize="9.5" TextColor="#9ECFB8"
+                                       HorizontalOptions="End"/>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <!-- Job reference bar -->
+                        <Grid BackgroundColor="#EAF4EE"
+                              Padding="16,8,16,8"
+                              ColumnDefinitions="Auto,*">
+                            <Label Grid.Column="0"
+                                   Text="FOR:"
+                                   FontSize="10" FontAttributes="Bold"
+                                   TextColor="#1B6B4A"
+                                   CharacterSpacing="0.6"
+                                   VerticalOptions="Center"/>
+                            <Label Grid.Column="1"
+                                   Text="{Binding FeedTitle}"
+                                   FontSize="11" FontAttributes="Bold"
+                                   TextColor="#0F3D24"
+                                   VerticalOptions="Center"
+                                   Margin="6,0,0,0"
+                                   LineBreakMode="TailTruncation"/>
+                        </Grid>
+
+                        <BoxView HeightRequest="1" Color="#E4EBF0"/>
+
+                        <!-- Column headers -->
+                        <Grid Padding="16,8,16,4"
+                              ColumnDefinitions="*,44,76,76">
+                            <Label Grid.Column="0" Text="ITEM"
+                                   FontSize="8.5" FontAttributes="Bold"
+                                   TextColor="#94A3B8" CharacterSpacing="1.1"/>
+                            <Label Grid.Column="1" Text="QTY"
+                                   FontSize="8.5" FontAttributes="Bold"
+                                   TextColor="#94A3B8" CharacterSpacing="1.1"
+                                   HorizontalOptions="Center"/>
+                            <Label Grid.Column="2" Text="UNIT"
+                                   FontSize="8.5" FontAttributes="Bold"
+                                   TextColor="#94A3B8" CharacterSpacing="1.1"
+                                   HorizontalOptions="End"/>
+                            <Label Grid.Column="3" Text="TOTAL"
+                                   FontSize="8.5" FontAttributes="Bold"
+                                   TextColor="#94A3B8" CharacterSpacing="1.1"
+                                   HorizontalOptions="End"/>
+                        </Grid>
+
+                        <!-- Line items -->
+                        <CollectionView ItemsSource="{Binding Invoice.LineItems}">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Padding="16,7,16,7"
+                                          ColumnDefinitions="*,44,76,76">
+                                        <BoxView Grid.ColumnSpan="4"
+                                                 HeightRequest="1"
+                                                 Color="#F1F5F9"
+                                                 VerticalOptions="Start"/>
+                                        <Label Grid.Column="0"
+                                               Text="{Binding ProductName}"
+                                               FontSize="12" TextColor="#1E293B"
+                                               VerticalOptions="Center"
+                                               LineBreakMode="TailTruncation"/>
+                                        <Label Grid.Column="1"
+                                               Text="{Binding Quantity}"
+                                               FontSize="12" TextColor="#475569"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"/>
+                                        <Label Grid.Column="2"
+                                               Text="{Binding UnitPrice, StringFormat='₵{0:N2}'}"
+                                               FontSize="11" TextColor="#94A3B8"
+                                               HorizontalOptions="End"
+                                               VerticalOptions="Center"/>
+                                        <Label Grid.Column="3"
+                                               Text="{Binding LineTotal, StringFormat='₵{0:N2}'}"
+                                               FontSize="12" FontAttributes="Bold"
+                                               TextColor="#1E293B"
+                                               HorizontalOptions="End"
+                                               VerticalOptions="Center"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+
+                        <!-- Totals block -->
+                        <VerticalStackLayout Padding="16,10,16,10"
+                                             Spacing="7"
+                                             BackgroundColor="#F8FAFB">
+
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0" Text="Material Cost"
+                                       FontSize="12" TextColor="#64748B"/>
+                                <Label Grid.Column="1"
+                                       Text="{Binding Invoice.ProductsSubtotal, StringFormat='₵{0:N2}'}"
+                                       FontSize="12" FontAttributes="Bold" TextColor="#334155"/>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,Auto"
+                                  IsVisible="{Binding HasDiscount}">
+                                <Label Grid.Column="0"
+                                       Text="{Binding Invoice.OverallDiscountPercent, StringFormat='Discount ({0:N0}%)'}"
+                                       FontSize="12" TextColor="#D97706"/>
+                                <Label Grid.Column="1"
+                                       Text="{Binding Invoice.OverallDiscountAmount, StringFormat='−₵{0:N2}'}"
+                                       FontSize="12" FontAttributes="Bold" TextColor="#D97706"/>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0" Text="Workmanship"
+                                       FontSize="12" TextColor="#64748B"/>
+                                <Label Grid.Column="1"
+                                       Text="{Binding Invoice.Workmanship, StringFormat='₵{0:N2}'}"
+                                       FontSize="12" FontAttributes="Bold" TextColor="#334155"/>
+                            </Grid>
+
+                            <BoxView HeightRequest="1.5" Color="#1B6B4A" Margin="0,2"/>
+
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0" Text="GRAND TOTAL"
+                                       FontSize="13" FontAttributes="Bold"
+                                       TextColor="#1B6B4A" CharacterSpacing="0.6"/>
+                                <Label Grid.Column="1"
+                                       Text="{Binding Invoice.GrandTotal, StringFormat='₵{0:N2}'}"
+                                       FontSize="13" FontAttributes="Bold"
+                                       TextColor="#1B6B4A"/>
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <!-- Notes (conditional) -->
+                        <VerticalStackLayout IsVisible="{Binding HasNotes}"
+                                             Padding="16,0,16,10"
+                                             Spacing="4">
+                            <BoxView HeightRequest="1" Color="#E8EDF2"/>
+                            <Label Text="NOTES"
+                                   FontSize="8.5" FontAttributes="Bold"
+                                   TextColor="#94A3B8" CharacterSpacing="1.1"
+                                   Margin="0,8,0,2"/>
+                            <Label Text="{Binding Invoice.Notes}"
+                                   FontSize="12" TextColor="#64748B"
+                                   LineHeight="1.5"/>
+                        </VerticalStackLayout>
+
+                        <Label Text="Generated by Agooha CraftConnect"
+                               FontSize="9" TextColor="#C4CBD5"
+                               HorizontalOptions="Center"
+                               Padding="0,4,0,10"/>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Info tip -->
+                <Border BackgroundColor="#EFF8F3"
+                        Stroke="#A7DEC0"
+                        StrokeThickness="1"
+                        Padding="12,10">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10"/>
+                    </Border.StrokeShape>
+                    <HorizontalStackLayout Spacing="10">
+                        <Label Text="ℹ️" FontSize="13" VerticalOptions="Center"/>
+                        <Label Text="Your invoice can be accessed and downloaded anytime from your Invoice list."
+                               FontSize="11.5" TextColor="#166534"
+                               VerticalOptions="Center"/>
+                    </HorizontalStackLayout>
+                </Border>
+
+                <BoxView HeightRequest="6" Color="Transparent"/>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- ══ STICKY ACTION BAR ══════════════════════════════════════ -->
+        <Grid Grid.Row="2"
+              BackgroundColor="White"
+              RowDefinitions="Auto,Auto"
+              RowSpacing="8">
+
+            <Grid.Padding>
+                <OnPlatform x:TypeArguments="Thickness">
+                    <On Platform="Android" Value="14,12,14,30"/>
+                    <On Platform="Default" Value="14,12,14,16"/>
+                </OnPlatform>
+            </Grid.Padding>
+
+            <!-- Hairline separator -->
+            <BoxView Grid.RowSpan="2"
+                     HeightRequest="1" Color="#E2E8F0"
+                     VerticalOptions="Start"/>
+
+            <!-- Submit + Download (outlined) -->
+            <Border Grid.Row="0"
+                    HeightRequest="48"
+                    StrokeThickness="1.5">
+                <Border.Stroke>
+                    <SolidColorBrush Color="#1B6B4A"/>
+                </Border.Stroke>
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12"/>
+                </Border.StrokeShape>
+                <Grid ColumnDefinitions="Auto,*" BackgroundColor="Transparent">
+                    <Image Grid.Column="0"
+                           Source="icon_download.svg"
+                           WidthRequest="17" HeightRequest="17"
+                           Margin="14,0,0,0"
+                           VerticalOptions="Center"/>
+                    <Button Grid.Column="1"
+                            Text="Submit + Download Invoice"
+                            BackgroundColor="Transparent"
+                            TextColor="#1B6B4A"
+                            FontSize="12.5" FontAttributes="Bold"
+                            HorizontalOptions="Center"
+                            Command="{Binding SubmitAndDownloadCommand}"
+                            IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}"/>
+                </Grid>
+            </Border>
+
+            <!-- Submit Proposal + Send Invoice (gradient fill) -->
+            <Border Grid.Row="1"
+                    HeightRequest="48"
+                    StrokeThickness="0">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12"/>
+                </Border.StrokeShape>
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#155E42" Offset="0"/>
+                        <GradientStop Color="#22A36B" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Grid ColumnDefinitions="Auto,*" BackgroundColor="Transparent">
+                    <Image Grid.Column="0"
+                           Source="icon_send1.svg"
+                           WidthRequest="17" HeightRequest="17"
+                           Margin="14,0,0,0"
+                           VerticalOptions="Center"/>
+                    <Button Grid.Column="1"
+                            Text="Submit Proposal + Send Invoice"
+                            BackgroundColor="Transparent"
+                            TextColor="White"
+                            FontSize="12.5" FontAttributes="Bold"
+                            HorizontalOptions="Center"
+                            Command="{Binding SubmitCommand}"
+                            IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}"/>
+                </Grid>
+            </Border>
+
+        </Grid>
+    </Grid>
+</ContentPage>

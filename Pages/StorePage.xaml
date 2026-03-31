@@ -8,13 +8,13 @@
              xmlns:controls="clr-namespace:CraftConnect_Mobile_App.Pages"
              x:DataType="pagemodels:StorePageModel"
              Shell.NavBarIsVisible="False"
-             BackgroundColor="#F8F9FA">
+             BackgroundColor="#F0F4FF">
 
     <ContentPage.Resources>
         <ResourceDictionary>
             <Shadow x:Key="CardShadow"
-                    Brush="#000000"
-                    Opacity="0.08"
+                    Brush="#2563EB"
+                    Opacity="0.07"
                     Radius="12"
                     Offset="0,4"/>
         </ResourceDictionary>
@@ -28,57 +28,59 @@
         <Border Grid.Row="0"
                 BackgroundColor="White"
                 StrokeThickness="0"
-                Padding="16,12">
+                Padding="20,52,20,16">
             <Border.Shadow>
-                <Shadow Brush="#000000"
-                        Opacity="0.05"
+                <Shadow Brush="#2563EB"
+                        Opacity="0.06"
                         Radius="8"
                         Offset="0,2"/>
             </Border.Shadow>
 
-            <Grid RowDefinitions="Auto,Auto"
-                  RowSpacing="12">
+            <Grid RowDefinitions="Auto,Auto" RowSpacing="12">
 
-                <!-- Top bar with title and cart -->
-                <Grid Grid.Row="0"
-                      ColumnDefinitions="*,Auto,Auto">
+                <!-- Top bar: title + cart + menu -->
+                <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+
                     <Label Grid.Column="0"
                            Text="CraftStore"
-                           FontSize="26"
+                           FontSize="32"
                            FontAttributes="Bold"
-                           TextColor="#1F2937"
+                           TextColor="#0D0D0D"
                            VerticalOptions="Center"/>
 
-                    <!-- Cart Icon with Badge -->
-                    <Grid Grid.Column="1"
-                          WidthRequest="48"
-                          HeightRequest="48"
-                          Margin="0,0,8,0">
-                        <Border BackgroundColor="#F3F4F6"
+                    <!-- Cart button — dark navy pill -->
+                    <Grid Grid.Column="1" WidthRequest="48" HeightRequest="48">
+                        <Border BackgroundColor="#1A2340"
                                 StrokeThickness="0"
-                                WidthRequest="48"
-                                HeightRequest="48">
+                                WidthRequest="42"
+                                HeightRequest="42"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center">
                             <Border.StrokeShape>
-                                <RoundRectangle CornerRadius="24"/>
+                                <RoundRectangle CornerRadius="13"/>
                             </Border.StrokeShape>
+                            <Border.Shadow>
+                                <Shadow Brush="#000000" Offset="0,2" Radius="6" Opacity="0.18"/>
+                            </Border.Shadow>
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding ViewCartCommand}"/>
                             </Border.GestureRecognizers>
                             <Label Text="🛒"
-                                   FontSize="22"
+                                   FontSize="20"
                                    VerticalOptions="Center"
                                    HorizontalOptions="Center"/>
                         </Border>
 
                         <!-- Cart badge -->
                         <Border IsVisible="{Binding CartItemCount, Converter={StaticResource GreaterThanZeroConverter}}"
-                                BackgroundColor="#EF4444"
+                                BackgroundColor="#2563EB"
                                 WidthRequest="20"
                                 HeightRequest="20"
                                 VerticalOptions="Start"
                                 HorizontalOptions="End"
                                 Margin="0,-2,-2,0"
-                                StrokeThickness="0">
+                                StrokeThickness="2"
+                                Stroke="#FFFFFF">
                             <Border.StrokeShape>
                                 <RoundRectangle CornerRadius="10"/>
                             </Border.StrokeShape>
@@ -91,48 +93,54 @@
                         </Border>
                     </Grid>
 
-                    <!-- Menu -->
+                    <!-- Menu button — blue accent pill -->
                     <Border Grid.Column="2"
-                            BackgroundColor="#F3F4F6"
+                            BackgroundColor="#2563EB"
                             StrokeThickness="0"
-                            WidthRequest="48"
-                            HeightRequest="48">
+                            WidthRequest="42"
+                            HeightRequest="42">
                         <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="24"/>
+                            <RoundRectangle CornerRadius="13"/>
                         </Border.StrokeShape>
+                        <Border.Shadow>
+                            <Shadow Brush="#2563EB" Offset="0,3" Radius="8" Opacity="0.35"/>
+                        </Border.Shadow>
                         <Label Text="☰"
-                               FontSize="22"
-                               TextColor="#6B7280"
+                               FontSize="20"
+                               TextColor="White"
                                VerticalOptions="Center"
                                HorizontalOptions="Center"/>
                     </Border>
                 </Grid>
 
-                <!-- Search Bar -->
+                <!-- Search bar -->
                 <Border Grid.Row="1"
-                        BackgroundColor="#F3F4F6"
+                        BackgroundColor="#F0F4FF"
                         StrokeThickness="0"
-                        Padding="16,10">
+                        Padding="14,10">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="12"/>
+                        <RoundRectangle CornerRadius="14"/>
                     </Border.StrokeShape>
-
-                    <Grid ColumnDefinitions="Auto,*">
+                    <Border.Shadow>
+                        <Shadow Brush="#2563EB" Offset="0,1" Radius="6" Opacity="0.06"/>
+                    </Border.Shadow>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                         <Label Grid.Column="0"
                                Text="🔍"
-                               FontSize="18"
+                               FontSize="16"
                                VerticalOptions="Center"
-                               Margin="0,0,8,0"/>
+                               Opacity="0.5"/>
                         <Entry Grid.Column="1"
                                Text="{Binding SearchText}"
                                Placeholder="Search products and services..."
                                FontSize="15"
-                               TextColor="#1F2937"
-                               PlaceholderColor="#9CA3AF"
+                               TextColor="#0D0D0D"
+                               PlaceholderColor="#BBBBBB"
                                BackgroundColor="Transparent"
                                VerticalOptions="Center"/>
                     </Grid>
                 </Border>
+
             </Grid>
         </Border>
 
@@ -142,82 +150,98 @@
         <ScrollView Grid.Row="1"
                     Orientation="Horizontal"
                     HorizontalScrollBarVisibility="Never"
-                    Padding="16,12,16,8">
-            <HorizontalStackLayout Spacing="10">
-                <Border BackgroundColor="#6366F1"
+                    Padding="20,12,20,8">
+            <HorizontalStackLayout Spacing="10" Padding="0,2,0,2">
+
+                <!-- All — active (blue) -->
+                <Border BackgroundColor="#2563EB"
                         StrokeThickness="0"
                         Padding="20,10">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="20"/>
+                        <RoundRectangle CornerRadius="22"/>
                     </Border.StrokeShape>
+                    <Border.Shadow>
+                        <Shadow Brush="#2563EB" Offset="0,2" Radius="6" Opacity="0.28"/>
+                    </Border.Shadow>
                     <Label Text="All"
                            FontSize="14"
                            FontAttributes="Bold"
                            TextColor="White"/>
                 </Border>
 
-                <Border BackgroundColor="#F3F4F6"
+                <!-- Products -->
+                <Border BackgroundColor="#FFFFFF"
                         StrokeThickness="0"
                         Padding="20,10">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="20"/>
+                        <RoundRectangle CornerRadius="22"/>
                     </Border.StrokeShape>
+                    <Border.Shadow>
+                        <Shadow Brush="#000000" Offset="0,1" Radius="3" Opacity="0.06"/>
+                    </Border.Shadow>
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding FilterCategoryCommand}"
-                                            CommandParameter="Products"/>
+                                              CommandParameter="Products"/>
                     </Border.GestureRecognizers>
-                    <Label Text="📦 Products"
-                           FontSize="14"
-                           TextColor="#6B7280"/>
+                    <Label Text="📦 Products" FontSize="14" TextColor="#555555"/>
                 </Border>
 
-                <Border BackgroundColor="#F3F4F6"
+                <!-- Services -->
+                <Border BackgroundColor="#FFFFFF"
                         StrokeThickness="0"
                         Padding="20,10">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="20"/>
+                        <RoundRectangle CornerRadius="22"/>
                     </Border.StrokeShape>
+                    <Border.Shadow>
+                        <Shadow Brush="#000000" Offset="0,1" Radius="3" Opacity="0.06"/>
+                    </Border.Shadow>
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding FilterCategoryCommand}"
-                                            CommandParameter="Services"/>
+                                              CommandParameter="Services"/>
                     </Border.GestureRecognizers>
-                    <Label Text="🔧 Services"
-                           FontSize="14"
-                           TextColor="#6B7280"/>
+                    <Label Text="🔧 Services" FontSize="14" TextColor="#555555"/>
                 </Border>
 
-                <Border BackgroundColor="#F3F4F6"
+                <!-- Construction -->
+                <Border BackgroundColor="#FFFFFF"
                         StrokeThickness="0"
                         Padding="20,10">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="20"/>
+                        <RoundRectangle CornerRadius="22"/>
                     </Border.StrokeShape>
-                    <Label Text="🏗 Construction"
-                           FontSize="14"
-                           TextColor="#6B7280"/>
+                    <Border.Shadow>
+                        <Shadow Brush="#000000" Offset="0,1" Radius="3" Opacity="0.06"/>
+                    </Border.Shadow>
+                    <Label Text="🏗 Construction" FontSize="14" TextColor="#555555"/>
                 </Border>
 
-                <Border BackgroundColor="#F3F4F6"
+                <!-- Design -->
+                <Border BackgroundColor="#FFFFFF"
                         StrokeThickness="0"
                         Padding="20,10">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="20"/>
+                        <RoundRectangle CornerRadius="22"/>
                     </Border.StrokeShape>
-                    <Label Text="🎨 Design"
-                           FontSize="14"
-                           TextColor="#6B7280"/>
+                    <Border.Shadow>
+                        <Shadow Brush="#000000" Offset="0,1" Radius="3" Opacity="0.06"/>
+                    </Border.Shadow>
+                    <Label Text="🎨 Design" FontSize="14" TextColor="#555555"/>
                 </Border>
 
-                <Border BackgroundColor="#F3F4F6"
+                <!-- Tools -->
+                <Border BackgroundColor="#FFFFFF"
                         StrokeThickness="0"
                         Padding="20,10">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="20"/>
+                        <RoundRectangle CornerRadius="22"/>
                     </Border.StrokeShape>
-                    <Label Text="🛠 Tools"
-                           FontSize="14"
-                           TextColor="#6B7280"/>
+                    <Border.Shadow>
+                        <Shadow Brush="#000000" Offset="0,1" Radius="3" Opacity="0.06"/>
+                    </Border.Shadow>
+                    <Label Text="🛠 Tools" FontSize="14" TextColor="#555555"/>
                 </Border>
+
             </HorizontalStackLayout>
         </ScrollView>
 
@@ -227,7 +251,7 @@
         <RefreshView Grid.Row="2"
                      Command="{Binding RefreshCommand}"
                      IsRefreshing="{Binding IsBusy}"
-                     RefreshColor="#6366F1">
+                     RefreshColor="#2563EB">
             <ScrollView>
                 <CollectionView ItemsSource="{Binding StoreItems}"
                                 SelectionMode="None"
@@ -235,22 +259,22 @@
 
                     <CollectionView.ItemsLayout>
                         <GridItemsLayout Orientation="Vertical"
-                                       Span="2"
-                                       HorizontalItemSpacing="12"
-                                       VerticalItemSpacing="12"/>
+                                         Span="2"
+                                         HorizontalItemSpacing="12"
+                                         VerticalItemSpacing="12"/>
                     </CollectionView.ItemsLayout>
 
                     <CollectionView.EmptyView>
                         <VerticalStackLayout Padding="40"
-                                           VerticalOptions="Center"
-                                           Spacing="16">
+                                             VerticalOptions="Center"
+                                             Spacing="16">
                             <Label Text="🏪"
                                    FontSize="64"
                                    HorizontalOptions="Center"/>
                             <Label Text="No items available"
                                    FontSize="20"
                                    FontAttributes="Bold"
-                                   TextColor="#1F2937"
+                                   TextColor="#0D0D0D"
                                    HorizontalTextAlignment="Center"/>
                             <Label Text="Check back later for products and services"
                                    FontSize="14"
@@ -265,29 +289,32 @@
                                     StrokeThickness="0"
                                     Shadow="{StaticResource CardShadow}">
                                 <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="16"/>
+                                    <RoundRectangle CornerRadius="18"/>
                                 </Border.StrokeShape>
                                 <Border.GestureRecognizers>
-                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type pagemodels:StorePageModel}}, Path=ItemTappedCommand}"
-                                                        CommandParameter="{Binding .}"/>
+                                    <TapGestureRecognizer
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type pagemodels:StorePageModel}}, Path=ItemTappedCommand}"
+                                        CommandParameter="{Binding .}"/>
                                 </Border.GestureRecognizers>
 
                                 <Grid RowDefinitions="140,Auto,Auto,Auto,Auto,Auto"
                                       RowSpacing="8"
                                       Padding="0">
 
+                                    <!-- Image area -->
                                     <Border Grid.Row="0"
-                                            BackgroundColor="#F3F4F6"
+                                            BackgroundColor="#EEF2FF"
                                             StrokeThickness="0">
                                         <Border.StrokeShape>
-                                            <RoundRectangle CornerRadius="16,16,0,0"/>
+                                            <RoundRectangle CornerRadius="18,18,0,0"/>
                                         </Border.StrokeShape>
                                         <Grid>
                                             <Image Source="{Binding ImageUrl}"
                                                    Aspect="AspectFill"
                                                    HeightRequest="140"/>
 
-                                            <Border BackgroundColor="#1F2937"
+                                            <!-- Type badge — dark navy -->
+                                            <Border BackgroundColor="#1A2340"
                                                     StrokeThickness="0"
                                                     Padding="10,4"
                                                     VerticalOptions="Start"
@@ -302,6 +329,7 @@
                                                        TextColor="White"/>
                                             </Border>
 
+                                            <!-- Wishlist heart -->
                                             <Border BackgroundColor="#FFFFFF"
                                                     StrokeThickness="0"
                                                     WidthRequest="32"
@@ -314,22 +342,24 @@
                                                 </Border.StrokeShape>
                                                 <Label Text="♡"
                                                        FontSize="18"
-                                                       TextColor="#EF4444"
+                                                       TextColor="#2563EB"
                                                        VerticalOptions="Center"
                                                        HorizontalOptions="Center"/>
                                             </Border>
                                         </Grid>
                                     </Border>
 
+                                    <!-- Name -->
                                     <Label Grid.Row="1"
                                            Text="{Binding Name}"
                                            FontSize="14"
                                            FontAttributes="Bold"
-                                           TextColor="#1F2937"
+                                           TextColor="#0D0D0D"
                                            LineBreakMode="TailTruncation"
                                            MaxLines="2"
                                            Margin="10,8,10,0"/>
 
+                                    <!-- Seller -->
                                     <Label Grid.Row="2"
                                            Text="{Binding SellerName}"
                                            FontSize="12"
@@ -337,34 +367,41 @@
                                            LineBreakMode="TailTruncation"
                                            Margin="10,0"/>
 
+                                    <!-- Rating -->
                                     <HorizontalStackLayout Grid.Row="3"
-                                                          Spacing="4"
-                                                          Margin="10,0">
+                                                           Spacing="4"
+                                                           Margin="10,0">
                                         <Label Text="⭐" FontSize="12" VerticalOptions="Center"/>
                                         <Label Text="{Binding Rating, StringFormat='{0:F1}'}"
-                                               FontSize="12" TextColor="#1F2937" VerticalOptions="Center"/>
+                                               FontSize="12" TextColor="#0D0D0D" VerticalOptions="Center"/>
                                         <Label Text="{Binding ReviewCount, StringFormat='({0})'}"
                                                FontSize="11" TextColor="#9CA3AF" VerticalOptions="Center"/>
                                     </HorizontalStackLayout>
 
+                                    <!-- Price — blue -->
                                     <Label Grid.Row="4"
                                            Text="{Binding DisplayPrice}"
                                            FontSize="16"
                                            FontAttributes="Bold"
-                                           TextColor="#6366F1"
+                                           TextColor="#2563EB"
                                            Margin="10,4,10,0"/>
 
+                                    <!-- Add to cart / Book button — blue -->
                                     <Border Grid.Row="5"
-                                            BackgroundColor="#6366F1"
+                                            BackgroundColor="#2563EB"
                                             StrokeThickness="0"
                                             Padding="0,10"
                                             Margin="8,8,8,10">
                                         <Border.StrokeShape>
                                             <RoundRectangle CornerRadius="10"/>
                                         </Border.StrokeShape>
+                                        <Border.Shadow>
+                                            <Shadow Brush="#2563EB" Offset="0,2" Radius="6" Opacity="0.28"/>
+                                        </Border.Shadow>
                                         <Border.GestureRecognizers>
-                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type pagemodels:StorePageModel}}, Path=AddToCartOrBookCommand}"
-                                                                CommandParameter="{Binding .}"/>
+                                            <TapGestureRecognizer
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pagemodels:StorePageModel}}, Path=AddToCartOrBookCommand}"
+                                                CommandParameter="{Binding .}"/>
                                         </Border.GestureRecognizers>
                                         <Label Text="{Binding ActionButtonText}"
                                                FontSize="13"
@@ -372,6 +409,7 @@
                                                TextColor="White"
                                                HorizontalOptions="Center"/>
                                     </Border>
+
                                 </Grid>
                             </Border>
                         </DataTemplate>
@@ -383,7 +421,6 @@
         <!-- ========================================
              BOTTOM NAVIGATION
              ======================================== -->
-        <!-- CHANGE: added x:Name="BottomNav" -->
         <controls:BottomNavBar x:Name="BottomNav"
                                Grid.Row="3"
                                ActiveTab="Store"/>

@@ -24,6 +24,16 @@ namespace CraftConnect_Mobile_App.PageModels
         [ObservableProperty]
         private bool _hasAttachedFiles;
 
+        // ── Typing indicator state ────────────────────────────────
+
+        /// <summary>
+        /// True while the AI is composing a reply.
+        /// Drives the page-level TypingIndicatorOverlay in XAML and the
+        /// bouncing-wave animation in AiFeedChatPage.xaml.cs.
+        /// </summary>
+        [ObservableProperty]
+        private bool _isTyping;
+
         // ── Recording state ───────────────────────────────────────
 
         /// <summary>True while the microphone is actively recording.</summary>
@@ -137,7 +147,6 @@ namespace CraftConnect_Mobile_App.PageModels
             RecordingDuration = "0:00";
             IsRecording = true;
 
-            // Tick every second to update the duration label
             _recordingTimer = Application.Current!.Dispatcher.CreateTimer();
             _recordingTimer.Interval = TimeSpan.FromSeconds(1);
             _recordingTimer.Tick += OnRecordingTimerTick;
@@ -173,11 +182,6 @@ namespace CraftConnect_Mobile_App.PageModels
         // Send voice message
         // ─────────────────────────────────────────────────────────
 
-        /// <summary>
-        /// Uploads the recorded audio file and sends it to the AI service.
-        /// If your backend supports speech-to-text, pass the transcription back
-        /// through the normal chat flow. Otherwise the audio is attached as a file.
-        /// </summary>
         public async Task SendVoiceMessageAsync(string filePath)
         {
             try
@@ -185,30 +189,18 @@ namespace CraftConnect_Mobile_App.PageModels
                 IsBusy = true;
                 StatusText = "Sending voice note...";
 
-                // Show the voice note in the chat bubble
                 var durationLabel = RecordingDuration == "0:00" ? "" : $" ({RecordingDuration})";
                 await AddUserMessage($"🎙 Voice note{durationLabel}");
 
                 var fileName = Path.GetFileName(filePath);
 
-                // --- Option A: upload audio to your backend -------------------------
-                // If AiFeedChatService has an audio/transcription endpoint:
                 using var stream = File.OpenRead(filePath);
                 var response = await _aiFeedService.UploadFileAsync(_sessionId, stream, fileName, "voice");
 
                 if (response?.Success == true && !string.IsNullOrEmpty(response.Message))
-                {
-                    // The backend returned a transcription or an acknowledgement
                     await DispatchAiResponse(response.Message, alreadyFromServer: true);
-                }
                 else
-                {
-                    // Fallback: tell the AI we sent a voice note
                     await DispatchAiResponse("[voice note attached]");
-                }
-                // --- Option B: if you only want to transcribe locally and send text --
-                // Replace the block above with local STT (e.g. Microsoft.CognitiveServices.Speech)
-                // and call: await DispatchAiResponse(transcribedText);
             }
             catch (Exception ex)
             {
@@ -220,7 +212,6 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 IsBusy = false;
 
-                // Clean up the temp audio file
                 try { if (File.Exists(filePath)) File.Delete(filePath); }
                 catch { /* non-critical */ }
             }
@@ -234,6 +225,12 @@ namespace CraftConnect_Mobile_App.PageModels
         /// <param name="alreadyFromServer">When true, skip the API call and display directly.</param>
         private async Task DispatchAiResponse(string userInput, bool alreadyFromServer = false)
         {
+            // ── Show typing indicator ─────────────────────────────
+            // 1. Flip the page-level flag → triggers the wave animation in code-behind
+            //    and shows the TypingIndicatorOverlay in XAML.
+            // 2. Also add a per-message placeholder so the CollectionView scrolls correctly.
+            IsTyping = true;
+
             var typingMessage = new AiChatMessageViewModel
             {
                 IsFromAi = true,
@@ -244,7 +241,7 @@ namespace CraftConnect_Mobile_App.PageModels
 
             try
             {
-                StatusText = "AI is thinking...";
+                StatusText = "typing...";
 
                 string replyText;
 
@@ -258,11 +255,13 @@ namespace CraftConnect_Mobile_App.PageModels
                     replyText = response?.Message ?? "Sorry, I didn't receive a response. Please try again.";
                 }
 
+                // ── Hide typing indicator ─────────────────────────
+                IsTyping = false;
                 Messages.Remove(typingMessage);
+
                 await AddAiMessage(replyText, false);
                 StatusText = "Online";
 
-                // Check if AI signalled the feed is ready to create
                 var apiResponse = alreadyFromServer ? null : await _aiFeedService.SendMessageAsync(_sessionId, userInput);
                 if (apiResponse?.ReadyToCreate == true)
                 {
@@ -273,6 +272,9 @@ namespace CraftConnect_Mobile_App.PageModels
             catch (Exception ex)
             {
                 Debug.WriteLine($"[AI CHAT MODEL] ❌ DispatchAiResponse error: {ex.Message}");
+
+                // Always clear the typing state on error
+                IsTyping = false;
                 Messages.Remove(typingMessage);
 
                 var errorMessage = ex.Message.Contains("Network") ? "Network error. Please check your connection."

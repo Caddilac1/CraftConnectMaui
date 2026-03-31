@@ -16,15 +16,12 @@
         </ResourceDictionary>
     </ContentPage.Resources>
 
-    <!-- Root grid — main UI sits in Row 0; attachment overlay sits on top -->
     <Grid>
 
-        <!-- ══════════════════════════════════════════════════════════
-             MAIN LAYOUT
-        ═════════════════════════════════════════════════════════════ -->
+        <!-- ══ MAIN LAYOUT ══════════════════════════════════════════ -->
         <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="0">
 
-            <!-- ── WHATSAPP-STYLE HEADER ──────────────────────────── -->
+            <!-- ── HEADER ────────────────────────────────────────── -->
             <Grid Grid.Row="0"
                   BackgroundColor="#075E54"
                   ColumnDefinitions="Auto,Auto,*,Auto"
@@ -36,7 +33,7 @@
                     </OnPlatform>
                 </Grid.Padding>
 
-                <!-- Back arrow -->
+                <!-- Back -->
                 <Border Grid.Column="0"
                         BackgroundColor="Transparent" StrokeThickness="0"
                         WidthRequest="36" HeightRequest="36" VerticalOptions="Center">
@@ -47,7 +44,7 @@
                            TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
                 </Border>
 
-                <!-- AI Avatar circle -->
+                <!-- Support avatar -->
                 <Grid Grid.Column="1" WidthRequest="40" HeightRequest="40"
                       VerticalOptions="Center" Margin="2,0,10,0">
                     <Border WidthRequest="40" HeightRequest="40"
@@ -55,11 +52,11 @@
                         <Border.StrokeShape>
                             <RoundRectangle CornerRadius="20"/>
                         </Border.StrokeShape>
-                        <!-- Robot/AI icon -->
-                        <Label Text="&#xe8b5;" FontFamily="MaterialIcons" FontSize="22"
-                               TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+                        <Label Text="CC" FontSize="14" FontAttributes="Bold"
+                               TextColor="White"
+                               HorizontalOptions="Center" VerticalOptions="Center"/>
                     </Border>
-                    <!-- Online green dot -->
+                    <!-- Online dot -->
                     <Border WidthRequest="12" HeightRequest="12"
                             BackgroundColor="#25D366" StrokeThickness="1.5"
                             HorizontalOptions="End" VerticalOptions="End">
@@ -72,9 +69,9 @@
                     </Border>
                 </Grid>
 
-                <!-- AI name + status -->
+                <!-- Name + status -->
                 <VerticalStackLayout Grid.Column="2" VerticalOptions="Center" Spacing="1">
-                    <Label Text="Feed Assistant"
+                    <Label Text="CraftConnect Support"
                            FontSize="17" FontAttributes="Bold"
                            TextColor="White" LineBreakMode="TailTruncation"/>
                     <Label Text="{Binding StatusText}"
@@ -91,7 +88,7 @@
                 </Border>
             </Grid>
 
-            <!-- ── MESSAGES AREA — beige WhatsApp background ─────── -->
+            <!-- ── MESSAGES AREA ──────────────────────────────────── -->
             <Grid Grid.Row="1" BackgroundColor="#ECE5DD">
 
                 <RefreshView Command="{Binding RefreshCommand}"
@@ -105,7 +102,6 @@
                                     BackgroundColor="Transparent">
 
                         <CollectionView.Header>
-                            <!-- "TODAY" date separator pill -->
                             <Grid Padding="0,10,0,6">
                                 <Border BackgroundColor="White" StrokeThickness="0"
                                         Padding="14,4" HorizontalOptions="Center">
@@ -127,14 +123,14 @@
                                     <Border.StrokeShape>
                                         <RoundRectangle CornerRadius="36"/>
                                     </Border.StrokeShape>
-                                    <Label Text="&#xe8b5;" FontFamily="MaterialIcons" FontSize="36"
-                                           TextColor="#075E54" HorizontalOptions="Center"
-                                           VerticalOptions="Center"/>
+                                    <Label Text="CC" FontSize="22" FontAttributes="Bold"
+                                           TextColor="#075E54"
+                                           HorizontalOptions="Center" VerticalOptions="Center"/>
                                 </Border>
-                                <Label Text="Assistant Ready" FontSize="16"
-                                       TextColor="#546E7A" FontAttributes="Bold"
+                                <Label Text="CraftConnect Support"
+                                       FontSize="16" TextColor="#546E7A" FontAttributes="Bold"
                                        HorizontalTextAlignment="Center"/>
-                                <Label Text="Let's create an amazing feed post together!"
+                                <Label Text="We're here to help you build your feed post."
                                        FontSize="13" TextColor="#90A4AE"
                                        HorizontalTextAlignment="Center"/>
                             </VerticalStackLayout>
@@ -144,22 +140,29 @@
                             <DataTemplate x:DataType="pagemodels:AiChatMessageViewModel">
                                 <Grid Padding="6,2,6,2">
 
-                                    <!-- ── AI MESSAGES (LEFT) ──────────────── -->
+                                    <!-- ── AI / Support messages (LEFT) ──────────── -->
                                     <VerticalStackLayout IsVisible="{Binding IsFromAi}"
                                                          HorizontalOptions="Start"
                                                          MaximumWidthRequest="290"
                                                          Spacing="0">
 
-                                        <Label Text="Feed Assistant"
+                                        <!--
+                                            Sender label — ONLY visible on real messages.
+                                            Hidden while IsTyping=true so the dots bubble
+                                            appears alone, just like WhatsApp.
+                                        -->
+                                        <Label Text="CraftConnect Support"
                                                FontSize="13" FontAttributes="Bold"
                                                TextColor="#075E54"
-                                               Margin="12,4,12,0"/>
+                                               Margin="12,4,12,0"
+                                               IsVisible="{Binding IsTyping, Converter={StaticResource InvertedBoolConverter}}"/>
 
-                                        <!-- White bubble, sharp top-left corner -->
+                                        <!-- Real message bubble — hidden while typing -->
                                         <Border BackgroundColor="White"
                                                 StrokeThickness="0"
                                                 Padding="10,6,10,6"
-                                                Margin="0,2,0,2">
+                                                Margin="0,2,0,2"
+                                                IsVisible="{Binding IsTyping, Converter={StaticResource InvertedBoolConverter}}">
                                             <Border.StrokeShape>
                                                 <RoundRectangle CornerRadius="0,8,8,8"/>
                                             </Border.StrokeShape>
@@ -173,28 +176,40 @@
                                             </VerticalStackLayout>
                                         </Border>
 
-                                        <!-- Typing indicator (three dots) -->
+                                        <!--
+                                            Typing dots bubble — visible ONLY while IsTyping=true.
+                                            No sender name above it (controlled by label above).
+                                            The animated wave runs on page-level TypingDot1/2/3
+                                            via the code-behind. These are static placeholders.
+                                        -->
                                         <Border IsVisible="{Binding IsTyping}"
-                                                BackgroundColor="White" StrokeThickness="0"
-                                                Padding="14,10" Margin="0,2,0,2">
+                                                BackgroundColor="White"
+                                                StrokeThickness="0"
+                                                Padding="14,11"
+                                                Margin="0,2,0,2"
+                                                WidthRequest="66">
                                             <Border.StrokeShape>
                                                 <RoundRectangle CornerRadius="0,8,8,8"/>
                                             </Border.StrokeShape>
-                                            <HorizontalStackLayout Spacing="5">
-                                                <Ellipse WidthRequest="8" HeightRequest="8" Fill="#9E9E9E" Opacity="0.4"/>
-                                                <Ellipse WidthRequest="8" HeightRequest="8" Fill="#9E9E9E" Opacity="0.6"/>
-                                                <Ellipse WidthRequest="8" HeightRequest="8" Fill="#9E9E9E" Opacity="0.4"/>
+                                            <HorizontalStackLayout Spacing="5"
+                                                                    HorizontalOptions="Center"
+                                                                    VerticalOptions="Center">
+                                                <Ellipse WidthRequest="7" HeightRequest="7"
+                                                         Fill="#9E9E9E" Opacity="0.35"/>
+                                                <Ellipse WidthRequest="7" HeightRequest="7"
+                                                         Fill="#9E9E9E" Opacity="0.35"/>
+                                                <Ellipse WidthRequest="7" HeightRequest="7"
+                                                         Fill="#9E9E9E" Opacity="0.35"/>
                                             </HorizontalStackLayout>
                                         </Border>
+
                                     </VerticalStackLayout>
 
-                                    <!-- ── USER MESSAGES (RIGHT) ───────────── -->
+                                    <!-- ── User messages (RIGHT) ─────────────────── -->
                                     <VerticalStackLayout IsVisible="{Binding IsFromUser}"
                                                          HorizontalOptions="End"
                                                          MaximumWidthRequest="290"
                                                          Spacing="0">
-
-                                        <!-- Green bubble, sharp top-right corner -->
                                         <Border BackgroundColor="#DCF8C6"
                                                 StrokeThickness="0"
                                                 Padding="10,6,10,6"
@@ -216,7 +231,7 @@
                                         </Border>
                                     </VerticalStackLayout>
 
-                                    <!-- ── FILE ATTACHMENT PREVIEW ─────────── -->
+                                    <!-- ── File attachment preview ───────────────── -->
                                     <Border IsVisible="{Binding HasAttachment}"
                                             HorizontalOptions="{Binding AttachmentAlignment}"
                                             BackgroundColor="#F0F0F0"
@@ -252,7 +267,6 @@
                     </CollectionView>
                 </RefreshView>
 
-                <!-- Loading spinner -->
                 <ActivityIndicator IsRunning="{Binding IsBusy}"
                                    IsVisible="{Binding IsBusy}"
                                    Color="#075E54"
@@ -264,10 +278,8 @@
             <!-- ── ATTACHED FILES STRIP ───────────────────────────── -->
             <Border Grid.Row="2"
                     IsVisible="{Binding HasAttachedFiles}"
-                    BackgroundColor="White"
-                    StrokeThickness="0"
-                    HeightRequest="64"
-                    Padding="8,4">
+                    BackgroundColor="White" StrokeThickness="0"
+                    HeightRequest="64" Padding="8,4">
                 <CollectionView ItemsSource="{Binding AttachedFiles}">
                     <CollectionView.ItemsLayout>
                         <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8"/>
@@ -284,10 +296,8 @@
                                         <Label Text="{Binding FileName}" FontSize="11"
                                                FontAttributes="Bold" TextColor="#111B21"
                                                LineBreakMode="TailTruncation"/>
-                                        <Label Text="{Binding FileType}" FontSize="10"
-                                               TextColor="#667781"/>
+                                        <Label Text="{Binding FileType}" FontSize="10" TextColor="#667781"/>
                                     </VerticalStackLayout>
-                                    <!-- Remove file button -->
                                     <Label Grid.Column="1" Text="&#xe5cd;"
                                            FontFamily="MaterialIcons" FontSize="16"
                                            TextColor="#8696A0" VerticalOptions="Center">
@@ -304,7 +314,7 @@
                 </CollectionView>
             </Border>
 
-            <!-- ── WHATSAPP-STYLE INPUT BAR ───────────────────────── -->
+            <!-- ── INPUT BAR ──────────────────────────────────────── -->
             <Grid Grid.Row="3"
                   x:Name="MessageInputArea"
                   BackgroundColor="#F0F2F5"
@@ -317,7 +327,6 @@
                     </OnPlatform>
                 </Grid.Padding>
 
-                <!-- White input pill -->
                 <Border Grid.Column="0"
                         BackgroundColor="White" StrokeThickness="0"
                         VerticalOptions="Center"
@@ -325,10 +334,8 @@
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="24"/>
                     </Border.StrokeShape>
-
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="0" Padding="6,0">
 
-                        <!-- Emoji -->
                         <Border Grid.Column="0"
                                 BackgroundColor="Transparent" StrokeThickness="0"
                                 WidthRequest="38" HeightRequest="38" VerticalOptions="Center">
@@ -339,11 +346,10 @@
                                    TextColor="#8696A0" HorizontalOptions="Center" VerticalOptions="Center"/>
                         </Border>
 
-                        <!-- Message editor -->
                         <Editor Grid.Column="1"
                                 x:Name="MessageEditor"
                                 Text="{Binding MessageText}"
-                                Placeholder="Type a message"
+                                Placeholder="Message CraftConnect Support"
                                 AutoSize="TextChanges"
                                 FontSize="16"
                                 TextColor="#111B21"
@@ -353,7 +359,6 @@
                                 MinimumHeightRequest="28"
                                 MaximumHeightRequest="100"/>
 
-                        <!-- Attachment icon — only when no text typed -->
                         <Border Grid.Column="2"
                                 BackgroundColor="Transparent" StrokeThickness="0"
                                 WidthRequest="38" HeightRequest="38"
@@ -366,22 +371,14 @@
                                    TextColor="#8696A0" Rotation="-45"
                                    HorizontalOptions="Center" VerticalOptions="Center"/>
                         </Border>
-
                     </Grid>
                 </Border>
 
-                <!-- ── SEND / MIC BUTTON ───────────────────────────── -->
-                <!--
-                    When text is present   → teal background, sends message on tap
-                    When no text + idle    → teal background, starts recording on tap
-                    When recording         → red background, stops recording on tap
-                -->
                 <Border x:Name="SendMicButton"
                         Grid.Column="1"
                         WidthRequest="48" HeightRequest="48"
                         BackgroundColor="{Binding SendButtonColor}"
-                        StrokeThickness="0"
-                        VerticalOptions="Center">
+                        StrokeThickness="0" VerticalOptions="Center">
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="24"/>
                     </Border.StrokeShape>
@@ -389,38 +386,27 @@
                         <TapGestureRecognizer Tapped="OnSendMicTapped"/>
                     </Border.GestureRecognizers>
                     <Grid>
-                        <!-- Mic — idle, no text -->
                         <Label Text="&#xe029;" FontFamily="MaterialIcons" FontSize="24"
                                TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"
                                IsVisible="{Binding ShowMicIcon}"/>
-                        <!-- Stop square — while recording -->
                         <Label Text="&#xe047;" FontFamily="MaterialIcons" FontSize="24"
                                TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"
                                IsVisible="{Binding IsRecording}"/>
-                        <!-- Send arrow — when text present -->
                         <Label Text="&#xe163;" FontFamily="MaterialIcons" FontSize="24"
                                TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"
                                IsVisible="{Binding MessageText, Converter={StaticResource StringNotEmptyConverter}}"/>
                     </Grid>
                 </Border>
-
             </Grid>
         </Grid>
 
-        <!-- ══════════════════════════════════════════════════════════
-             RECORDING INDICATOR OVERLAY
-             Slides up from bottom while recording is active.
-        ═════════════════════════════════════════════════════════════ -->
+        <!-- ══ RECORDING BANNER ══════════════════════════════════════ -->
         <Border x:Name="RecordingBanner"
                 IsVisible="{Binding IsRecording}"
-                BackgroundColor="#D32F2F"
-                StrokeThickness="0"
-                VerticalOptions="End"
-                HorizontalOptions="FillAndExpand"
-                Padding="20,12"
-                Margin="0,0,0,70">
+                BackgroundColor="#D32F2F" StrokeThickness="0"
+                VerticalOptions="End" HorizontalOptions="FillAndExpand"
+                Padding="20,12" Margin="0,0,0,70">
             <HorizontalStackLayout Spacing="12" HorizontalOptions="Center">
-                <!-- Pulsing dot -->
                 <Ellipse x:Name="RecordingDot"
                          WidthRequest="10" HeightRequest="10"
                          Fill="White" VerticalOptions="Center"/>
@@ -432,22 +418,17 @@
             </HorizontalStackLayout>
         </Border>
 
-        <!-- ══════════════════════════════════════════════════════════
-             WHATSAPP-STYLE ATTACHMENT BOTTOM SHEET OVERLAY
-        ═════════════════════════════════════════════════════════════ -->
+        <!-- ══ ATTACHMENT SHEET OVERLAY ══════════════════════════════ -->
         <Grid x:Name="AttachmentOverlay" IsVisible="False" BackgroundColor="Transparent">
 
-            <!-- Dim background — tap to dismiss -->
             <BoxView BackgroundColor="Black" Opacity="0.6">
                 <BoxView.GestureRecognizers>
                     <TapGestureRecognizer Tapped="OnDismissAttachmentSheet"/>
                 </BoxView.GestureRecognizers>
             </BoxView>
 
-            <!-- Bottom sheet panel -->
             <VerticalStackLayout VerticalOptions="End" Spacing="0">
 
-                <!-- Drag handle -->
                 <Border BackgroundColor="White" StrokeThickness="0"
                         Padding="0,12,0,4" HorizontalOptions="FillAndExpand">
                     <Border BackgroundColor="#E0E0E0" WidthRequest="40" HeightRequest="4"
@@ -458,15 +439,12 @@
                     </Border>
                 </Border>
 
-                <!-- Options grid -->
                 <Grid BackgroundColor="White"
                       Padding="24,8,24,32"
                       ColumnDefinitions="*,*,*"
                       RowDefinitions="Auto,Auto"
-                      RowSpacing="20"
-                      ColumnSpacing="16">
+                      RowSpacing="20" ColumnSpacing="16">
 
-                    <!-- Document -->
                     <VerticalStackLayout Grid.Row="0" Grid.Column="0"
                                          Spacing="8" HorizontalOptions="Center">
                         <Border WidthRequest="58" HeightRequest="58"
@@ -481,11 +459,9 @@
                             <Label Text="&#xe24d;" FontFamily="MaterialIcons" FontSize="26"
                                    TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
                         </Border>
-                        <Label Text="Document" FontSize="12" TextColor="#424242"
-                               HorizontalOptions="Center"/>
+                        <Label Text="Document" FontSize="12" TextColor="#424242" HorizontalOptions="Center"/>
                     </VerticalStackLayout>
 
-                    <!-- Camera -->
                     <VerticalStackLayout Grid.Row="0" Grid.Column="1"
                                          Spacing="8" HorizontalOptions="Center">
                         <Border WidthRequest="58" HeightRequest="58"
@@ -500,11 +476,9 @@
                             <Label Text="&#xe3af;" FontFamily="MaterialIcons" FontSize="26"
                                    TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
                         </Border>
-                        <Label Text="Camera" FontSize="12" TextColor="#424242"
-                               HorizontalOptions="Center"/>
+                        <Label Text="Camera" FontSize="12" TextColor="#424242" HorizontalOptions="Center"/>
                     </VerticalStackLayout>
 
-                    <!-- Gallery -->
                     <VerticalStackLayout Grid.Row="0" Grid.Column="2"
                                          Spacing="8" HorizontalOptions="Center">
                         <Border WidthRequest="58" HeightRequest="58"
@@ -519,11 +493,9 @@
                             <Label Text="&#xe410;" FontFamily="MaterialIcons" FontSize="26"
                                    TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
                         </Border>
-                        <Label Text="Gallery" FontSize="12" TextColor="#424242"
-                               HorizontalOptions="Center"/>
+                        <Label Text="Gallery" FontSize="12" TextColor="#424242" HorizontalOptions="Center"/>
                     </VerticalStackLayout>
 
-                    <!-- Invoice -->
                     <VerticalStackLayout Grid.Row="1" Grid.Column="0"
                                          Spacing="8" HorizontalOptions="Center">
                         <Border WidthRequest="58" HeightRequest="58"
@@ -538,8 +510,7 @@
                             <Label Text="&#xe8e0;" FontFamily="MaterialIcons" FontSize="26"
                                    TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
                         </Border>
-                        <Label Text="Invoice" FontSize="12" TextColor="#424242"
-                               HorizontalOptions="Center"/>
+                        <Label Text="Invoice" FontSize="12" TextColor="#424242" HorizontalOptions="Center"/>
                     </VerticalStackLayout>
 
                 </Grid>

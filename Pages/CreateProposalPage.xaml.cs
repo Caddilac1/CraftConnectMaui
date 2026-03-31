@@ -9,8 +9,13 @@ namespace CraftConnect_Mobile_App.Pages
     {
         private readonly CreateProposalPageModel _pm;
 
+        // Guard flag — prevents OnProjectSelected from overwriting the
+        // programmatically-preselected feed while RefreshPicker is running.
+        private bool _suppressPickerEvents = false;
+
         public List<(string Id, string DisplayName)> AvailableProjects { get; set; } = new();
         public string? PreselectedFeedId { get; set; }
+        public string? PreselectedFeedTitle { get; set; }
 
         public CreateProposalPage(ArtisanProposalService proposalService)
         {
@@ -26,7 +31,7 @@ namespace CraftConnect_Mobile_App.Pages
         protected override void OnAppearing()
         {
             base.OnAppearing();
-            _pm.Initialize(AvailableProjects, PreselectedFeedId);
+            _pm.Initialize(AvailableProjects, PreselectedFeedId, PreselectedFeedTitle);
             RefreshPicker();
         }
 
@@ -36,19 +41,39 @@ namespace CraftConnect_Mobile_App.Pages
 
         private void RefreshPicker()
         {
-            ProjectPicker.Items.Clear();
-            foreach (var feed in _pm.AvailableFeeds)
-                ProjectPicker.Items.Add(feed.DisplayName);
+            // Suppress OnProjectSelected while we rebuild the picker so that
+            // setting SelectedIndex programmatically doesn't accidentally
+            // clear or overwrite the feed the PM already has selected.
+            _suppressPickerEvents = true;
 
-            if (_pm.SelectedFeed != null)
+            try
             {
-                var idx = _pm.AvailableFeeds.IndexOf(_pm.SelectedFeed);
-                if (idx >= 0) ProjectPicker.SelectedIndex = idx;
+                ProjectPicker.Items.Clear();
+                foreach (var feed in _pm.AvailableFeeds)
+                    ProjectPicker.Items.Add(feed.DisplayName);
+
+                // Sync picker index to whatever SelectedFeed the PM already has
+                if (_pm.SelectedFeed != null)
+                {
+                    var idx = _pm.AvailableFeeds.IndexOf(_pm.SelectedFeed);
+                    if (idx >= 0)
+                    {
+                        ProjectPicker.SelectedIndex = idx;
+                        Debug.WriteLine($"[PAGE] Picker synced to idx={idx}, feed={_pm.SelectedFeed.DisplayName}");
+                    }
+                }
+            }
+            finally
+            {
+                _suppressPickerEvents = false;
             }
         }
 
         private void OnProjectSelected(object sender, EventArgs e)
         {
+            // Ignore events fired during programmatic picker population
+            if (_suppressPickerEvents) return;
+
             var idx = ProjectPicker.SelectedIndex;
             _pm.SelectedFeed = (idx >= 0 && idx < _pm.AvailableFeeds.Count)
                 ? _pm.AvailableFeeds[idx]
@@ -58,13 +83,30 @@ namespace CraftConnect_Mobile_App.Pages
         }
 
         // ══════════════════════════════════════════════════════════════
+        // ▌ HELPER — ensure SelectedFeed is in sync with the picker
+        // ══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// If the PM's SelectedFeed is still null (e.g. because the user
+        /// never touched the picker after pre-population), try to recover
+        /// it from the picker's current index before we validate or navigate.
+        /// </summary>
+        private void EnsureSelectedFeedSynced()
+        {
+            if (_pm.SelectedFeed == null
+                && ProjectPicker.SelectedIndex >= 0
+                && ProjectPicker.SelectedIndex < _pm.AvailableFeeds.Count)
+            {
+                _pm.SelectedFeed = _pm.AvailableFeeds[ProjectPicker.SelectedIndex];
+                Debug.WriteLine($"[PAGE] SelectedFeed recovered from picker: {_pm.SelectedFeed.DisplayName}");
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
         // ▌ NAVIGATION
         // ══════════════════════════════════════════════════════════════
 
-        private async void OnBackClicked(object sender, EventArgs e) =>
-            await Navigation.PopAsync();
-
-        private async void OnBackToListClicked(object sender, EventArgs e)
+        private async void OnBackClicked(object sender, EventArgs e)
         {
             if (_pm.HasUnsavedChanges)
             {
@@ -80,7 +122,7 @@ namespace CraftConnect_Mobile_App.Pages
         }
 
         // ══════════════════════════════════════════════════════════════
-        // ▌ PRICE ENTRY
+        // ▌ WORKMANSHIP ENTRY
         // ══════════════════════════════════════════════════════════════
 
         private void OnPriceChanged(object sender, TextChangedEventArgs e)
@@ -88,7 +130,8 @@ namespace CraftConnect_Mobile_App.Pages
             var text = e.NewTextValue ?? string.Empty;
 
             if (!string.IsNullOrEmpty(text) &&
-                !decimal.TryParse(text, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out _))
+                !decimal.TryParse(text, NumberStyles.AllowDecimalPoint,
+                    CultureInfo.InvariantCulture, out _))
             {
                 PriceEntry.Text = e.OldTextValue;
                 return;
@@ -99,19 +142,6 @@ namespace CraftConnect_Mobile_App.Pages
 
         // ══════════════════════════════════════════════════════════════
         // ▌ DATE PICKER
-        //
-        // WHY THE OLD APPROACH FAILED:
-        // A DatePicker with HeightRequest="0" or "1" + IsVisible="False"
-        // inside a ScrollView is never fully laid out by Android's view
-        // hierarchy. When Focus() is called the renderer exists but the
-        // native View has zero size and is not attached to the window
-        // input system, so the OS ignores the focus request entirely.
-        //
-        // NEW APPROACH — Modal page:
-        // Push a lightweight modal that contains a properly rendered
-        // DatePicker as its primary content. OnAppearing() calls Focus()
-        // when the view IS fully laid out and attached, so the native
-        // date dialog opens immediately and reliably on both platforms.
         // ══════════════════════════════════════════════════════════════
 
         private async void OnDatePickerTapped(object sender, EventArgs e)
@@ -123,7 +153,7 @@ namespace CraftConnect_Mobile_App.Pages
             {
                 _pm.EstimatedDuration = selectedDate;
                 DateLabel.Text = _pm.DateDisplayText;
-                DateLabel.TextColor = Color.FromArgb("#1B2B3A");
+                DateLabel.TextColor = Color.FromArgb("#0D0D0D");
                 Debug.WriteLine($"[PAGE] Date confirmed: {selectedDate:dd MMM yyyy}");
             };
 
@@ -141,20 +171,21 @@ namespace CraftConnect_Mobile_App.Pages
                 var options = new PickOptions
                 {
                     PickerTitle = "Select a document",
-                    FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
-                    {
-                        { DevicePlatform.Android, new[] {
-                            "application/pdf",
-                            "application/msword",
-                            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        }},
-                        { DevicePlatform.iOS, new[] {
-                            "com.adobe.pdf",
-                            "org.openxmlformats.wordprocessingml.document"
-                        }},
-                        { DevicePlatform.WinUI,       new[] { ".pdf", ".doc", ".docx" } },
-                        { DevicePlatform.MacCatalyst, new[] { "com.adobe.pdf" } }
-                    })
+                    FileTypes = new FilePickerFileType(
+                        new Dictionary<DevicePlatform, IEnumerable<string>>
+                        {
+                            { DevicePlatform.Android, new[] {
+                                "application/pdf",
+                                "application/msword",
+                                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            }},
+                            { DevicePlatform.iOS, new[] {
+                                "com.adobe.pdf",
+                                "org.openxmlformats.wordprocessingml.document"
+                            }},
+                            { DevicePlatform.WinUI,       new[] { ".pdf", ".doc", ".docx" } },
+                            { DevicePlatform.MacCatalyst, new[] { "com.adobe.pdf" } }
+                        })
                 };
 
                 var result = await FilePicker.Default.PickAsync(options);
@@ -189,14 +220,17 @@ namespace CraftConnect_Mobile_App.Pages
         }
 
         // ══════════════════════════════════════════════════════════════
-        // ▌ SUBMIT
+        // ▌ FOOTER — SUBMIT PROPOSAL
         // ══════════════════════════════════════════════════════════════
 
-        private async void OnSubmitProposalClicked(object sender, EventArgs e)
+        private async void OnSubmitProposalClicked_Tap(object sender, EventArgs e)
         {
             _pm.Message = CoverLetterEditor.Text ?? string.Empty;
             _pm.TermsConditions = TermsEditor.Text;
             _pm.PaymentTerms = PaymentTermsEditor.Text;
+
+            // Recover SelectedFeed from picker BEFORE validating
+            EnsureSelectedFeedSynced();
 
             var validationError = _pm.Validate();
             if (validationError != null)
@@ -207,19 +241,47 @@ namespace CraftConnect_Mobile_App.Pages
 
             _pm.SubmitCommand.Execute(null);
         }
+
+        // ══════════════════════════════════════════════════════════════
+        // ▌ FOOTER — ADD INVOICE
+        // ══════════════════════════════════════════════════════════════
+
+        private async void OnAddInvoiceClicked_Tap(object sender, EventArgs e)
+        {
+            _pm.Message = CoverLetterEditor.Text ?? string.Empty;
+            _pm.TermsConditions = TermsEditor.Text;
+            _pm.PaymentTerms = PaymentTermsEditor.Text;
+
+            // Recover SelectedFeed from picker BEFORE validating —
+            // this is the key fix: previously this came after Validate(),
+            // so the "please select a project" error fired even when the
+            // picker was visually showing the pre-selected feed.
+            EnsureSelectedFeedSynced();
+
+            var validationError = _pm.Validate();
+            if (validationError != null)
+            {
+                await DisplayAlert("Validation", validationError, "OK");
+                return;
+            }
+
+            decimal.TryParse(_pm.ProposedPrice, out var workmanship);
+
+            var navParams = new Dictionary<string, object>
+            {
+                { "userFeedId",           _pm.SelectedFeed!.Id },
+                { "feedTitle",            _pm.SelectedFeed.DisplayName },
+                { "proposalId",           string.Empty },
+                { "prefilledWorkmanship", workmanship.ToString("F2") },
+            };
+
+            Debug.WriteLine($"[PAGE] → CreateInvoicePage. FeedId={_pm.SelectedFeed.Id}, Workmanship={workmanship}");
+            await Shell.Current.GoToAsync("CreateInvoicePage", navParams);
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════
-    // ▌ MODAL DATE PICKER PAGE
-    //
-    // A minimal full-screen modal that hosts a real, visible DatePicker.
-    // Because the DatePicker is fully laid out when OnAppearing fires,
-    // Focus() reliably opens the native date dialog on Android & iOS.
-    //
-    // Usage:
-    //   var page = new DatePickerModalPage(currentDate, DateTime.Today);
-    //   page.DateConfirmed += (_, date) => { /* use date */ };
-    //   await Navigation.PushModalAsync(page);
+    // ▌ MODAL DATE PICKER PAGE  (unchanged)
     // ══════════════════════════════════════════════════════════════════
 
     public class DatePickerModalPage : ContentPage
@@ -231,13 +293,13 @@ namespace CraftConnect_Mobile_App.Pages
         public DatePickerModalPage(DateTime initialDate, DateTime minimumDate)
         {
             Shell.SetNavBarIsVisible(this, false);
-            BackgroundColor = Color.FromArgb("#80000000"); // dim overlay
+            BackgroundColor = Colors.Transparent;
 
             _datePicker = new DatePicker
             {
                 MinimumDate = minimumDate,
                 Date = initialDate,
-                TextColor = Color.FromArgb("#1B2B3A"),
+                TextColor = Color.FromArgb("#0D0D0D"),
                 BackgroundColor = Colors.White,
                 FontSize = 16,
                 HorizontalOptions = LayoutOptions.Fill,
@@ -248,14 +310,14 @@ namespace CraftConnect_Mobile_App.Pages
                 Text = "Select Completion Date",
                 FontSize = 17,
                 FontAttributes = FontAttributes.Bold,
-                TextColor = Color.FromArgb("#1B2B3A"),
+                TextColor = Color.FromArgb("#0D0D0D"),
                 HorizontalOptions = LayoutOptions.Center,
             };
 
             var confirmButton = new Button
             {
                 Text = "Confirm",
-                BackgroundColor = Color.FromArgb("#F5A623"),
+                BackgroundColor = Color.FromArgb("#2563EB"),
                 TextColor = Colors.White,
                 FontAttributes = FontAttributes.Bold,
                 FontSize = 15,
@@ -268,7 +330,7 @@ namespace CraftConnect_Mobile_App.Pages
             {
                 Text = "Cancel",
                 BackgroundColor = Colors.Transparent,
-                TextColor = Color.FromArgb("#6B7D8D"),
+                TextColor = Color.FromArgb("#6B7280"),
                 FontSize = 15,
                 HeightRequest = 44,
             };
@@ -290,11 +352,8 @@ namespace CraftConnect_Mobile_App.Pages
                 }
             };
 
-            // Tapping the dim background dismisses without confirming
             var bgTap = new TapGestureRecognizer();
             bgTap.Tapped += async (_, _) => await Navigation.PopModalAsync();
-
-            var root = new Grid();
 
             var dimBackground = new BoxView
             {
@@ -304,6 +363,7 @@ namespace CraftConnect_Mobile_App.Pages
             };
             dimBackground.GestureRecognizers.Add(bgTap);
 
+            var root = new Grid();
             root.Children.Add(dimBackground);
             root.Children.Add(card);
 
@@ -313,8 +373,6 @@ namespace CraftConnect_Mobile_App.Pages
         protected override void OnAppearing()
         {
             base.OnAppearing();
-            // The DatePicker is now fully laid out — Focus() reliably
-            // opens the native date dialog on Android and iOS.
             _datePicker.Focus();
         }
 
