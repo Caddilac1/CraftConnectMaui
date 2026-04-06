@@ -21,14 +21,16 @@ namespace CraftConnect_Mobile_App
             Routing.RegisterRoute(nameof(OtpVerificationPage), typeof(OtpVerificationPage));
             Routing.RegisterRoute(nameof(RegisterPage), typeof(RegisterPage));
 
-            // Chat
+            // Group chat
             Routing.RegisterRoute("chat", typeof(ChatPage));
+
+            // ── Private (DM) chat ──────────────────────────────────────
+            Routing.RegisterRoute(nameof(PrivateChatPage), typeof(PrivateChatPage));
 
             // Store
             Routing.RegisterRoute("store", typeof(StorePage));
 
-            // Cart flow — registered as routes (not ShellContent) so GoToAsync("..")
-            // works correctly and the back arrow returns to the previous page
+            // Cart flow
             Routing.RegisterRoute("cart", typeof(CartPage));
             Routing.RegisterRoute("CheckoutPage", typeof(CheckoutPage));
 

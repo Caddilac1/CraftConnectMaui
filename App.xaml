@@ -13,7 +13,6 @@
             <converters:PasswordIconConverter x:Key="PasswordIconConverter" />
             <converters:PasswordTextConverter x:Key="PasswordTextConverter" />
             <converters:IsNotNullOrEmptyConverter x:Key="IsNotNullOrEmptyConverter"/>
-            <!-- ✅ NEW -->
             <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
             <converters:StringToInitialsConverter x:Key="StringToInitialsConverter" />
             <converters:LastMessageTimeConverter x:Key="LastMessageTimeConverter" />
@@ -32,7 +31,6 @@
             <converters:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter"/>
 
             <!-- WhatsApp-like Color Scheme -->
-            <!-- Primary Colors -->
             <Color x:Key="WhatsAppPrimary">#075E54</Color>
             <Color x:Key="WhatsAppSecondary">#128C7E</Color>
             <Color x:Key="WhatsAppLightGreen">#25D366</Color>
@@ -80,7 +78,7 @@
             <Color x:Key="SwipePin">#007AFF</Color>
             <Color x:Key="SwipeMute">#8E8E93</Color>
 
-            <!-- Original Blue & White Color Scheme (from GroupChatListPage) -->
+            <!-- Original Blue & White Color Scheme -->
             <Color x:Key="PrimaryBlue">#007AFF</Color>
             <Color x:Key="DarkBlue">#0051D5</Color>
             <Color x:Key="LightBlue">#E3F2FD</Color>
@@ -116,7 +114,7 @@
             <Color x:Key="Gray800">#1F2937</Color>
             <Color x:Key="Gray900">#111827</Color>
 
-            <!-- WhatsApp Color Palette (added from second file) -->
+            <!-- WhatsApp Color Palette -->
             <Color x:Key="WhatsAppAccent">#25D366</Color>
             <Color x:Key="WhatsAppLight">#DCF8C6</Color>
             <Color x:Key="WhatsAppTeal">#128C7E</Color>
@@ -155,13 +153,14 @@
             <CornerRadius x:Key="BadgeCornerRadius">12</CornerRadius>
             <CornerRadius x:Key="SearchBarCornerRadius">20</CornerRadius>
 
-            <!-- Font Styles -->
+            <!-- Global Label Style — FontFamily intentionally omitted so each
+                 platform uses its native default (Roboto on Android, SF Pro on iOS).
+                 Only set the text colour globally. -->
             <Style TargetType="Label">
-                <Setter Property="FontFamily" Value="Segoe UI"/>
                 <Setter Property="TextColor" Value="{StaticResource DarkGray}"/>
             </Style>
 
-            <!-- ✅ CRITICAL: ContentPage Style to Fix Gray Box -->
+            <!-- CRITICAL: ContentPage Style to Fix Gray Box -->
             <Style TargetType="ContentPage" ApplyToDerivedTypes="True">
                 <Setter Property="Padding">
                     <Setter.Value>

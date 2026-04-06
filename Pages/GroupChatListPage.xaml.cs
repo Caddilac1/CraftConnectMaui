@@ -7,11 +7,8 @@ namespace CraftConnect_Mobile_App.Pages
     {
         private readonly GroupChatListPageModel _viewModel;
         private bool _initialized = false;
-
-        // Tracks which filter is active
         private string _activeFilter = "All";
 
-        // Blue active colours
         private static readonly Color ActiveBg = Color.FromArgb("#2563EB");
         private static readonly Color ActiveText = Colors.White;
         private static readonly Color InactiveBg = Color.FromArgb("#FFFFFF");
@@ -53,22 +50,17 @@ namespace CraftConnect_Mobile_App.Pages
             if (_activeFilter == filter) return;
             _activeFilter = filter;
 
-            // Reset all to inactive style
             SetChipStyle(ChipAll, ChipAllLabel, false);
             SetChipStyle(ChipUnread, ChipUnreadLabel, false);
             SetChipStyle(ChipGroups, ChipGroupsLabel, false);
-            SetChipStyle(ChipPersonal, ChipPersonalLabel, false);
 
-            // Activate the selected chip
             switch (filter)
             {
                 case "All": SetChipStyle(ChipAll, ChipAllLabel, true); break;
                 case "Unread": SetChipStyle(ChipUnread, ChipUnreadLabel, true); break;
                 case "Groups": SetChipStyle(ChipGroups, ChipGroupsLabel, true); break;
-                case "Personal": SetChipStyle(ChipPersonal, ChipPersonalLabel, true); break;
             }
 
-            // Apply filter to ViewModel
             _viewModel.ApplyFilter(filter);
         }
 
@@ -82,16 +74,13 @@ namespace CraftConnect_Mobile_App.Pages
         private void OnFilterAllClicked(object sender, EventArgs e) => SetActiveChip("All");
         private void OnFilterUnreadClicked(object sender, EventArgs e) => SetActiveChip("Unread");
         private void OnFilterGroupsClicked(object sender, EventArgs e) => SetActiveChip("Groups");
-        private void OnFilterPersonalClicked(object sender, EventArgs e) => SetActiveChip("Personal");
 
         // ══════════════════════════════════════════════════════════════
         // SEARCH
         // ══════════════════════════════════════════════════════════════
 
-        private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
-        {
+        private void OnSearchTextChanged(object sender, TextChangedEventArgs e) =>
             _viewModel.ApplySearch(e.NewTextValue);
-        }
 
         // ══════════════════════════════════════════════════════════════
         // HEADER BUTTONS
@@ -103,10 +92,7 @@ namespace CraftConnect_Mobile_App.Pages
         private async void OnAddGroupClicked(object sender, EventArgs e)
         {
             try { await Shell.Current.GoToAsync("addgroup"); }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[ChatList] AddGroup nav error: {ex.Message}");
-            }
+            catch (Exception ex) { Debug.WriteLine($"[ChatList] AddGroup: {ex.Message}"); }
         }
     }
 }

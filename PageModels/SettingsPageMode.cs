@@ -11,67 +11,56 @@ public partial class SettingsPageViewModel : ObservableObject
     private readonly INavigationService _navigationService;
     private readonly IDialogService _dialogService;
 
-    [ObservableProperty]
-    private UserProfile _currentUser;
+    // ── Observable properties ─────────────────────────────────────
 
-    [ObservableProperty]
-    private string _userName;
+    [ObservableProperty] private UserProfile _currentUser;
+    [ObservableProperty] private string _userName = "User";
+    [ObservableProperty] private string _userEmail = "";
+    [ObservableProperty] private string _userRole = "Customer";
+    [ObservableProperty] private string _phoneNumber = "";
+    [ObservableProperty] private string _businessName = "";
+    [ObservableProperty] private string _specialization = "";
 
-    [ObservableProperty]
-    private string _userEmail;
+    /// <summary>
+    /// Displayed availability label — kept in sync with IsAvailable.
+    /// </summary>
+    [ObservableProperty] private string _availabilityStatus = "Available";
 
-    [ObservableProperty]
-    private string _userRole;
+    /// <summary>
+    /// Bound to the availability Switch. Setting this also updates
+    /// AvailabilityStatus automatically via the partial method below.
+    /// </summary>
+    [ObservableProperty] private bool _isAvailable = true;
 
-    [ObservableProperty]
-    private string _phoneNumber;
+    [ObservableProperty] private bool _notificationsEnabled = true;
+    [ObservableProperty] private bool _emailNotificationsEnabled = true;
+    [ObservableProperty] private bool _showArtisanSection;
+    [ObservableProperty] private bool _showAdminSection;
+    [ObservableProperty] private string _appVersion = "v1.0.0";
+    [ObservableProperty] private string _languageText = "English";
 
-    [ObservableProperty]
-    private string _businessName;
+    // ── Constructor ───────────────────────────────────────────────
 
-    [ObservableProperty]
-    private string _specialization;
-
-    [ObservableProperty]
-    private string _availabilityStatus;
-
-    [ObservableProperty]
-    private bool _isAvailable;
-
-    [ObservableProperty]
-    private bool _notificationsEnabled;
-
-    [ObservableProperty]
-    private bool _emailNotificationsEnabled;
-
-    [ObservableProperty]
-    private bool _showArtisanSection;
-
-    [ObservableProperty]
-    private bool _showAdminSection;
-
-    [ObservableProperty]
-    private string _appVersion;
-
-    [ObservableProperty]
-    private string _languageText;
-
-    public SettingsPageViewModel(IUserService userService, INavigationService navigationService, IDialogService dialogService)
+    public SettingsPageViewModel(
+        IUserService userService,
+        INavigationService navigationService,
+        IDialogService dialogService)
     {
         _userService = userService;
         _navigationService = navigationService;
         _dialogService = dialogService;
 
-        // Initialize with default values
-        AppVersion = "v1.0.0";
-        NotificationsEnabled = true;
-        EmailNotificationsEnabled = true;
-        IsAvailable = true;
-        AvailabilityStatus = "Available";
-        LanguageText = "English";
-
         LoadUserData();
     }
+
+    // ── Keep AvailabilityStatus label in sync with the bool ───────
+
+    partial void OnIsAvailableChanged(bool value)
+    {
+        AvailabilityStatus = value ? "Available" : "Unavailable";
+    }
+
+    // ── Data loading ──────────────────────────────────────────────
 
     private void LoadUserData()
     {
@@ -79,27 +68,24 @@ public partial class SettingsPageViewModel : ObservableObject
 
         if (CurrentUser != null)
         {
-            UserName = CurrentUser.FullName;
-            UserEmail = CurrentUser.Email;
-            UserRole = CurrentUser.Role;
-            PhoneNumber = CurrentUser.PhoneNumber;
+            UserName = CurrentUser.FullName ?? "User";
+            UserEmail = CurrentUser.Email ?? "";
+            UserRole = CurrentUser.Role ?? "Customer";
+            PhoneNumber = CurrentUser.PhoneNumber ?? "";
 
-            // Show/hide sections based on user role
-            ShowArtisanSection = CurrentUser.Role == "Artisan" || CurrentUser.Role == "Admin";
-            ShowAdminSection = CurrentUser.Role == "Admin";
+            ShowArtisanSection = UserRole is "Artisan" or "Admin";
+            ShowAdminSection = UserRole == "Admin";
 
-            // Load artisan-specific data if applicable
-            if (CurrentUser is ArtisanUser artisanUser)
+            if (CurrentUser is ArtisanUser artisan)
             {
-                BusinessName = artisanUser.BusinessName;
-                Specialization = string.Join(", ", artisanUser.Specializations);
-                IsAvailable = artisanUser.IsAvailable;
-                AvailabilityStatus = artisanUser.IsAvailable ? "Available" : "Unavailable";
+                BusinessName = artisan.BusinessName ?? "";
+                Specialization = string.Join(", ", artisan.Specializations ?? new List<string>());
+                IsAvailable = artisan.IsAvailable;
             }
         }
         else
         {
-            // Default values for demo
+            // Demo / design-time defaults
             UserName = "John Doe";
             UserEmail = "john.doe@example.com";
             UserRole = "Artisan";
@@ -111,40 +97,38 @@ public partial class SettingsPageViewModel : ObservableObject
         }
     }
 
+    // ── ACCOUNT commands ──────────────────────────────────────────
+
     [RelayCommand]
-    private async Task EditProfile()
-    {
+    private async Task EditProfile() =>
         await _navigationService.NavigateToAsync("EditProfilePage");
-    }
 
     [RelayCommand]
     private async Task EditEmail()
     {
         var result = await _dialogService.ShowPromptAsync(
-            "Update Email",
-            "Enter your new email address:",
-            initialValue: UserEmail,
-            keyboard: Keyboard.Email);
+            "Update Email", "Enter your new email address:",
+            initialValue: UserEmail, keyboard: Keyboard.Email);
 
-        if (!string.IsNullOrWhiteSpace(result))
+        if (string.IsNullOrWhiteSpace(result)) return;
+
+        if (!IsValidEmail(result))
         {
-            if (IsValidEmail(result))
-            {
-                var success = await _userService.UpdateEmailAsync(result);
-                if (success)
-                {
-                    UserEmail = result;
-                    await _dialogService.ShowToastAsync("Email updated successfully!");
-                }
-                else
-                {
-                    await _dialogService.ShowAlertAsync("Error", "Failed to update email. Please try again.");
-                }
-            }
-            else
-            {
-                await _dialogService.ShowAlertAsync("Invalid Email", "Please enter a valid email address.");
-            }
+            await _dialogService.ShowAlertAsync("Invalid Email",
+                "Please enter a valid email address.");
+            return;
+        }
+
+        bool success = await _userService.UpdateEmailAsync(result);
+        if (success)
+        {
+            UserEmail = result;
+            await _dialogService.ShowToastAsync("Email updated successfully!");
+        }
+        else
+        {
+            await _dialogService.ShowAlertAsync("Error",
+                "Failed to update email. Please try again.");
         }
     }
 
@@ -152,69 +136,59 @@ public partial class SettingsPageViewModel : ObservableObject
     private async Task EditPhone()
     {
         var result = await _dialogService.ShowPromptAsync(
-            "Update Phone Number",
-            "Enter your new phone number:",
-            initialValue: PhoneNumber,
-            keyboard: Keyboard.Telephone);
+            "Update Phone Number", "Enter your new phone number:",
+            initialValue: PhoneNumber, keyboard: Keyboard.Telephone);
 
-        if (!string.IsNullOrWhiteSpace(result))
+        if (string.IsNullOrWhiteSpace(result)) return;
+
+        bool success = await _userService.UpdatePhoneNumberAsync(result);
+        if (success)
         {
-            var success = await _userService.UpdatePhoneNumberAsync(result);
-            if (success)
-            {
-                PhoneNumber = result;
-                await _dialogService.ShowToastAsync("Phone number updated successfully!");
-            }
-            else
-            {
-                await _dialogService.ShowAlertAsync("Error", "Failed to update phone number. Please try again.");
-            }
+            PhoneNumber = result;
+            await _dialogService.ShowToastAsync("Phone number updated successfully!");
+        }
+        else
+        {
+            await _dialogService.ShowAlertAsync("Error",
+                "Failed to update phone number. Please try again.");
         }
     }
 
     [RelayCommand]
-    private async Task ChangePassword()
-    {
+    private async Task ChangePassword() =>
         await _navigationService.NavigateToAsync("ChangePasswordPage");
-    }
+
+    // ── ARTISAN commands ──────────────────────────────────────────
 
     [RelayCommand]
-    private async Task EditBusinessProfile()
-    {
+    private async Task EditBusinessProfile() =>
         await _navigationService.NavigateToAsync("BusinessProfilePage");
-    }
 
     [RelayCommand]
     private async Task EditSpecialization()
     {
-        var specializations = new[]
+        var options = new[]
         {
-            "Carpentry",
-            "Plumbing",
-            "Electrical",
-            "Masonry",
-            "Painting",
-            "Welding",
-            "Tailoring",
-            "Hairdressing"
+            "Carpentry", "Plumbing", "Electrical", "Masonry",
+            "Painting",  "Welding",  "Tailoring",  "Hairdressing"
         };
 
-        var currentSpecs = Specialization?.Split(',').Select(s => s.Trim()).ToArray() ?? Array.Empty<string>();
+        var current = Specialization?
+            .Split(',')
+            .Select(s => s.Trim())
+            .ToArray() ?? Array.Empty<string>();
 
         var selected = await _dialogService.ShowMultiSelectAsync(
-            "Select Specializations",
-            specializations,
-            currentSpecs);
+            "Select Specializations", options, current);
 
-        if (selected != null && selected.Length > 0)
+        if (selected == null || selected.Length == 0) return;
+
+        Specialization = string.Join(", ", selected);
+
+        if (CurrentUser is ArtisanUser artisan)
         {
-            Specialization = string.Join(", ", selected);
-
-            if (CurrentUser is ArtisanUser artisanUser)
-            {
-                artisanUser.Specializations = selected.ToList();
-                await _userService.UpdateUserAsync(artisanUser);
-            }
+            artisan.Specializations = selected.ToList();
+            await _userService.UpdateUserAsync(artisan);
         }
     }
 
@@ -222,44 +196,40 @@ public partial class SettingsPageViewModel : ObservableObject
     private async Task ToggleAvailability()
     {
         IsAvailable = !IsAvailable;
-        AvailabilityStatus = IsAvailable ? "Available" : "Unavailable";
 
-        if (CurrentUser is ArtisanUser artisanUser)
+        if (CurrentUser is ArtisanUser artisan)
         {
-            artisanUser.IsAvailable = IsAvailable;
-            await _userService.UpdateUserAsync(artisanUser);
+            artisan.IsAvailable = IsAvailable;
+            await _userService.UpdateUserAsync(artisan);
         }
 
-        var status = IsAvailable ? "available" : "unavailable";
-        await _dialogService.ShowToastAsync($"You are now {status} for work");
+        var statusText = IsAvailable ? "available" : "unavailable";
+        await _dialogService.ShowToastAsync($"You are now {statusText} for work");
     }
 
+    // ── ADMIN commands ────────────────────────────────────────────
+
     [RelayCommand]
-    private async Task ManageUsers()
-    {
+    private async Task ManageUsers() =>
         await _navigationService.NavigateToAsync("ManageUsersPage");
-    }
 
     [RelayCommand]
-    private async Task ViewReports()
-    {
+    private async Task ViewReports() =>
         await _navigationService.NavigateToAsync("SystemReportsPage");
-    }
 
     [RelayCommand]
-    private async Task ManageVerifications()
-    {
+    private async Task ManageVerifications() =>
         await _navigationService.NavigateToAsync("ArtisanVerificationsPage");
-    }
+
+    // ── NOTIFICATIONS commands ────────────────────────────────────
 
     [RelayCommand]
     private async Task ToggleNotifications()
     {
         NotificationsEnabled = !NotificationsEnabled;
         await _userService.UpdateNotificationPreferenceAsync(NotificationsEnabled);
-
-        var status = NotificationsEnabled ? "enabled" : "disabled";
-        await _dialogService.ShowToastAsync($"Push notifications {status}");
+        await _dialogService.ShowToastAsync(
+            $"Push notifications {(NotificationsEnabled ? "enabled" : "disabled")}");
     }
 
     [RelayCommand]
@@ -267,10 +237,11 @@ public partial class SettingsPageViewModel : ObservableObject
     {
         EmailNotificationsEnabled = !EmailNotificationsEnabled;
         await _userService.UpdateEmailNotificationPreferenceAsync(EmailNotificationsEnabled);
-
-        var status = EmailNotificationsEnabled ? "enabled" : "disabled";
-        await _dialogService.ShowToastAsync($"Email notifications {status}");
+        await _dialogService.ShowToastAsync(
+            $"Email notifications {(EmailNotificationsEnabled ? "enabled" : "disabled")}");
     }
+
+    // ── SUPPORT commands ──────────────────────────────────────────
 
     [RelayCommand]
     private async Task ChangeLanguage()
@@ -278,114 +249,88 @@ public partial class SettingsPageViewModel : ObservableObject
         var languages = new[] { "English", "French", "Spanish", "Arabic" };
 
         var selected = await _dialogService.ShowActionSheetAsync(
-            "Select Language",
-            "Cancel",
-            null,
-            languages);
+            "Select Language", "Cancel", null, languages);
 
-        if (selected != null && selected != "Cancel")
-        {
-            LanguageText = selected;
-            await _dialogService.ShowToastAsync($"Language changed to {selected}");
-        }
+        if (selected == null || selected == "Cancel") return;
+
+        LanguageText = selected;
+        await _dialogService.ShowToastAsync($"Language changed to {selected}");
     }
 
     [RelayCommand]
-    private async Task OpenHelp()
-    {
+    private async Task OpenHelp() =>
         await _navigationService.NavigateToAsync("HelpPage");
-    }
 
     [RelayCommand]
-    private async Task OpenTerms()
-    {
+    private async Task OpenTerms() =>
         await _navigationService.NavigateToAsync("TermsPage");
-    }
 
     [RelayCommand]
-    private async Task OpenPrivacy()
-    {
+    private async Task OpenPrivacy() =>
         await _navigationService.NavigateToAsync("PrivacyPage");
-    }
 
     [RelayCommand]
-    private async Task OpenAbout()
-    {
-        var aboutInfo = $"CraftConnect App\nVersion: {AppVersion}\n\n© 2024 CraftConnect Ltd.\nAll rights reserved.";
-
-        await _dialogService.ShowAlertAsync(
-            "About CraftConnect",
-            aboutInfo,
+    private async Task OpenAbout() =>
+        await _dialogService.ShowAlertAsync("About CraftConnect",
+            $"CraftConnect App\nVersion: {AppVersion}\n\n© 2024 CraftConnect Ltd.\nAll rights reserved.",
             "OK");
-    }
+
+    // ── LOGOUT / DELETE commands ──────────────────────────────────
 
     [RelayCommand]
     private async Task Logout()
     {
-        var confirm = await _dialogService.ShowConfirmAsync(
-            "Logout",
-            "Are you sure you want to logout?",
-            "Yes, Logout",
-            "Cancel");
+        bool confirm = await _dialogService.ShowConfirmAsync(
+            "Logout", "Are you sure you want to logout?",
+            "Yes, Logout", "Cancel");
 
-        if (confirm)
-        {
-            await _userService.LogoutAsync();
-            await _navigationService.NavigateToAsync("//LoginPage");
-        }
+        if (!confirm) return;
+
+        await _userService.LogoutAsync();
+        await _navigationService.NavigateToAsync("//LoginPage");
     }
 
     [RelayCommand]
     private async Task DeleteAccount()
     {
-        var confirm = await _dialogService.ShowConfirmAsync(
+        bool confirm = await _dialogService.ShowConfirmAsync(
             "Delete Account",
             "This will permanently delete your account and all associated data. This action cannot be undone.",
-            "Delete Account",
-            "Cancel",
-            isDestructive: true);
+            "Delete Account", "Cancel", isDestructive: true);
 
-        if (confirm)
+        if (!confirm) return;
+
+        var password = await _dialogService.ShowPromptAsync(
+            "Confirm Deletion",
+            "Please enter your password to confirm account deletion:",
+            placeholder: "Your password", isPassword: true);
+
+        if (string.IsNullOrWhiteSpace(password)) return;
+
+        bool success = await _userService.DeleteAccountAsync(password);
+        if (success)
         {
-            var password = await _dialogService.ShowPromptAsync(
-                "Confirm Deletion",
-                "Please enter your password to confirm account deletion:",
-                placeholder: "Your password",
-                isPassword: true);
-
-            if (!string.IsNullOrWhiteSpace(password))
-            {
-                var success = await _userService.DeleteAccountAsync(password);
-                if (success)
-                {
-                    await _dialogService.ShowAlertAsync(
-                        "Account Deleted",
-                        "Your account has been successfully deleted.");
-                    await _navigationService.NavigateToAsync("//LoginPage");
-                }
-                else
-                {
-                    await _dialogService.ShowAlertAsync(
-                        "Deletion Failed",
-                        "Incorrect password or account deletion failed.");
-                }
-            }
+            await _dialogService.ShowAlertAsync("Account Deleted",
+                "Your account has been successfully deleted.");
+            await _navigationService.NavigateToAsync("//LoginPage");
+        }
+        else
+        {
+            await _dialogService.ShowAlertAsync("Deletion Failed",
+                "Incorrect password or account deletion failed.");
         }
     }
 
-    private bool IsValidEmail(string email)
-    {
-        if (string.IsNullOrWhiteSpace(email))
-            return false;
+    // ── Helpers ───────────────────────────────────────────────────
 
+    private static bool IsValidEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return false;
         try
         {
             var addr = new System.Net.Mail.MailAddress(email);
             return addr.Address == email;
         }
-        catch
-        {
-            return false;
-        }
+        catch { return false; }
     }
 }

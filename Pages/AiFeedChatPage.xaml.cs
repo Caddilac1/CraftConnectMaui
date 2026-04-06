@@ -17,11 +17,18 @@ namespace CraftConnect_Mobile_App.Pages
         private IAudioRecorder? _recorder;
         private string? _recordingFilePath;
 
+        // ── Audio playback fields ─────────────────────────────────
+        private IAudioPlayer? _audioPlayer;
+
         public AiFeedChatPage(AiFeedChatPageModel viewModel)
         {
             InitializeComponent();
             _viewModel = viewModel;
             BindingContext = _viewModel;
+
+            // Subscribe to playback requests raised by the ViewModel relay command
+            _viewModel.PlayVoiceRequested += OnPlayVoiceRequested;
+
             Debug.WriteLine("[SUPPORT CHAT] Page initialized");
         }
 
@@ -55,6 +62,12 @@ namespace CraftConnect_Mobile_App.Pages
 
             if (_viewModel.IsRecording)
                 await StopRecordingAndDiscard();
+
+            // Stop any active playback when leaving the page
+            StopPlayback();
+
+            // Unsubscribe to avoid memory leaks
+            _viewModel.PlayVoiceRequested -= OnPlayVoiceRequested;
         }
 
         // ─────────────────────────────────────────────────────────
@@ -83,16 +96,22 @@ namespace CraftConnect_Mobile_App.Pages
 
         private async void OnSendMicTapped(object sender, EventArgs e)
         {
+            // If text is present → send text message
             if (!string.IsNullOrWhiteSpace(_viewModel.MessageText))
             {
                 await _viewModel.SendMessageCommand.ExecuteAsync(null);
                 return;
             }
 
+            // If currently recording → stop and send
             if (_viewModel.IsRecording)
+            {
                 await StopRecordingAndSend();
-            else
-                await StartRecording();
+                return;
+            }
+
+            // Otherwise → start recording
+            await StartRecording();
         }
 
         // ─────────────────────────────────────────────────────────
@@ -135,10 +154,13 @@ namespace CraftConnect_Mobile_App.Pages
             {
                 if (_recorder == null) return;
 
+                // ⚠️ Capture duration NOW, before StopRecordingState() resets it to "0:00"
+                var capturedDuration = _viewModel.RecordingDuration;
+
                 await _recorder.StopAsync();
                 _viewModel.StopRecordingState();
 
-                Debug.WriteLine("[SUPPORT CHAT] ⏹ Recording stopped");
+                Debug.WriteLine($"[SUPPORT CHAT] ⏹ Recording stopped — duration: {capturedDuration}");
 
                 if (string.IsNullOrEmpty(_recordingFilePath) || !File.Exists(_recordingFilePath))
                 {
@@ -146,7 +168,8 @@ namespace CraftConnect_Mobile_App.Pages
                     return;
                 }
 
-                await _viewModel.SendVoiceMessageAsync(_recordingFilePath);
+                // Pass the captured duration so the bubble shows the correct time
+                await _viewModel.SendVoiceMessageAsync(_recordingFilePath, capturedDuration);
             }
             catch (Exception ex)
             {
@@ -192,6 +215,72 @@ namespace CraftConnect_Mobile_App.Pages
                 await RecordingDot.FadeTo(1.0, 500);
             }
             RecordingDot.Opacity = 1;
+        }
+
+        // ─────────────────────────────────────────────────────────
+        // Audio playback
+        // ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Called when the ViewModel fires PlayVoiceRequested.
+        /// Runs on whatever thread the event fires on; marshals to UI thread
+        /// so DisplayAlert (if needed) is safe.
+        /// </summary>
+        private void OnPlayVoiceRequested(object? sender, string filePath)
+        {
+            MainThread.BeginInvokeOnMainThread(async () =>
+                await PlayVoiceMessageAsync(filePath));
+        }
+
+        private async Task PlayVoiceMessageAsync(string filePath)
+        {
+            try
+            {
+                // Stop any currently playing audio first
+                StopPlayback();
+
+                if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+                {
+                    await DisplayAlert("Playback unavailable",
+                        "The audio file is no longer available on this device.", "OK");
+                    return;
+                }
+
+                var stream = File.OpenRead(filePath);
+                _audioPlayer = AudioManager.Current.CreatePlayer(stream);
+                _audioPlayer.PlaybackEnded += (s, e) =>
+                {
+                    // Clean up when playback finishes naturally
+                    MainThread.BeginInvokeOnMainThread(StopPlayback);
+                };
+                _audioPlayer.Play();
+
+                Debug.WriteLine($"[SUPPORT CHAT] ▶️ Playing: {filePath}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[SUPPORT CHAT] ❌ Playback error: {ex.Message}");
+                await DisplayAlert("Error", "Could not play the voice message. Please try again.", "OK");
+            }
+        }
+
+        private void StopPlayback()
+        {
+            try
+            {
+                if (_audioPlayer != null)
+                {
+                    if (_audioPlayer.IsPlaying)
+                        _audioPlayer.Stop();
+
+                    _audioPlayer.Dispose();
+                    _audioPlayer = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[SUPPORT CHAT] ❌ StopPlayback error: {ex.Message}");
+            }
         }
 
         // ─────────────────────────────────────────────────────────

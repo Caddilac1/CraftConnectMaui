@@ -1,270 +1,239 @@
-﻿using System;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
-using System.Threading.Tasks;
+using System.IdentityModel.Tokens.Jwt;
+using System.Runtime.CompilerServices;
 using CraftConnect_Mobile_App.Models;
 using CraftConnect_Mobile_App.Services;
-using Microsoft.Maui.Controls;
 
 namespace CraftConnect_Mobile_App.PageModels
 {
-    public class GroupChatListPageModel : BasePageModel
+    public class GroupChatListPageModel : INotifyPropertyChanged
     {
         private readonly IChatService _chatService;
+        private readonly IPrivateChatService _dmService;
+        private readonly AuthService _authService;
+        private readonly IChatSignalRService _signalR;
 
-        // ── Fix: full property with backing field so RefreshGroupsList()
-        //    can reassign it and the CollectionView binding updates. ─────
-        private ObservableCollection<GroupChatItem> _groups = new();
-        public ObservableCollection<GroupChatItem> Groups
-        {
-            get => _groups;
-            set
-            {
-                _groups = value;
-                OnPropertyChanged();
-            }
-        }
+        private string _currentUserId = string.Empty;
+        private bool _isBusy;
+        private string _activeFilter = "All";
+        private string _searchText = string.Empty;
+
+        // ── Raw data ───────────────────────────────────────────────
+        private List<GroupChatItem> _allGroups = new();
+        private List<PrivateConversationItem> _allConversations = new();
+
+        // ── Displayed unified collection ───────────────────────────
+        public ObservableCollection<ChatListItem> ChatItems { get; } = new();
+
+        private ChatListItem? _selectedChatItem;
+
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         public Command LoadCommand { get; }
         public Command RefreshUnreadCommand { get; }
-        public Command<GroupChatItem> GroupTappedCommand { get; }
 
-        private GroupChatItem _selectedGroup;
-        public GroupChatItem SelectedGroup
-        {
-            get => _selectedGroup;
-            set
-            {
-                _selectedGroup = value;
-                OnPropertyChanged();
-
-                if (value != null)
-                {
-                    _ = NavigateToChat(value);
-                    _selectedGroup = null;
-                    OnPropertyChanged(nameof(SelectedGroup));
-                }
-            }
-        }
-
-        // Total unread badge count — shown on the nav tab
-        private int _totalUnreadCount;
-        public int TotalUnreadCount
-        {
-            get => _totalUnreadCount;
-            set
-            {
-                _totalUnreadCount = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(HasAnyUnread));
-            }
-        }
-
-        public bool HasAnyUnread => TotalUnreadCount > 0;
-
-        public GroupChatListPageModel(IChatService chatService)
+        public GroupChatListPageModel(
+            IChatService chatService,
+            IPrivateChatService dmService,
+            AuthService authService,
+            IChatSignalRService signalR)
         {
             _chatService = chatService;
+            _dmService = dmService;
+            _authService = authService;
+            _signalR = signalR;
 
-            LoadCommand = new Command(async () => await LoadGroupsAsync());
-            RefreshUnreadCommand = new Command(async () => await RefreshUnreadCountsAsync());
-            GroupTappedCommand = new Command<GroupChatItem>(async (g) => await NavigateToChat(g));
+            LoadCommand = new Command(async () => await LoadAllAsync());
+            RefreshUnreadCommand = new Command(async () => await RefreshUnreadAsync());
 
-            Debug.WriteLine("[GROUP CHAT LIST VM] Initialized");
+            _signalR.PrivateMessageNotification += OnPrivateNotification;
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // LOAD GROUPS — fetches groups from API (includes UnreadCount
-        // per group already set by ChatService from the API response)
-        // ═══════════════════════════════════════════════════════════════
+        // ── Selection ──────────────────────────────────────────────
+
+        public ChatListItem? SelectedChatItem
+        {
+            get => _selectedChatItem;
+            set
+            {
+                _selectedChatItem = value;
+                OnPropertyChanged();
+                if (value != null) _ = NavigateAsync(value);
+            }
+        }
+
+        private async Task NavigateAsync(ChatListItem item)
+        {
+            _selectedChatItem = null;
+            OnPropertyChanged(nameof(SelectedChatItem));
+
+            try
+            {
+                if (item.IsGroup)
+                {
+                    await Shell.Current.GoToAsync(
+                        $"chat?GroupId={item.Id}&GroupName={Uri.EscapeDataString(item.DisplayName)}");
+                }
+                else
+                {
+                    await Shell.Current.GoToAsync(
+                        $"{nameof(PrivateChatPage)}" +
+                        $"?ConversationId={item.Id}" +
+                        $"&OtherUserId={Uri.EscapeDataString(item.OtherUserId)}" +
+                        $"&OtherUserName={Uri.EscapeDataString(item.OtherUserName)}");
+                }
+            }
+            catch (Exception ex) { Debug.WriteLine($"[LIST] Navigate: {ex.Message}"); }
+        }
+
+        // ── Open DM directly (called from GroupChatPage) ───────────
+
+        public async Task OpenDmWithUserAsync(string otherUserId, string otherUserName)
+        {
+            try
+            {
+                var (convId, _) = await _dmService.OpenConversationAsync(otherUserId);
+                await Shell.Current.GoToAsync(
+                    $"{nameof(PrivateChatPage)}" +
+                    $"?ConversationId={convId}" +
+                    $"&OtherUserId={Uri.EscapeDataString(otherUserId)}" +
+                    $"&OtherUserName={Uri.EscapeDataString(otherUserName)}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[LIST] OpenDmWithUser: {ex.Message}");
+                await Application.Current!.MainPage!.DisplayAlert(
+                    "Error", "Could not open private chat.", "OK");
+            }
+        }
+
+        // ── Data loading ───────────────────────────────────────────
+
+        public bool IsBusy
+        {
+            get => _isBusy;
+            set { _isBusy = value; OnPropertyChanged(); }
+        }
+
+        private async Task LoadAllAsync()
+        {
+            try
+            {
+                IsBusy = true;
+                await LoadCurrentUserAsync();
+                await Task.WhenAll(LoadGroupsAsync(), LoadConversationsAsync());
+
+                if (!_signalR.IsConnected)
+                {
+                    try { await _signalR.ConnectAsync(); }
+                    catch (Exception ex) { Debug.WriteLine($"[LIST] SignalR: {ex.Message}"); }
+                }
+            }
+            catch (Exception ex) { Debug.WriteLine($"[LIST] LoadAll: {ex.Message}"); }
+            finally { IsBusy = false; }
+        }
 
         private async Task LoadGroupsAsync()
         {
-            if (IsBusy)
-            {
-                Debug.WriteLine("[GROUP CHAT LIST VM] Already loading, skipping...");
-                return;
-            }
-
-            try
-            {
-                Debug.WriteLine("[GROUP CHAT LIST VM] Loading groups...");
-                IsBusy = true;
-
-                Groups.Clear();
-
-                var list = await _chatService.GetMyGroupsAsync();
-
-                foreach (var item in list)
-                {
-                    // Log each group's unread count so we can confirm API is sending it
-                    Debug.WriteLine($"[GROUP CHAT LIST VM] Group: '{item.Name}' | UnreadCount={item.UnreadCount} | HasUnread={item.HasUnreadMessages} | IsGroup={item.IsGroup}");
-                    Groups.Add(item);
-                }
-
-                // Cache the full list for filtering / searching
-                CacheGroups();
-
-                // Also fetch the overall total for the nav badge
-                TotalUnreadCount = await _chatService.GetTotalUnreadCountAsync();
-
-                Debug.WriteLine($"[GROUP CHAT LIST VM] ✅ Loaded {Groups.Count} groups. TotalUnread={TotalUnreadCount}");
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                Debug.WriteLine($"[GROUP CHAT LIST VM] ❌ Unauthorized: {ex.Message}");
-                await Application.Current.MainPage.DisplayAlert(
-                    "Session Expired",
-                    "Your session has expired. Please login again.",
-                    "OK");
-                await Shell.Current.GoToAsync("//auth/LoginPage");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[GROUP CHAT LIST VM] ❌ Error loading groups: {ex.Message}");
-                Debug.WriteLine($"[GROUP CHAT LIST VM] StackTrace: {ex.StackTrace}");
-
-                await Application.Current.MainPage.DisplayAlert(
-                    "Error",
-                    $"Failed to load groups: {ex.Message}",
-                    "OK");
-            }
-            finally
-            {
-                IsBusy = false;
-                Debug.WriteLine("[GROUP CHAT LIST VM] Loading complete");
-            }
+            _allGroups = await _chatService.GetMyGroupsAsync();
+            RebuildList();
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // REFRESH UNREAD COUNTS — call this on a timer or after returning
-        // from a chat page to refresh badges without reloading everything
-        // ═══════════════════════════════════════════════════════════════
-
-        private async Task RefreshUnreadCountsAsync()
+        private async Task LoadConversationsAsync()
         {
-            try
-            {
-                Debug.WriteLine("[GROUP CHAT LIST VM] Refreshing unread counts...");
-
-                TotalUnreadCount = await _chatService.GetTotalUnreadCountAsync();
-
-                // Reload the full list so per-group badges update too
-                var list = await _chatService.GetMyGroupsAsync();
-
-                // Update in-place rather than clearing so the list doesn't flicker
-                for (int i = 0; i < list.Count; i++)
-                {
-                    var updated = list[i];
-
-                    if (i < Groups.Count)
-                    {
-                        // Update the existing item's unread count so the UI refreshes.
-                        // NOTE: This only works because GroupChatItem implements
-                        // INotifyPropertyChanged on UnreadCount.
-                        Groups[i].UnreadCount = updated.UnreadCount;
-                        Groups[i].LastMessageIsRead = updated.LastMessageIsRead;
-                    }
-                    else
-                    {
-                        Groups.Add(updated);
-                    }
-                }
-
-                // Re-cache with fresh data so filters stay accurate
-                CacheGroups();
-
-                Debug.WriteLine($"[GROUP CHAT LIST VM] ✅ Unread refreshed. Total={TotalUnreadCount}");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[GROUP CHAT LIST VM] ❌ Error refreshing unread: {ex.Message}");
-            }
+            _allConversations = await _dmService.GetMyConversationsAsync();
+            RebuildList();
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // FILTERING & SEARCH
-        // ═══════════════════════════════════════════════════════════════
+        private async Task RefreshUnreadAsync()
+        {
+            try { await Task.WhenAll(LoadGroupsAsync(), LoadConversationsAsync()); }
+            catch (Exception ex) { Debug.WriteLine($"[LIST] RefreshUnread: {ex.Message}"); }
+        }
 
-        // Keep a reference to the full unfiltered list
-        private List<GroupChatItem> _allGroups = new();
-        private string _currentSearch = "";
-        private string _currentFilter = "All";
+        private async Task LoadCurrentUserAsync()
+        {
+            var token = await _authService.GetTokenAsync();
+            if (string.IsNullOrEmpty(token)) return;
+            var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+            _currentUserId = jwt.Claims
+                .FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub || c.Type == "sub")
+                ?.Value ?? string.Empty;
+        }
+
+        // ── Filtering ──────────────────────────────────────────────
 
         /// <summary>
-        /// Snapshots the current Groups list so filters/search work against
-        /// the full dataset. Call after every load or refresh.
+        /// Called by filter chips.
+        /// All    → groups + DMs mixed, sorted by last message time
+        /// Unread → same mix but only items with unread messages
+        /// Groups → only group chats
         /// </summary>
-        private void CacheGroups()
-        {
-            _allGroups = Groups?.ToList() ?? new List<GroupChatItem>();
-        }
-
-        /// <summary>Called by the view when a filter chip is tapped.</summary>
         public void ApplyFilter(string filter)
         {
-            _currentFilter = filter;
-            RefreshGroupsList();
+            _activeFilter = filter;
+            RebuildList();
         }
 
-        /// <summary>Called by the view when the search text changes.</summary>
-        public void ApplySearch(string query)
+        public void ApplySearch(string text)
         {
-            _currentSearch = query ?? "";
-            RefreshGroupsList();
+            _searchText = text;
+            RebuildList();
         }
 
-        private void RefreshGroupsList()
+        private void RebuildList()
         {
-            var filtered = _allGroups.AsEnumerable();
+            var search = _searchText.ToLower();
 
-            // Filter chip
-            filtered = _currentFilter switch
+            // Start with all items merged
+            IEnumerable<ChatListItem> items = _allGroups
+                .Select(ChatListItem.FromGroup)
+                .Concat(_allConversations.Select(ChatListItem.FromConversation));
+
+            // Search across display name
+            if (!string.IsNullOrWhiteSpace(search))
+                items = items.Where(i => i.DisplayName.ToLower().Contains(search));
+
+            // Filter chip logic
+            items = _activeFilter switch
             {
-                "Unread" => filtered.Where(g => g.HasUnreadMessages),
-                "Groups" => filtered.Where(g => g.IsGroup),
-                "Personal" => filtered.Where(g => !g.IsGroup),
-                _ => filtered   // "All" — no filter
+                "Unread" => items.Where(i => i.HasUnreadMessages),
+                "Groups" => items.Where(i => i.IsGroup),
+                _ => items   // "All" — show everything
             };
 
-            // Search query
-            if (!string.IsNullOrWhiteSpace(_currentSearch))
-            {
-                var q = _currentSearch.ToLowerInvariant();
-                filtered = filtered.Where(g =>
-                    (g.Name?.ToLowerInvariant().Contains(q) ?? false) ||
-                    (g.LastMessage?.ToLowerInvariant().Contains(q) ?? false));
-            }
+            // Sort newest first
+            items = items.OrderByDescending(i => i.LastMessageTime);
 
-            // Fix CS0200: assign via the property setter, not the readonly field
-            Groups = new ObservableCollection<GroupChatItem>(filtered);
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                ChatItems.Clear();
+                foreach (var item in items)
+                    ChatItems.Add(item);
+            });
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // NAVIGATE TO CHAT
-        // ═══════════════════════════════════════════════════════════════
+        // ── Real-time DM notification ──────────────────────────────
 
-        private async Task NavigateToChat(GroupChatItem group)
+        private void OnPrivateNotification(
+            object? sender, PrivateMessageNotificationEventArgs e)
         {
-            if (group == null) return;
-
-            Debug.WriteLine($"[GROUP CHAT LIST VM] Navigating to chat: {group.Name} (ID: {group.Id})");
-
-            try
+            var conv = _allConversations.FirstOrDefault(c => c.Id == e.ConversationId);
+            if (conv != null)
             {
-                await Shell.Current.GoToAsync(
-                    $"chat?GroupId={group.Id}&GroupName={Uri.EscapeDataString(group.Name)}");
+                conv.UnreadCount++;
+                RebuildList();
+            }
+        }
 
-                Debug.WriteLine("[GROUP CHAT LIST VM] ✅ Navigation successful");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[GROUP CHAT LIST VM] ❌ Navigation error: {ex.Message}");
-                await Application.Current.MainPage.DisplayAlert(
-                    "Navigation Error",
-                    $"Could not open chat: {ex.Message}",
-                    "OK");
-            }
+        protected void OnPropertyChanged([CallerMemberName] string? name = null) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+        ~GroupChatListPageModel()
+        {
+            _signalR.PrivateMessageNotification -= OnPrivateNotification;
         }
     }
 }

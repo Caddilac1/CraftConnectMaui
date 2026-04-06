@@ -20,14 +20,14 @@ namespace CraftConnect_Mobile_App
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-                    fonts.AddFont("fa-regular-400.ttf", "FARegular");
-                    fonts.AddFont("fa-solid-900.ttf", "FASolid");
                     fonts.AddFont("MaterialIcons-Regular.ttf", "MaterialIcons");
+                    fonts.AddFont("FluentSystemIcons-Regular.ttf", "FluentIcons");
+                    fonts.AddFont("SegoeUI-Semibold.ttf", "SegoeUISemibold");
                 });
 
-            // ========================================
-            // FIX GRAY NAVIGATION BAR - Android
-            // ========================================
+            // ═══════════════════════════════════════════════════════
+            // FIX GRAY NAVIGATION BAR — Android
+            // ═══════════════════════════════════════════════════════
             builder.ConfigureLifecycleEvents(events =>
             {
 #if ANDROID
@@ -67,63 +67,99 @@ namespace CraftConnect_Mobile_App
 #endif
             });
 
-            // ========================================
+            // ═══════════════════════════════════════════════════════
             // SERVICES
-            // ========================================
+            // ═══════════════════════════════════════════════════════
             builder.Services.AddSingleton<ApiConfig>();
+
             builder.Services.AddSingleton<AuthService>(sp =>
                 new AuthService(sp.GetRequiredService<ApiConfig>()));
+
             builder.Services.AddSingleton<IChatService, ChatService>(sp =>
                 new ChatService(sp.GetRequiredService<ApiConfig>()));
+
             builder.Services.AddSingleton<IChatSignalRService, ChatSignalRService>(sp =>
                 new ChatSignalRService(sp.GetRequiredService<ApiConfig>()));
+
+            // Private (DM) chat service
+            builder.Services.AddSingleton<IPrivateChatService, PrivateChatService>(sp =>
+                new PrivateChatService(sp.GetRequiredService<ApiConfig>()));
+
             builder.Services.AddSingleton<IUserFeedService, UserFeedService>(sp =>
                 new UserFeedService(sp.GetRequiredService<ApiConfig>()));
+
             builder.Services.AddSingleton<INavigationService, NavigationService>();
             builder.Services.AddSingleton<IDialogService, DialogService>();
             builder.Services.AddSingleton<IUserService, UserService>();
             builder.Services.AddSingleton<AiFeedChatService>();
             builder.Services.AddSingleton<ArtisanProposalService>();
+
             builder.Services.AddSingleton<IProfileApiService>(sp =>
                 new ProfileApiService(sp.GetRequiredService<ApiConfig>()));
+
             builder.Services.AddSingleton<IStoreService, StoreService>(sp =>
                 new StoreService(sp.GetRequiredService<ApiConfig>()));
+
             builder.Services.AddSingleton<ICartApiService, CartApiService>(sp =>
                 new CartApiService(sp.GetRequiredService<ApiConfig>()));
+
             builder.Services.AddSingleton<IServiceService, ServiceService>(sp =>
                 new ServiceService(sp.GetRequiredService<ApiConfig>()));
+
             builder.Services.AddSingleton<InvoiceService>();
             builder.Services.AddTransient<CreateInvoicePage>();
             builder.Services.AddTransient<ReviewInvoicePage>();
 
-            // ========================================
-            // VIEWMODELS
-            // ========================================
+            // ═══════════════════════════════════════════════════════
+            // VIEW MODELS
+            // ═══════════════════════════════════════════════════════
             builder.Services.AddTransient<RegisterPageModel>();
             builder.Services.AddTransient<LoginPageModel>();
-            builder.Services.AddTransient<GroupChatListPageModel>();
+
+            builder.Services.AddTransient<GroupChatListPageModel>(sp =>
+                new GroupChatListPageModel(
+                    sp.GetRequiredService<IChatService>(),
+                    sp.GetRequiredService<IPrivateChatService>(),
+                    sp.GetRequiredService<AuthService>(),
+                    sp.GetRequiredService<IChatSignalRService>()));
+
             builder.Services.AddTransient<ChatPageModel>();
+
+            // Private chat page model
+            builder.Services.AddTransient<PrivateChatPageModel>(sp =>
+                new PrivateChatPageModel(
+                    sp.GetRequiredService<IPrivateChatService>(),
+                    sp.GetRequiredService<AuthService>(),
+                    sp.GetRequiredService<IChatSignalRService>()));
+
             builder.Services.AddTransient<StorePageModel>(sp =>
                 new StorePageModel(
                     sp.GetRequiredService<IStoreService>(),
                     sp.GetRequiredService<ICartApiService>(),
                     sp.GetRequiredService<IServiceService>()));
+
             builder.Services.AddTransient<OtpVerificationPageModel>();
             builder.Services.AddTransient<SettingsPageViewModel>();
             builder.Services.AddTransient<AiFeedChatPageModel>();
             builder.Services.AddTransient<UpdatesFeedPageModel>();
+
             builder.Services.AddTransient<CartPageModel>(sp =>
                 new CartPageModel(sp.GetRequiredService<ICartApiService>()));
+
             builder.Services.AddTransient<CheckoutPageModel>(sp =>
                 new CheckoutPageModel(sp.GetRequiredService<ICartApiService>()));
 
-            // ========================================
-            // PAGES - Core
-            // ========================================
+            // ═══════════════════════════════════════════════════════
+            // PAGES — Core
+            // ═══════════════════════════════════════════════════════
             builder.Services.AddTransient<RegisterPage>();
             builder.Services.AddTransient<LoginPage>();
             builder.Services.AddTransient<GroupChatListPage>();
             builder.Services.AddTransient<ChatPage>();
+
+            // Private chat page
+            builder.Services.AddTransient<PrivateChatPage>();
+
             builder.Services.AddTransient<OtpVerificationPage>();
             builder.Services.AddTransient<SettingsPage>();
             builder.Services.AddTransient<AiFeedChatPage>();
@@ -133,19 +169,11 @@ namespace CraftConnect_Mobile_App
             builder.Services.AddTransient<CheckoutPage>();
             builder.Services.AddTransient<PaystackWebViewPage>();
 
-            // ========================================
-            // PAGES - Proposal flow
-            // ========================================
+            // ═══════════════════════════════════════════════════════
+            // PAGES — Proposal / Profile / Settings flow
+            // ═══════════════════════════════════════════════════════
             builder.Services.AddTransient<CreateProposalPage>();
-
-            // ========================================
-            // PAGES - Profile flow
-            // ========================================
             builder.Services.AddTransient<EditArtisanProfilePage>();
-
-            // ========================================
-            // PAGES - Settings sub-pages
-            // ========================================
             builder.Services.AddTransient<ProfileSettingsPage>();
             builder.Services.AddTransient<EditProfilePage>();
             builder.Services.AddTransient<NotificationsSettingsPage>();

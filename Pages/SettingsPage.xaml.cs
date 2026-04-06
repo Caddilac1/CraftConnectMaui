@@ -13,27 +13,30 @@ namespace CraftConnect_Mobile_App.Pages
     {
         private readonly AuthService _authService;
         private readonly IUserService _userService;
+        private readonly ApiConfig _apiConfig;
+
         private UserProfile _currentUser;
         private ArtisanUser _artisanUser;
         private string _primaryRole;
 
-        public SettingsPage(AuthService authService, IUserService userService)
+        // Track whether the switch toggle was changed programmatically
+        // to avoid firing the API call during initial data load.
+        private bool _suppressAvailabilityToggle;
+
+        public SettingsPage(AuthService authService, IUserService userService, ApiConfig apiConfig)
         {
             InitializeComponent();
             _authService = authService;
             _userService = userService;
+            _apiConfig = apiConfig;
         }
 
-        // FIX #3: Sync the nav bar highlight every time this page is navigated to,
-        // including via the back button or deep links.
+        // ── Lifecycle ─────────────────────────────────────────────────
+
         protected override void OnNavigatedTo(NavigatedToEventArgs args)
         {
             base.OnNavigatedTo(args);
-
-            // Find the BottomNavBar in this page's visual tree and sync it.
-            // The key "Settings" maps to the "Profile" tab in the nav bar.
-            var navBar = this.FindByName<BottomNavBar>("BottomNav");
-            navBar?.SyncTab("Settings");
+            this.FindByName<BottomNavBar>("BottomNav")?.SyncTab("Settings");
         }
 
         protected override async void OnAppearing()
@@ -41,6 +44,8 @@ namespace CraftConnect_Mobile_App.Pages
             base.OnAppearing();
             await LoadUserDataAsync();
         }
+
+        // ── Data loading ─────────────────────────────────────────────
 
         private async Task LoadUserDataAsync()
         {
@@ -50,15 +55,17 @@ namespace CraftConnect_Mobile_App.Pages
 
                 _currentUser = await _userService.LoadUserProfileAsync();
 
+                // Resolve role from JWT
                 var token = await _authService.GetTokenAsync();
-                string role = "Customer";
+                _primaryRole = "Customer";
 
                 if (!string.IsNullOrEmpty(token))
                 {
                     var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
-                    role = jwt.Claims.FirstOrDefault(c =>
-                        c.Type == "role" ||
-                        c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")
+                    _primaryRole = jwt.Claims
+                        .FirstOrDefault(c =>
+                            c.Type == "role" ||
+                            c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")
                         ?.Value ?? "Customer";
                 }
 
@@ -68,16 +75,25 @@ namespace CraftConnect_Mobile_App.Pages
                     UserEmailLabel.Text = _currentUser.Email ?? "";
                     AvatarInitialsLabel.Text = GetInitials(_currentUser.FullName);
 
-                    if (!string.IsNullOrWhiteSpace(_currentUser.ProfileImageUrl))
-                        ShowProfilePhoto(_currentUser.ProfileImageUrl);
+                    // ── FIX: load remote URL with FromUri, local path with FromFile ──
+                    var imageUrl = _currentUser.ProfileImageUrl;
+                    System.Diagnostics.Debug.WriteLine($"[SETTINGS] ProfileImageUrl = '{imageUrl}'");
 
-                    _primaryRole = role;
+                    if (!string.IsNullOrWhiteSpace(imageUrl))
+                        await TryLoadProfileImageAsync(imageUrl);
+                    else
+                        ShowInitials();
 
+                    // Artisan-specific setup
                     if (_primaryRole.Equals("Artisan", StringComparison.OrdinalIgnoreCase) &&
                         _currentUser is ArtisanUser artisan)
                     {
                         _artisanUser = artisan;
+
+                        // Suppress the Toggled event while we set the initial value
+                        _suppressAvailabilityToggle = true;
                         AvailabilitySwitch.IsToggled = artisan.IsAvailable;
+                        _suppressAvailabilityToggle = false;
                     }
 
                     ConfigureUIForRole(_primaryRole);
@@ -87,6 +103,7 @@ namespace CraftConnect_Mobile_App.Pages
                     UserNameLabel.Text = "User";
                     UserEmailLabel.Text = "";
                     AvatarInitialsLabel.Text = "?";
+                    ShowInitials();
                 }
             }
             catch (Exception ex)
@@ -99,11 +116,68 @@ namespace CraftConnect_Mobile_App.Pages
             }
         }
 
-        // ── Profile photo helpers ─────────────────────────────────────
+        // ── Profile image helpers ─────────────────────────────────────
 
-        private void ShowProfilePhoto(string path)
+        /// <summary>
+        /// Attempts to load the profile image from either a remote URL or a local
+        /// file path. Falls back to initials on any failure.
+        /// </summary>
+        private async Task TryLoadProfileImageAsync(string path)
         {
-            AvatarImage.Source = ImageSource.FromFile(path);
+            try
+            {
+                AvatarLoadingIndicator.IsRunning = true;
+                AvatarLoadingIndicator.IsVisible = true;
+                AvatarInitialsFrame.IsVisible = false;
+                AvatarPhotoFrame.IsVisible = false;
+
+                ImageSource source;
+
+                if (path.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                    path.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Already a full remote URL
+                    source = ImageSource.FromUri(new Uri(path));
+                }
+                else if (path.StartsWith("/") || path.StartsWith("images/", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Relative server path — prepend base URL from ApiConfig
+                    var fullUrl = $"{_apiConfig.BaseUrl.TrimEnd('/')}/{path.TrimStart('/')}";
+                    System.Diagnostics.Debug.WriteLine($"[SETTINGS] Resolved image URL: {fullUrl}");
+                    source = ImageSource.FromUri(new Uri(fullUrl));
+                }
+                else
+                {
+                    // Genuine local file path (e.g. from MediaPicker)
+                    source = ImageSource.FromFile(path);
+                }
+
+                AvatarImage.Source = source;
+                await Task.Delay(100);
+                AvatarPhotoFrame.IsVisible = true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Image load failed: {ex.Message}");
+                ShowInitials();
+            }
+            finally
+            {
+                AvatarLoadingIndicator.IsRunning = false;
+                AvatarLoadingIndicator.IsVisible = false;
+            }
+        }
+
+
+        /// <summary>Called by the XAML Image's LoadError event if the source fails to decode.</summary>
+        private void OnAvatarImageLoadError(object sender, EventArgs e)
+        {
+            System.Diagnostics.Debug.WriteLine("[SETTINGS] AvatarImage load error — showing initials.");
+            ShowInitials();
+        }
+
+        private void ShowProfilePhoto()
+        {
             AvatarPhotoFrame.IsVisible = true;
             AvatarInitialsFrame.IsVisible = false;
         }
@@ -114,6 +188,17 @@ namespace CraftConnect_Mobile_App.Pages
             AvatarInitialsFrame.IsVisible = true;
         }
 
+        private string GetInitials(string fullName)
+        {
+            if (string.IsNullOrWhiteSpace(fullName)) return "?";
+            var parts = fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length == 1
+                ? parts[0][0].ToString().ToUpper()
+                : $"{parts[0][0]}{parts[^1][0]}".ToUpper();
+        }
+
+        // ── Photo picker ──────────────────────────────────────────────
+
         private async void OnChangePhotoClicked(object sender, EventArgs e)
         {
             try
@@ -123,11 +208,14 @@ namespace CraftConnect_Mobile_App.Pages
                     Title = "Select profile photo"
                 });
 
-                if (result != null)
-                {
-                    ShowProfilePhoto(result.FullPath);
-                    // TODO: upload result.OpenReadAsync() to your API
-                }
+                if (result == null) return;
+
+                // Show locally right away for instant feedback
+                await TryLoadProfileImageAsync(result.FullPath);
+
+                // TODO: upload the stream to your API
+                // using var stream = await result.OpenReadAsync();
+                // await _someApiService.UploadProfilePictureAsync(stream);
             }
             catch (Exception ex)
             {
@@ -135,13 +223,7 @@ namespace CraftConnect_Mobile_App.Pages
             }
         }
 
-        private string GetInitials(string fullName)
-        {
-            if (string.IsNullOrWhiteSpace(fullName)) return "?";
-            var parts = fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length == 1) return parts[0][0].ToString().ToUpper();
-            return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
-        }
+        // ── Role-based UI ─────────────────────────────────────────────
 
         private void ConfigureUIForRole(string role)
         {
@@ -160,7 +242,7 @@ namespace CraftConnect_Mobile_App.Pages
             }
         }
 
-        // ── ACCOUNT ──────────────────────────────────────────────────
+        // ── ACCOUNT handlers ─────────────────────────────────────────
 
         private async void OnProfileSettingsClicked(object sender, EventArgs e)
         {
@@ -180,7 +262,7 @@ namespace CraftConnect_Mobile_App.Pages
             catch { await DisplayAlert("Info", "Notifications page is not yet available.", "OK"); }
         }
 
-        // ── ARTISAN ───────────────────────────────────────────────────
+        // ── ARTISAN handlers ──────────────────────────────────────────
 
         private async void OnEditBusinessClicked(object sender, EventArgs e)
         {
@@ -190,9 +272,14 @@ namespace CraftConnect_Mobile_App.Pages
 
         private async void OnAvailabilityToggled(object sender, ToggledEventArgs e)
         {
+            // Skip when we set the switch value programmatically during load
+            if (_suppressAvailabilityToggle) return;
+
             if (_artisanUser == null)
             {
+                _suppressAvailabilityToggle = true;
                 AvailabilitySwitch.IsToggled = !e.Value;
+                _suppressAvailabilityToggle = false;
                 return;
             }
 
@@ -204,19 +291,26 @@ namespace CraftConnect_Mobile_App.Pages
                 if (!success)
                 {
                     await DisplayAlert("Error", "Failed to update availability.", "OK");
+
+                    // Revert the switch without triggering another API call
+                    _suppressAvailabilityToggle = true;
                     AvailabilitySwitch.IsToggled = !e.Value;
+                    _suppressAvailabilityToggle = false;
                     _artisanUser.IsAvailable = !e.Value;
                 }
             }
             catch (Exception ex)
             {
                 await DisplayAlert("Error", $"Failed to update availability: {ex.Message}", "OK");
+
+                _suppressAvailabilityToggle = true;
                 AvailabilitySwitch.IsToggled = !e.Value;
+                _suppressAvailabilityToggle = false;
                 _artisanUser.IsAvailable = !e.Value;
             }
         }
 
-        // ── ADMIN ─────────────────────────────────────────────────────
+        // ── ADMIN handlers ────────────────────────────────────────────
 
         private async void OnManageUsersClicked(object sender, EventArgs e)
         {
@@ -236,7 +330,7 @@ namespace CraftConnect_Mobile_App.Pages
             catch { await DisplayAlert("Info", "Verification page is not yet available.", "OK"); }
         }
 
-        // ── SECURITY ──────────────────────────────────────────────────
+        // ── SECURITY handlers ─────────────────────────────────────────
 
         private async void OnPrivacySecurityClicked(object sender, EventArgs e)
         {
@@ -250,7 +344,7 @@ namespace CraftConnect_Mobile_App.Pages
             catch { await DisplayAlert("Info", "Payment Methods page is not yet available.", "OK"); }
         }
 
-        // ── SUPPORT ───────────────────────────────────────────────────
+        // ── SUPPORT handlers ──────────────────────────────────────────
 
         private async void OnHelpClicked(object sender, EventArgs e)
         {
@@ -267,14 +361,16 @@ namespace CraftConnect_Mobile_App.Pages
         private async void OnAboutClicked(object sender, EventArgs e)
         {
             await DisplayAlert("About CraftConnect",
-                "Version 1.0.0\n\n© 2024 CraftConnect\nConnecting skilled artisans with customers.\n\nAll rights reserved.", "OK");
+                "Version 1.0.0\n\n© 2024 CraftConnect\nConnecting skilled artisans with customers.\n\nAll rights reserved.",
+                "OK");
         }
 
-        // ── LOGOUT / DELETE ───────────────────────────────────────────
+        // ── LOGOUT / DELETE handlers ──────────────────────────────────
 
         private async void OnLogoutClicked(object sender, EventArgs e)
         {
-            bool confirm = await DisplayAlert("Logout", "Are you sure you want to logout?", "Yes", "No");
+            bool confirm = await DisplayAlert("Logout",
+                "Are you sure you want to logout?", "Yes", "No");
             if (!confirm) return;
 
             try
@@ -301,32 +397,36 @@ namespace CraftConnect_Mobile_App.Pages
             if (!confirm) return;
 
             string password = await DisplayPromptAsync("Final Confirmation",
-                "Enter your password to confirm deletion:", placeholder: "Password",
-                maxLength: 50, keyboard: Keyboard.Text);
+                "Enter your password to confirm deletion:",
+                placeholder: "Password", maxLength: 50,
+                keyboard: Keyboard.Text);
 
-            if (!string.IsNullOrWhiteSpace(password))
+            if (string.IsNullOrWhiteSpace(password)) return;
+
+            try
             {
-                try
+                IsBusy = true;
+                bool success = await _userService.DeleteAccountAsync(password);
+
+                if (success)
                 {
-                    IsBusy = true;
-                    bool success = await _userService.DeleteAccountAsync(password);
-                    if (success)
-                    {
-                        await DisplayAlert("Account Deleted", "Your account has been permanently deleted.", "OK");
-                        await Shell.Current.GoToAsync("//LoginPage");
-                    }
-                    else
-                    {
-                        await DisplayAlert("Error", "Failed to delete account. Please check your password.", "OK");
-                    }
+                    await DisplayAlert("Account Deleted",
+                        "Your account has been permanently deleted.", "OK");
+                    await Shell.Current.GoToAsync("//LoginPage");
                 }
-                catch (Exception ex)
+                else
                 {
-                    await DisplayAlert("Error", "Failed to delete account. Please check your password.", "OK");
-                    System.Diagnostics.Debug.WriteLine($"[SETTINGS] Delete account error: {ex.Message}");
+                    await DisplayAlert("Error",
+                        "Failed to delete account. Please check your password.", "OK");
                 }
-                finally { IsBusy = false; }
             }
+            catch (Exception ex)
+            {
+                await DisplayAlert("Error",
+                    "Failed to delete account. Please check your password.", "OK");
+                System.Diagnostics.Debug.WriteLine($"[SETTINGS] Delete account error: {ex.Message}");
+            }
+            finally { IsBusy = false; }
         }
     }
 }

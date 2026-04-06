@@ -21,6 +21,7 @@
                     <!-- Avatar -->
                     <Grid Grid.Row="0" WidthRequest="90" HeightRequest="90" HorizontalOptions="Center">
 
+                        <!-- Initials fallback (shown when no photo) -->
                         <Frame x:Name="AvatarInitialsFrame"
                                WidthRequest="90" HeightRequest="90" CornerRadius="45"
                                Padding="0" HasShadow="False"
@@ -37,15 +38,26 @@
                                    HorizontalOptions="Center" VerticalOptions="Center"/>
                         </Frame>
 
+                        <!-- Photo frame (shown when photo is available) -->
                         <Frame x:Name="AvatarPhotoFrame"
                                WidthRequest="90" HeightRequest="90" CornerRadius="45"
                                Padding="0" HasShadow="False"
                                HorizontalOptions="Center" VerticalOptions="Center"
                                IsClippedToBounds="True" IsVisible="False">
-                            <Image x:Name="AvatarImage" Aspect="AspectFill"
+                            <Image x:Name="AvatarImage"
+                                   Aspect="AspectFill"
                                    WidthRequest="90" HeightRequest="90"/>
                         </Frame>
 
+                        <!-- Loading indicator over avatar -->
+                        <ActivityIndicator x:Name="AvatarLoadingIndicator"
+                                           IsRunning="False" IsVisible="False"
+                                           Color="White"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"
+                                           WidthRequest="30" HeightRequest="30"/>
+
+                        <!-- Camera badge -->
                         <Border WidthRequest="28" HeightRequest="28" StrokeThickness="2"
                                 HorizontalOptions="End" VerticalOptions="End">
                             <Border.Stroke>
@@ -137,7 +149,7 @@
                         </Frame>
                     </VerticalStackLayout>
 
-                    <!-- ARTISAN Section -->
+                    <!-- ARTISAN Section (role-gated) -->
                     <VerticalStackLayout x:Name="ArtisanSectionContainer" Spacing="0" IsVisible="False">
                         <Label Text="ARTISAN" TextColor="#8A9BAD" FontSize="12"
                                FontAttributes="Bold" Margin="4,0,0,8" CharacterSpacing="1.2"/>
@@ -179,7 +191,7 @@
                         </Frame>
                     </VerticalStackLayout>
 
-                    <!-- ADMIN Section -->
+                    <!-- ADMIN Section (role-gated) -->
                     <VerticalStackLayout x:Name="AdminSectionContainer" Spacing="0" IsVisible="False">
                         <Label Text="ADMINISTRATION" TextColor="#8A9BAD" FontSize="12"
                                FontAttributes="Bold" Margin="4,0,0,8" CharacterSpacing="1.2"/>
@@ -372,7 +384,7 @@
             </VerticalStackLayout>
         </ScrollView>
 
-        <!-- BottomNavBar — x:Name="BottomNav" is REQUIRED for SyncTab to work -->
+        <!-- Bottom nav bar -->
         <controls:BottomNavBar x:Name="BottomNav"
                                Grid.Row="1"
                                ActiveTab="Settings"

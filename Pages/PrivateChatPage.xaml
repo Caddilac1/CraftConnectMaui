@@ -1,0 +1,418 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:CraftConnect_Mobile_App.PageModels"
+             x:Class="CraftConnect_Mobile_App.Pages.PrivateChatPage"
+             x:DataType="vm:PrivateChatPageModel"
+             Shell.NavBarIsVisible="False"
+             Shell.TabBarIsVisible="False"
+             BackgroundColor="#F0F4FF">
+
+    <Grid RowDefinitions="Auto,*,Auto" RowSpacing="0">
+
+        <!-- ══════════════════════════════════════
+             HEADER
+             ══════════════════════════════════════ -->
+        <Grid Grid.Row="0"
+              Padding="16,52,16,12"
+              BackgroundColor="#FFFFFF"
+              ColumnDefinitions="Auto,*,Auto">
+
+            <!-- Back button -->
+            <Border WidthRequest="40" HeightRequest="40"
+                    BackgroundColor="#F0F4FF"
+                    StrokeThickness="0"
+                    VerticalOptions="Center">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12"/>
+                </Border.StrokeShape>
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnBackTapped"/>
+                </Border.GestureRecognizers>
+                <Label Text="&#xE5C4;" FontFamily="MaterialIcons"
+                       FontSize="22" TextColor="#1A2340"
+                       HorizontalOptions="Center" VerticalOptions="Center"/>
+            </Border>
+
+            <!-- Avatar + name -->
+            <HorizontalStackLayout Grid.Column="1" Spacing="10"
+                                   VerticalOptions="Center"
+                                   Margin="10,0">
+                <Border WidthRequest="40" HeightRequest="40"
+                        StrokeThickness="0">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="12"/>
+                    </Border.StrokeShape>
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#60A5FA" Offset="0"/>
+                            <GradientStop Color="#2563EB" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Label Text="{Binding OtherUserName, Converter={StaticResource InitialConverter}}"
+                           FontSize="16" FontAttributes="Bold"
+                           TextColor="White"
+                           HorizontalOptions="Center" VerticalOptions="Center"/>
+                </Border>
+                <VerticalStackLayout Spacing="1" VerticalOptions="Center">
+                    <Label Text="{Binding OtherUserName}"
+                           FontSize="16" FontAttributes="Bold"
+                           TextColor="#0D0D0D"/>
+                    <Label Text="Private Chat"
+                           FontSize="11" TextColor="#888888"/>
+                </VerticalStackLayout>
+            </HorizontalStackLayout>
+
+            <!-- Placeholder right action -->
+            <Border Grid.Column="2"
+                    WidthRequest="40" HeightRequest="40"
+                    BackgroundColor="#F0F4FF"
+                    StrokeThickness="0"
+                    VerticalOptions="Center">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12"/>
+                </Border.StrokeShape>
+                <Label Text="&#xE5D3;" FontFamily="MaterialIcons"
+                       FontSize="22" TextColor="#1A2340"
+                       HorizontalOptions="Center" VerticalOptions="Center"/>
+            </Border>
+
+        </Grid>
+
+        <!-- ══════════════════════════════════════
+             MESSAGE LIST
+             ══════════════════════════════════════ -->
+        <CollectionView Grid.Row="1"
+                        x:Name="MessagesList"
+                        ItemsSource="{Binding Messages}"
+                        BackgroundColor="Transparent"
+                        Margin="0,4,0,0"
+                        VerticalOptions="FillAndExpand">
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:PrivateMessageItemViewModel">
+
+                    <Grid Margin="12,3">
+
+                        <Grid.GestureRecognizers>
+                            <PanGestureRecognizer PanUpdated="OnMessagePanUpdated"/>
+                        </Grid.GestureRecognizers>
+
+                        <!-- ── Sent (right-aligned) ── -->
+                        <Border IsVisible="{Binding IsFromCurrentUser}"
+                                BackgroundColor="#2563EB"
+                                Padding="12,8"
+                                MaximumWidthRequest="280"
+                                HorizontalOptions="End"
+                                StrokeThickness="0">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="18,18,4,18"/>
+                            </Border.StrokeShape>
+                            <VerticalStackLayout Spacing="4">
+
+                                <!-- Group quote banner (tappable → go back to group chat) -->
+                                <Border IsVisible="{Binding HasGroupQuote}"
+                                        BackgroundColor="#1A4DB0"
+                                        Padding="8,5"
+                                        StrokeThickness="0">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="8"/>
+                                    </Border.StrokeShape>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Tapped="OnGroupQuoteTapped"
+                                            CommandParameter="{Binding .}"/>
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout Spacing="2">
+                                        <HorizontalStackLayout Spacing="4">
+                                            <Label Text="&#xe0c6;" FontFamily="MaterialIcons"
+                                                   FontSize="11" TextColor="#90C8FF"
+                                                   VerticalOptions="Center"/>
+                                            <Label Text="{Binding QuotedGroupSender}"
+                                                   FontSize="11" FontAttributes="Bold"
+                                                   TextColor="#90C8FF"/>
+                                        </HorizontalStackLayout>
+                                        <Label Text="{Binding QuotedGroupMessage}"
+                                               FontSize="12" TextColor="#CCE0FF"
+                                               MaxLines="2" LineBreakMode="TailTruncation"/>
+                                        <Label Text="Tap to view in group"
+                                               FontSize="10" TextColor="#7AAAD0"
+                                               FontAttributes="Italic"/>
+                                    </VerticalStackLayout>
+                                </Border>
+
+                                <Label Text="{Binding Message}"
+                                       IsVisible="{Binding HasMessageText}"
+                                       FontSize="15" TextColor="White"
+                                       LineBreakMode="WordWrap"/>
+
+                                <HorizontalStackLayout HorizontalOptions="End" Spacing="4">
+                                    <Label Text="{Binding DisplayTime}"
+                                           FontSize="10" TextColor="#B0CAFF"/>
+                                    <Label Text="{Binding StatusIcon}"
+                                           FontSize="10" TextColor="#B0CAFF"/>
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <!-- ── Received (left-aligned) ── -->
+                        <HorizontalStackLayout IsVisible="{Binding IsFromCurrentUser,
+                            Converter={StaticResource InverseBoolConverter}}"
+                                              Spacing="8"
+                                              HorizontalOptions="Start">
+
+                            <!-- Avatar -->
+                            <Border WidthRequest="36" HeightRequest="36"
+                                    StrokeThickness="0"
+                                    VerticalOptions="End">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10"/>
+                                </Border.StrokeShape>
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#60A5FA" Offset="0"/>
+                                        <GradientStop Color="#2563EB" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <Label Text="{Binding SenderInitial}"
+                                       FontSize="14" FontAttributes="Bold"
+                                       TextColor="White"
+                                       HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
+
+                            <Border BackgroundColor="#FFFFFF"
+                                    Padding="12,8"
+                                    MaximumWidthRequest="260"
+                                    StrokeThickness="0">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="18,18,18,4"/>
+                                </Border.StrokeShape>
+                                <Border.Shadow>
+                                    <Shadow Brush="#2563EB" Offset="0,2" Radius="6" Opacity="0.06"/>
+                                </Border.Shadow>
+                                <VerticalStackLayout Spacing="4">
+
+                                    <!-- Group quote banner (tappable → go back to group chat) -->
+                                    <Border IsVisible="{Binding HasGroupQuote}"
+                                            BackgroundColor="#EEF3FF"
+                                            Padding="8,5"
+                                            StrokeThickness="0">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="8"/>
+                                        </Border.StrokeShape>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Tapped="OnGroupQuoteTapped"
+                                                CommandParameter="{Binding .}"/>
+                                        </Border.GestureRecognizers>
+                                        <VerticalStackLayout Spacing="2">
+                                            <HorizontalStackLayout Spacing="4">
+                                                <Label Text="&#xe0c6;" FontFamily="MaterialIcons"
+                                                       FontSize="11" TextColor="#2563EB"
+                                                       VerticalOptions="Center"/>
+                                                <Label Text="{Binding QuotedGroupSender}"
+                                                       FontSize="11" FontAttributes="Bold"
+                                                       TextColor="#2563EB"/>
+                                            </HorizontalStackLayout>
+                                            <Label Text="{Binding QuotedGroupMessage}"
+                                                   FontSize="12" TextColor="#555555"
+                                                   MaxLines="2" LineBreakMode="TailTruncation"/>
+                                            <Label Text="Tap to view in group"
+                                                   FontSize="10" TextColor="#2563EB"
+                                                   FontAttributes="Italic"/>
+                                        </VerticalStackLayout>
+                                    </Border>
+
+                                    <Label Text="{Binding Message}"
+                                           IsVisible="{Binding HasMessageText}"
+                                           FontSize="15" TextColor="#0D0D0D"
+                                           LineBreakMode="WordWrap"/>
+
+                                    <Label Text="{Binding DisplayTime}"
+                                           FontSize="10" TextColor="#AAAAAA"
+                                           HorizontalOptions="End"/>
+                                </VerticalStackLayout>
+                            </Border>
+                        </HorizontalStackLayout>
+
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- ══════════════════════════════════════
+             INPUT AREA
+             ══════════════════════════════════════ -->
+        <Grid Grid.Row="2"
+              x:Name="MessageInputArea"
+              RowDefinitions="Auto,Auto"
+              BackgroundColor="#FFFFFF">
+
+            <!-- Reply bar -->
+            <Border Grid.Row="0"
+                    IsVisible="{Binding IsReplying}"
+                    BackgroundColor="#EEF3FF"
+                    Padding="14,8"
+                    StrokeThickness="0">
+                <Grid ColumnDefinitions="4,*,Auto" ColumnSpacing="10">
+                    <BoxView Color="#2563EB" WidthRequest="4"
+                             CornerRadius="2" VerticalOptions="Fill"/>
+                    <VerticalStackLayout Grid.Column="1" Spacing="1">
+                        <Label Text="{Binding ReplyingToSender}"
+                               FontSize="12" FontAttributes="Bold"
+                               TextColor="#2563EB"/>
+                        <Label Text="{Binding ReplyingToMessage}"
+                               FontSize="12" TextColor="#555555"
+                               MaxLines="1" LineBreakMode="TailTruncation"/>
+                    </VerticalStackLayout>
+                    <Border Grid.Column="2"
+                            WidthRequest="28" HeightRequest="28"
+                            BackgroundColor="#DDDDDD"
+                            StrokeThickness="0"
+                            VerticalOptions="Center">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="14"/>
+                        </Border.StrokeShape>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnCancelReplyTapped"/>
+                        </Border.GestureRecognizers>
+                        <Label Text="&#xE5CD;" FontFamily="MaterialIcons"
+                               FontSize="14" TextColor="#555555"
+                               HorizontalOptions="Center" VerticalOptions="Center"/>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- Text input row -->
+            <HorizontalStackLayout Grid.Row="1"
+                                   Padding="12,10,12,24"
+                                   Spacing="8"
+                                   VerticalOptions="Center">
+
+                <Border Stroke="#E8EEFF"
+                        StrokeThickness="1.5"
+                        BackgroundColor="#F8FAFF"
+                        HorizontalOptions="FillAndExpand"
+                        Padding="14,10"
+                        HeightRequest="48">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="24"/>
+                    </Border.StrokeShape>
+                    <Editor x:Name="MessageEditor"
+                            Text="{Binding MessageText}"
+                            Placeholder="Message…"
+                            PlaceholderColor="#BBBBBB"
+                            TextColor="#0D0D0D"
+                            FontSize="15"
+                            AutoSize="TextChanges"
+                            MaximumHeightRequest="120"
+                            BackgroundColor="Transparent"
+                            VerticalOptions="Center"/>
+                </Border>
+
+                <!-- Send button -->
+                <Border WidthRequest="48" HeightRequest="48"
+                        BackgroundColor="#2563EB"
+                        StrokeThickness="0">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="24"/>
+                    </Border.StrokeShape>
+                    <Border.Shadow>
+                        <Shadow Brush="#2563EB" Offset="0,3" Radius="8" Opacity="0.35"/>
+                    </Border.Shadow>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnSendTapped"/>
+                    </Border.GestureRecognizers>
+                    <Label Text="&#xE163;" FontFamily="MaterialIcons"
+                           FontSize="22" TextColor="White"
+                           HorizontalOptions="Center" VerticalOptions="Center"/>
+                </Border>
+
+            </HorizontalStackLayout>
+        </Grid>
+
+        <!-- ══════════════════════════════════════
+             CONTEXT MENU OVERLAY
+             ══════════════════════════════════════ -->
+        <Grid Grid.RowSpan="3"
+              IsVisible="{Binding IsContextMenuVisible}"
+              BackgroundColor="#88000000">
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnContextMenuDismissed"/>
+            </Grid.GestureRecognizers>
+
+            <Border BackgroundColor="#FFFFFF"
+                    Padding="8"
+                    WidthRequest="220"
+                    HorizontalOptions="Center"
+                    VerticalOptions="Center"
+                    StrokeThickness="0">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="16"/>
+                </Border.StrokeShape>
+                <Border.Shadow>
+                    <Shadow Brush="#000000" Offset="0,4" Radius="20" Opacity="0.18"/>
+                </Border.Shadow>
+                <VerticalStackLayout Spacing="0">
+
+                    <!-- Reply -->
+                    <Border BackgroundColor="Transparent" Padding="14,12" StrokeThickness="0">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnContextReplyTapped"/>
+                        </Border.GestureRecognizers>
+                        <HorizontalStackLayout Spacing="12">
+                            <Label Text="&#xE8AF;" FontFamily="MaterialIcons"
+                                   FontSize="20" TextColor="#2563EB" VerticalOptions="Center"/>
+                            <Label Text="Reply" FontSize="15" TextColor="#0D0D0D" VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                    </Border>
+
+                    <BoxView HeightRequest="0.5" Color="#EEEEEE" Margin="14,0"/>
+
+                    <!-- Copy -->
+                    <Border BackgroundColor="Transparent" Padding="14,12" StrokeThickness="0">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnContextCopyTapped"/>
+                        </Border.GestureRecognizers>
+                        <HorizontalStackLayout Spacing="12">
+                            <Label Text="&#xE14D;" FontFamily="MaterialIcons"
+                                   FontSize="20" TextColor="#555555" VerticalOptions="Center"/>
+                            <Label Text="Copy" FontSize="15" TextColor="#0D0D0D" VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                    </Border>
+
+                    <BoxView HeightRequest="0.5" Color="#EEEEEE" Margin="14,0"/>
+
+                    <!-- Star -->
+                    <Border BackgroundColor="Transparent" Padding="14,12" StrokeThickness="0">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnContextStarTapped"/>
+                        </Border.GestureRecognizers>
+                        <HorizontalStackLayout Spacing="12">
+                            <Label Text="&#xE838;" FontFamily="MaterialIcons"
+                                   FontSize="20" TextColor="#555555" VerticalOptions="Center"/>
+                            <Label Text="{Binding SelectedMessage.StarLabel}"
+                                   FontSize="15" TextColor="#0D0D0D" VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                    </Border>
+
+                    <BoxView HeightRequest="0.5" Color="#EEEEEE" Margin="14,0"/>
+
+                    <!-- Delete -->
+                    <Border BackgroundColor="Transparent" Padding="14,12" StrokeThickness="0">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnContextDeleteTapped"/>
+                        </Border.GestureRecognizers>
+                        <HorizontalStackLayout Spacing="12">
+                            <Label Text="&#xE872;" FontFamily="MaterialIcons"
+                                   FontSize="20" TextColor="#E53935" VerticalOptions="Center"/>
+                            <Label Text="Delete" FontSize="15" TextColor="#E53935" VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                    </Border>
+
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
+    </Grid>
+</ContentPage>

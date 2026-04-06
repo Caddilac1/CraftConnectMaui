@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using CraftConnect_Mobile_App.Services;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace CraftConnect_Mobile_App.PageModels
 {
@@ -13,6 +14,9 @@ namespace CraftConnect_Mobile_App.PageModels
 
         // ── Basic chat state ──────────────────────────────────────
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ShowMicIcon))]
+        [NotifyPropertyChangedFor(nameof(ShowSendIcon))]
+        [NotifyPropertyChangedFor(nameof(SendButtonColor))]
         private string _messageText = string.Empty;
 
         [ObservableProperty]
@@ -25,24 +29,16 @@ namespace CraftConnect_Mobile_App.PageModels
         private bool _hasAttachedFiles;
 
         // ── Typing indicator state ────────────────────────────────
-
-        /// <summary>
-        /// True while the AI is composing a reply.
-        /// Drives the page-level TypingIndicatorOverlay in XAML and the
-        /// bouncing-wave animation in AiFeedChatPage.xaml.cs.
-        /// </summary>
         [ObservableProperty]
         private bool _isTyping;
 
         // ── Recording state ───────────────────────────────────────
-
-        /// <summary>True while the microphone is actively recording.</summary>
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(ShowMicIcon))]
+        [NotifyPropertyChangedFor(nameof(ShowSendIcon))]
         [NotifyPropertyChangedFor(nameof(SendButtonColor))]
         private bool _isRecording;
 
-        /// <summary>Elapsed time string shown in the recording banner, e.g. "0:12".</summary>
         [ObservableProperty]
         private string _recordingDuration = "0:00";
 
@@ -51,16 +47,23 @@ namespace CraftConnect_Mobile_App.PageModels
 
         // ── Derived properties for XAML bindings ─────────────────
 
-        /// <summary>Show the mic icon when no text AND not recording.</summary>
+        /// <summary>Show mic when: no text typed AND not currently recording.</summary>
         public bool ShowMicIcon => string.IsNullOrWhiteSpace(MessageText) && !IsRecording;
 
-        /// <summary>Button is red while recording, otherwise WhatsApp teal.</summary>
+        /// <summary>Show send arrow when: text is present AND not recording.</summary>
+        public bool ShowSendIcon => !string.IsNullOrWhiteSpace(MessageText) && !IsRecording;
+
+        /// <summary>Button is red while recording, teal otherwise.</summary>
         public Color SendButtonColor => IsRecording ? Color.FromArgb("#D32F2F") : Color.FromArgb("#075E54");
 
         // ── Collections ───────────────────────────────────────────
-
         public ObservableCollection<AiChatMessageViewModel> Messages { get; } = new();
         public ObservableCollection<AttachedFileViewModel> AttachedFiles { get; } = new();
+
+        // ── Events ────────────────────────────────────────────────
+
+        /// <summary>Raised when the user taps the play button on a voice message bubble.</summary>
+        public event EventHandler<string>? PlayVoiceRequested;
 
         // ─────────────────────────────────────────────────────────
         // Constructor
@@ -140,7 +143,6 @@ namespace CraftConnect_Mobile_App.PageModels
         // Recording state management (called from code-behind)
         // ─────────────────────────────────────────────────────────
 
-        /// <summary>Called by code-behind when recording starts.</summary>
         public void StartRecordingState()
         {
             _recordingSeconds = 0;
@@ -156,7 +158,6 @@ namespace CraftConnect_Mobile_App.PageModels
             Debug.WriteLine("[AI CHAT MODEL] Recording state started");
         }
 
-        /// <summary>Called by code-behind when recording stops (send or discard).</summary>
         public void StopRecordingState()
         {
             IsRecording = false;
@@ -180,17 +181,33 @@ namespace CraftConnect_Mobile_App.PageModels
 
         // ─────────────────────────────────────────────────────────
         // Send voice message
+        // duration is captured by the code-behind BEFORE StopRecordingState()
+        // resets RecordingDuration, so we receive it as a parameter here.
         // ─────────────────────────────────────────────────────────
 
-        public async Task SendVoiceMessageAsync(string filePath)
+        public async Task SendVoiceMessageAsync(string filePath, string duration)
         {
+            // Use the passed-in duration; fall back to a minimum of "0:01"
+            var capturedDuration = string.IsNullOrEmpty(duration) || duration == "0:00"
+                ? "0:01"
+                : duration;
+
             try
             {
                 IsBusy = true;
                 StatusText = "Sending voice note...";
 
-                var durationLabel = RecordingDuration == "0:00" ? "" : $" ({RecordingDuration})";
-                await AddUserMessage($"🎙 Voice note{durationLabel}");
+                // Add the voice message bubble immediately, storing the file path
+                // so the user can tap play before the file is cleaned up.
+                Messages.Add(new AiChatMessageViewModel
+                {
+                    IsFromUser = true,
+                    IsFromAi = false,
+                    IsVoiceMessage = true,
+                    VoiceDuration = capturedDuration,
+                    AudioFilePath = filePath,
+                    Timestamp = DateTime.Now
+                });
 
                 var fileName = Path.GetFileName(filePath);
 
@@ -212,23 +229,30 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 IsBusy = false;
 
-                try { if (File.Exists(filePath)) File.Delete(filePath); }
-                catch { /* non-critical */ }
+                // NOTE: we intentionally do NOT delete the file here so the user
+                // can still play it back from the bubble. The code-behind cleans
+                // up the _recordingFilePath reference; cached copies in the app's
+                // cache directory will be swept by the OS in due course.
             }
+        }
+
+        // ─────────────────────────────────────────────────────────
+        // Play voice message (relay command — wired via event to Page)
+        // ─────────────────────────────────────────────────────────
+
+        [RelayCommand]
+        private void PlayVoice(string filePath)
+        {
+            Debug.WriteLine($"[AI CHAT MODEL] PlayVoice requested: {filePath}");
+            PlayVoiceRequested?.Invoke(this, filePath ?? string.Empty);
         }
 
         // ─────────────────────────────────────────────────────────
         // Shared AI response dispatcher
         // ─────────────────────────────────────────────────────────
 
-        /// <param name="userInput">Text sent to the AI (or already-received server text).</param>
-        /// <param name="alreadyFromServer">When true, skip the API call and display directly.</param>
         private async Task DispatchAiResponse(string userInput, bool alreadyFromServer = false)
         {
-            // ── Show typing indicator ─────────────────────────────
-            // 1. Flip the page-level flag → triggers the wave animation in code-behind
-            //    and shows the TypingIndicatorOverlay in XAML.
-            // 2. Also add a per-message placeholder so the CollectionView scrolls correctly.
             IsTyping = true;
 
             var typingMessage = new AiChatMessageViewModel
@@ -255,7 +279,6 @@ namespace CraftConnect_Mobile_App.PageModels
                     replyText = response?.Message ?? "Sorry, I didn't receive a response. Please try again.";
                 }
 
-                // ── Hide typing indicator ─────────────────────────
                 IsTyping = false;
                 Messages.Remove(typingMessage);
 
@@ -273,7 +296,6 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 Debug.WriteLine($"[AI CHAT MODEL] ❌ DispatchAiResponse error: {ex.Message}");
 
-                // Always clear the typing state on error
                 IsTyping = false;
                 Messages.Remove(typingMessage);
 
@@ -307,12 +329,65 @@ namespace CraftConnect_Mobile_App.PageModels
 
             Messages.Add(new AiChatMessageViewModel
             {
-                Message = message,
+                Message = StripMarkdown(message),
                 IsFromAi = true,
                 IsFromUser = false,
                 Timestamp = DateTime.Now
             });
             await Task.Delay(100);
+        }
+
+        // ─────────────────────────────────────────────────────────
+        // Markdown stripper
+        // Removes common markdown syntax so AI replies render cleanly
+        // in plain Label controls.
+        // ─────────────────────────────────────────────────────────
+
+        private static string StripMarkdown(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+
+            // Bold: **text** or __text__
+            text = Regex.Replace(text, @"\*\*(.+?)\*\*", "$1", RegexOptions.Singleline);
+            text = Regex.Replace(text, @"__(.+?)__", "$1", RegexOptions.Singleline);
+
+            // Italic: *text* or _text_  (single asterisk / underscore)
+            text = Regex.Replace(text, @"\*(.+?)\*", "$1", RegexOptions.Singleline);
+            text = Regex.Replace(text, @"_(.+?)_", "$1", RegexOptions.Singleline);
+
+            // Strikethrough: ~~text~~
+            text = Regex.Replace(text, @"~~(.+?)~~", "$1", RegexOptions.Singleline);
+
+            // Inline code: `text`
+            text = Regex.Replace(text, @"`(.+?)`", "$1", RegexOptions.Singleline);
+
+            // Fenced code blocks: ```...```
+            text = Regex.Replace(text, @"```[\s\S]*?```", string.Empty);
+
+            // ATX headings: ## Heading → Heading
+            text = Regex.Replace(text, @"^#{1,6}\s+", string.Empty, RegexOptions.Multiline);
+
+            // Horizontal rules: --- / *** / ___
+            text = Regex.Replace(text, @"^(\s*[-*_]){3,}\s*$", string.Empty, RegexOptions.Multiline);
+
+            // Bullet list markers: "- item" or "* item" → "• item"
+            text = Regex.Replace(text, @"^\s*[-*]\s+", "• ", RegexOptions.Multiline);
+
+            // Numbered list: "1. item" → keep as-is (already readable)
+
+            // Blockquotes: "> text" → "text"
+            text = Regex.Replace(text, @"^\s*>\s?", string.Empty, RegexOptions.Multiline);
+
+            // Links: [text](url) → text
+            text = Regex.Replace(text, @"\[(.+?)\]\(.+?\)", "$1");
+
+            // Images: ![alt](url) → alt
+            text = Regex.Replace(text, @"!\[(.+?)\]\(.+?\)", "$1");
+
+            // Collapse 3+ consecutive blank lines to 2
+            text = Regex.Replace(text, @"\n{3,}", "\n\n");
+
+            return text.Trim();
         }
 
         // ─────────────────────────────────────────────────────────
@@ -435,6 +510,15 @@ namespace CraftConnect_Mobile_App.PageModels
         [ObservableProperty] private bool _isFromUser;
         [ObservableProperty] private bool _isFromAi;
         [ObservableProperty] private bool _isTyping;
+        [ObservableProperty] private bool _isVoiceMessage;
+        [ObservableProperty] private string _voiceDuration = string.Empty;
+
+        /// <summary>
+        /// Local file path for the recorded audio so the play button can
+        /// stream it back. Populated when the voice bubble is first added.
+        /// </summary>
+        [ObservableProperty] private string _audioFilePath = string.Empty;
+
         [ObservableProperty] private DateTime _timestamp;
         [ObservableProperty] private bool _hasAttachment;
         [ObservableProperty] private string _attachmentName = string.Empty;
@@ -442,6 +526,12 @@ namespace CraftConnect_Mobile_App.PageModels
 
         public string DisplayTime => Timestamp.ToString("HH:mm");
         public LayoutOptions AttachmentAlignment => IsFromUser ? LayoutOptions.End : LayoutOptions.Start;
+
+        /// <summary>
+        /// True for AI messages that are real text (not the typing placeholder).
+        /// Used in XAML to hide/show the regular text bubble vs typing dots.
+        /// </summary>
+        public bool IsRegularAiMessage => IsFromAi && !IsTyping && !IsVoiceMessage;
     }
 
     public partial class AttachedFileViewModel : ObservableObject

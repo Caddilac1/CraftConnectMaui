@@ -146,23 +146,19 @@
                                                          MaximumWidthRequest="290"
                                                          Spacing="0">
 
-                                        <!--
-                                            Sender label — ONLY visible on real messages.
-                                            Hidden while IsTyping=true so the dots bubble
-                                            appears alone, just like WhatsApp.
-                                        -->
+                                        <!-- Sender label — hidden during typing -->
                                         <Label Text="CraftConnect Support"
                                                FontSize="13" FontAttributes="Bold"
                                                TextColor="#075E54"
                                                Margin="12,4,12,0"
                                                IsVisible="{Binding IsTyping, Converter={StaticResource InvertedBoolConverter}}"/>
 
-                                        <!-- Real message bubble — hidden while typing -->
+                                        <!-- Regular text bubble — hidden while typing -->
                                         <Border BackgroundColor="White"
                                                 StrokeThickness="0"
                                                 Padding="10,6,10,6"
                                                 Margin="0,2,0,2"
-                                                IsVisible="{Binding IsTyping, Converter={StaticResource InvertedBoolConverter}}">
+                                                IsVisible="{Binding IsRegularAiMessage}">
                                             <Border.StrokeShape>
                                                 <RoundRectangle CornerRadius="0,8,8,8"/>
                                             </Border.StrokeShape>
@@ -176,12 +172,7 @@
                                             </VerticalStackLayout>
                                         </Border>
 
-                                        <!--
-                                            Typing dots bubble — visible ONLY while IsTyping=true.
-                                            No sender name above it (controlled by label above).
-                                            The animated wave runs on page-level TypingDot1/2/3
-                                            via the code-behind. These are static placeholders.
-                                        -->
+                                        <!-- Typing dots bubble -->
                                         <Border IsVisible="{Binding IsTyping}"
                                                 BackgroundColor="White"
                                                 StrokeThickness="0"
@@ -210,10 +201,13 @@
                                                          HorizontalOptions="End"
                                                          MaximumWidthRequest="290"
                                                          Spacing="0">
+
+                                        <!-- Regular text bubble -->
                                         <Border BackgroundColor="#DCF8C6"
                                                 StrokeThickness="0"
                                                 Padding="10,6,10,6"
-                                                Margin="0,2,0,2">
+                                                Margin="0,2,0,2"
+                                                IsVisible="{Binding IsVoiceMessage, Converter={StaticResource InvertedBoolConverter}}">
                                             <Border.StrokeShape>
                                                 <RoundRectangle CornerRadius="8,0,8,8"/>
                                             </Border.StrokeShape>
@@ -226,9 +220,119 @@
                                                     <Label Text="{Binding DisplayTime}"
                                                            FontSize="11" TextColor="#667781"
                                                            VerticalOptions="Center"/>
+                                                    <!-- Double tick for user messages -->
+                                                    <Label Text="&#xe5ca;" FontFamily="MaterialIcons"
+                                                           FontSize="14" TextColor="#53BDEB"
+                                                           VerticalOptions="Center"/>
                                                 </HorizontalStackLayout>
                                             </VerticalStackLayout>
                                         </Border>
+
+                                        <!-- ── Voice message bubble (user, right side) ── -->
+                                        <Border BackgroundColor="#DCF8C6"
+                                                StrokeThickness="0"
+                                                Padding="10,8,10,6"
+                                                Margin="0,2,0,2"
+                                                IsVisible="{Binding IsVoiceMessage}">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="8,0,8,8"/>
+                                            </Border.StrokeShape>
+                                            <Grid ColumnDefinitions="Auto,Auto,*,Auto"
+                                                  ColumnSpacing="8"
+                                                  RowDefinitions="Auto,Auto">
+
+                                                <!-- Avatar with mic badge -->
+                                                <Grid Grid.Column="0" Grid.RowSpan="2"
+                                                      WidthRequest="42" HeightRequest="42"
+                                                      VerticalOptions="Center">
+                                                    <Border WidthRequest="42" HeightRequest="42"
+                                                            BackgroundColor="#128C7E" StrokeThickness="0">
+                                                        <Border.StrokeShape>
+                                                            <RoundRectangle CornerRadius="21"/>
+                                                        </Border.StrokeShape>
+                                                        <Label Text="CC" FontSize="14" FontAttributes="Bold"
+                                                               TextColor="White"
+                                                               HorizontalOptions="Center" VerticalOptions="Center"/>
+                                                    </Border>
+                                                    <!-- Mic badge -->
+                                                    <Border WidthRequest="18" HeightRequest="18"
+                                                            BackgroundColor="#25D366" StrokeThickness="1.5"
+                                                            HorizontalOptions="End" VerticalOptions="End">
+                                                        <Border.Stroke>
+                                                            <SolidColorBrush Color="#DCF8C6"/>
+                                                        </Border.Stroke>
+                                                        <Border.StrokeShape>
+                                                            <RoundRectangle CornerRadius="9"/>
+                                                        </Border.StrokeShape>
+                                                        <Label Text="&#xe029;" FontFamily="MaterialIcons"
+                                                               FontSize="10" TextColor="White"
+                                                               HorizontalOptions="Center" VerticalOptions="Center"/>
+                                                    </Border>
+                                                </Grid>
+
+                                                <!-- Play button — wired to PlayVoiceCommand on the page model -->
+                                                <Border Grid.Column="1" Grid.RowSpan="2"
+                                                        WidthRequest="36" HeightRequest="36"
+                                                        BackgroundColor="Transparent" StrokeThickness="0"
+                                                        VerticalOptions="Center">
+                                                    <Border.GestureRecognizers>
+                                                        <TapGestureRecognizer
+                                                            Command="{Binding Source={RelativeSource AncestorType={x:Type pagemodels:AiFeedChatPageModel}}, Path=PlayVoiceCommand}"
+                                                            CommandParameter="{Binding AudioFilePath}"/>
+                                                    </Border.GestureRecognizers>
+                                                    <Label Text="&#xe037;" FontFamily="MaterialIcons"
+                                                           FontSize="30" TextColor="#075E54"
+                                                           HorizontalOptions="Center" VerticalOptions="Center"/>
+                                                </Border>
+
+                                                <!-- Waveform bars — all uniform grey (unplayed at-rest state) -->
+                                                <HorizontalStackLayout Grid.Column="2" Grid.Row="0"
+                                                                        Spacing="2" VerticalOptions="Center"
+                                                                        HeightRequest="28">
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="8"  VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="14" VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="20" VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="10" VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="24" VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="16" VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="28" VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="12" VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="20" VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="18" VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="10" VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="22" VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="8"  VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="16" VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="26" VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="12" VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="20" VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="8"  VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="14" VerticalOptions="Center" CornerRadius="1.25"/>
+                                                    <BoxView BackgroundColor="#BCC8C5" WidthRequest="2.5" HeightRequest="10" VerticalOptions="Center" CornerRadius="1.25"/>
+                                                </HorizontalStackLayout>
+
+                                                <!-- Duration -->
+                                                <HorizontalStackLayout Grid.Column="2" Grid.Row="1"
+                                                                        Spacing="4" VerticalOptions="Center">
+                                                    <Label Text="{Binding VoiceDuration}"
+                                                           FontSize="11" TextColor="#667781"
+                                                           VerticalOptions="Center"/>
+                                                </HorizontalStackLayout>
+
+                                                <!-- Timestamp + ticks -->
+                                                <HorizontalStackLayout Grid.Column="3" Grid.RowSpan="2"
+                                                                        Spacing="2" VerticalOptions="End">
+                                                    <Label Text="{Binding DisplayTime}"
+                                                           FontSize="11" TextColor="#667781"
+                                                           VerticalOptions="Center"/>
+                                                    <Label Text="&#xe5ca;" FontFamily="MaterialIcons"
+                                                           FontSize="14" TextColor="#53BDEB"
+                                                           VerticalOptions="Center"/>
+                                                </HorizontalStackLayout>
+
+                                            </Grid>
+                                        </Border>
+
                                     </VerticalStackLayout>
 
                                     <!-- ── File attachment preview ───────────────── -->
@@ -359,6 +463,7 @@
                                 MinimumHeightRequest="28"
                                 MaximumHeightRequest="100"/>
 
+                        <!-- Attachment icon — only when text box is empty -->
                         <Border Grid.Column="2"
                                 BackgroundColor="Transparent" StrokeThickness="0"
                                 WidthRequest="38" HeightRequest="38"
@@ -374,6 +479,7 @@
                     </Grid>
                 </Border>
 
+                <!-- Send / Mic / Stop button -->
                 <Border x:Name="SendMicButton"
                         Grid.Column="1"
                         WidthRequest="48" HeightRequest="48"
@@ -386,15 +492,18 @@
                         <TapGestureRecognizer Tapped="OnSendMicTapped"/>
                     </Border.GestureRecognizers>
                     <Grid>
+                        <!-- Mic icon: text empty AND not recording -->
                         <Label Text="&#xe029;" FontFamily="MaterialIcons" FontSize="24"
                                TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"
                                IsVisible="{Binding ShowMicIcon}"/>
+                        <!-- Stop icon: recording in progress -->
                         <Label Text="&#xe047;" FontFamily="MaterialIcons" FontSize="24"
                                TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"
                                IsVisible="{Binding IsRecording}"/>
+                        <!-- Send icon: text is present (not recording) -->
                         <Label Text="&#xe163;" FontFamily="MaterialIcons" FontSize="24"
                                TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"
-                               IsVisible="{Binding MessageText, Converter={StaticResource StringNotEmptyConverter}}"/>
+                               IsVisible="{Binding ShowSendIcon}"/>
                     </Grid>
                 </Border>
             </Grid>
