@@ -55,6 +55,9 @@ namespace CraftConnect_Mobile_App.Services
 
     public interface IChatSignalRService
     {
+        // Connection state
+        event EventHandler<bool> ConnectionStateChanged;
+
         // Group chat events
         event EventHandler<MessageReceivedEventArgs> MessageReceived;
         event EventHandler<TypingEventArgs> UserTyping;
@@ -68,8 +71,9 @@ namespace CraftConnect_Mobile_App.Services
         event EventHandler<PrivateMessageNotificationEventArgs> PrivateMessageNotification;
 
         bool IsConnected { get; }
+        bool IsConnecting { get; }
 
-        Task ConnectAsync();
+        Task ConnectAsync(CancellationToken cancellationToken = default);
         Task DisconnectAsync();
 
         // Group chat
