@@ -1,33 +1,31 @@
 using Microsoft.Maui.Controls;
 using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text.Json;
 using System.Threading.Tasks;
 using CraftConnect_Mobile_App.Services;
 
 namespace CraftConnect_Mobile_App.Pages
 {
     /// <summary>
-    /// Read-only profile card. Fetches fresh data from GET api/ProfilesApi/MyProfile.
-    /// Displays role-specific sections:
+    /// Read-only profile card. Uses IProfileApiService to fetch data from
+    /// GET api/ProfilesApi/MyProfile. Displays role-specific sections:
     ///   - All roles  : hero card (photo, name, role badge, email, bio, location)
-    ///   - Artisan    : stats strip + business card (business name, specialization, rate, availability, services)
+    ///   - Artisan    : stats strip + business card
     ///   - Customer / Admin : personal info card (address, city/country)
     /// </summary>
     [QueryProperty(nameof(Role), "Role")]
     public partial class MyProfilePage : ContentPage
     {
-        private readonly AuthService _authService;
+        private readonly IProfileApiService _profileService;
         private readonly ApiConfig _apiConfig;
 
         public string Role { get; set; } = "Customer";
 
-        public MyProfilePage(AuthService authService, ApiConfig apiConfig)
+        public MyProfilePage(IProfileApiService profileService, ApiConfig apiConfig)
         {
             InitializeComponent();
-            _authService = authService;
+            _profileService = profileService;
             _apiConfig = apiConfig;
         }
 
@@ -48,39 +46,30 @@ namespace CraftConnect_Mobile_App.Pages
                 ProfileCard.IsVisible = false;
                 EditProfileButton.IsVisible = false;
 
-                var token = await _authService.GetTokenAsync();
-                using var client = new HttpClient();
-                client.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", token);
+                var profile = await _profileService.GetMyProfileAsync();
 
-                var url = $"{_apiConfig.BaseUrl.TrimEnd('/')}/api/ProfilesApi/MyProfile";
-                var response = await client.GetAsync(url);
-
-                if (!response.IsSuccessStatusCode)
+                if (profile == null)
                 {
                     await DisplayAlert("Error", "Could not load profile.", "OK");
                     return;
                 }
 
-                var json = await response.Content.ReadAsStringAsync();
-                var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-
-                PopulateHeroCard(root);
+                PopulateHeroCard(profile);
 
                 var role = (Role ?? "customer").ToLower();
 
                 if (role == "artisan")
-                {
-                    PopulateArtisanCards(root);
-                }
+                    PopulateArtisanCards(profile);
                 else
-                {
-                    PopulatePersonalInfoCard(root);
-                }
+                    PopulatePersonalInfoCard(profile);
 
                 ProfileCard.IsVisible = true;
                 EditProfileButton.IsVisible = true;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                await DisplayAlert("Session Expired", "Please log in again.", "OK");
+                await Shell.Current.GoToAsync("//LoginPage");
             }
             catch (Exception ex)
             {
@@ -96,19 +85,17 @@ namespace CraftConnect_Mobile_App.Pages
 
         // ── Hero card ─────────────────────────────────────────────────
 
-        private void PopulateHeroCard(JsonElement root)
+        private void PopulateHeroCard(MobileProfileDetails profile)
         {
-            var userProfile = root.TryGetProperty("userProfile", out var up) ? (JsonElement?)up : null;
+            var fullName = profile.UserProfile?.FullName;
+            var email = profile.Email;
+            var phone = profile.PhoneNumber;
+            var bio = profile.UserProfile?.Bio;
+            var city = profile.UserProfile?.City;
+            var country = profile.UserProfile?.Country;
+            var photoUrl = profile.UserProfile?.ProfilePictureUrl;
 
-            var fullName = userProfile?.TryGetProperty("fullName", out var fn) == true ? fn.GetString() : null;
-            var email    = root.TryGetProperty("email", out var em) ? em.GetString() : null;
-            var phone    = root.TryGetProperty("phoneNumber", out var ph) ? ph.GetString() : null;
-            var bio      = userProfile?.TryGetProperty("bio", out var b) == true ? b.GetString() : null;
-            var city     = userProfile?.TryGetProperty("city", out var c) == true ? c.GetString() : null;
-            var country  = userProfile?.TryGetProperty("country", out var co) == true ? co.GetString() : null;
-            var photoUrl = userProfile?.TryGetProperty("profilePictureUrl", out var pic) == true ? pic.GetString() : null;
-
-            ProfileNameLabel.Text  = fullName ?? "User";
+            ProfileNameLabel.Text = fullName ?? "User";
             ProfileEmailLabel.Text = email ?? "";
             ProfileInitialsLabel.Text = GetInitials(fullName);
 
@@ -117,31 +104,28 @@ namespace CraftConnect_Mobile_App.Pages
             RoleBadgeLabel.Text = role switch
             {
                 "artisan" => "Artisan",
-                "admin"   => "Admin",
-                _         => "Customer"
+                "admin" => "Admin",
+                _ => "Customer"
             };
             RoleBadgeFrame.BackgroundColor = role switch
             {
                 "artisan" => Color.FromArgb("#2DC98E"),
-                "admin"   => Color.FromArgb("#8B5CF6"),
-                _         => Color.FromArgb("#2E6FD8")
+                "admin" => Color.FromArgb("#8B5CF6"),
+                _ => Color.FromArgb("#2E6FD8")
             };
 
-            // Phone
             if (!string.IsNullOrWhiteSpace(phone))
             {
                 ProfilePhoneLabel.Text = phone;
                 ProfilePhoneLabel.IsVisible = true;
             }
 
-            // Bio
             if (!string.IsNullOrWhiteSpace(bio))
             {
                 ProfileBioLabel.Text = bio;
                 ProfileBioLabel.IsVisible = true;
             }
 
-            // Location
             var locationParts = new[] { city, country }
                 .Where(s => !string.IsNullOrWhiteSpace(s));
             var location = string.Join(", ", locationParts);
@@ -151,7 +135,6 @@ namespace CraftConnect_Mobile_App.Pages
                 LocationRow.IsVisible = true;
             }
 
-            // Avatar photo
             if (!string.IsNullOrWhiteSpace(photoUrl))
                 TryLoadPhoto(photoUrl);
             else
@@ -160,60 +143,53 @@ namespace CraftConnect_Mobile_App.Pages
 
         // ── Artisan cards ─────────────────────────────────────────────
 
-        private void PopulateArtisanCards(JsonElement root)
+        private void PopulateArtisanCards(MobileProfileDetails profile)
         {
-            if (!root.TryGetProperty("artisanProfile", out var ap) ||
-                ap.ValueKind == JsonValueKind.Null)
-                return;
+            var ap = profile.ArtisanProfile;
+            if (ap == null) return;
 
             // Stats strip
-            var rating   = ap.TryGetProperty("averageRating", out var r)   ? r.GetDecimal() : 0m;
-            var projects = ap.TryGetProperty("completedProjects", out var p) ? p.GetInt32()  : 0;
-            var years    = ap.TryGetProperty("yearsOfExperience", out var y) ? y.GetInt32()  : 0;
-
-            StatRatingLabel.Text    = rating > 0 ? $"{rating:F1}⭐" : "—";
-            StatProjectsLabel.Text  = projects.ToString();
-            StatExperienceLabel.Text = years > 0 ? years.ToString() : "—";
+            StatRatingLabel.Text = "—";   // averageRating not in MobileArtisanProfile yet; extend if needed
+            StatProjectsLabel.Text = "—";   // completedProjects not in MobileArtisanProfile yet
+            StatExperienceLabel.Text = ap.YearsOfExperience > 0 ? ap.YearsOfExperience.ToString() : "—";
             ArtisanStatsCard.IsVisible = true;
 
             // Business card
-            BusinessNameLabel.Text   = ap.TryGetProperty("businessName",   out var bn) ? bn.GetString() ?? "" : "";
-            SpecializationLabel.Text = ap.TryGetProperty("specialization",  out var sp) ? sp.GetString() ?? "" : "";
+            BusinessNameLabel.Text = ap.BusinessName ?? "";
+            SpecializationLabel.Text = ap.Specialization ?? "";
 
-            if (ap.TryGetProperty("hourlyRate", out var hr) && hr.ValueKind != JsonValueKind.Null)
+            if (ap.HourlyRate.HasValue)
             {
-                HourlyRateLabel.Text = $"GH₵ {hr.GetDecimal():F0} / hr";
+                HourlyRateLabel.Text = $"GH₵ {ap.HourlyRate.Value:F0} / hr";
                 HourlyRateRow.IsVisible = true;
             }
 
-            var availability = ap.TryGetProperty("availabilityStatus", out var avs) ? avs.GetString() : "UNAVAILABLE";
-            AvailabilityLabel.Text = availability?.ToUpper() switch
+            var avStatus = ap.AvailabilityStatus?.ToUpper();
+            AvailabilityLabel.Text = avStatus switch
             {
-                "AVAILABLE"   => "Available",
-                "BUSY"        => "Busy",
-                _             => "Unavailable"
+                "AVAILABLE" => "Available",
+                "BUSY" => "Busy",
+                _ => "Unavailable"
             };
-            AvailabilityBadge.BackgroundColor = availability?.ToUpper() switch
+            AvailabilityBadge.BackgroundColor = avStatus switch
             {
                 "AVAILABLE" => Color.FromArgb("#10B981"),
-                "BUSY"      => Color.FromArgb("#F59E0B"),
-                _           => Color.FromArgb("#EF4444")
+                "BUSY" => Color.FromArgb("#F59E0B"),
+                _ => Color.FromArgb("#EF4444")
             };
 
-            var about = ap.TryGetProperty("about", out var abt) ? abt.GetString() : null;
-            if (!string.IsNullOrWhiteSpace(about))
+            if (!string.IsNullOrWhiteSpace(ap.About))
             {
-                AboutLabel.Text = about;
+                AboutLabel.Text = ap.About;
                 AboutSection.IsVisible = true;
             }
 
-            var services = ap.TryGetProperty("servicesOffered", out var svc) ? svc.GetString() : null;
-            if (!string.IsNullOrWhiteSpace(services))
+            if (!string.IsNullOrWhiteSpace(ap.ServicesOffered))
             {
                 ServicesLayout.Children.Clear();
-                foreach (var service in services.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                foreach (var service in ap.ServicesOffered.Split(',', StringSplitOptions.RemoveEmptyEntries))
                 {
-                    var chip = new Frame
+                    ServicesLayout.Children.Add(new Frame
                     {
                         BackgroundColor = Color.FromArgb("#EBF3FB"),
                         CornerRadius = 8,
@@ -226,8 +202,7 @@ namespace CraftConnect_Mobile_App.Pages
                             FontSize = 12,
                             TextColor = Color.FromArgb("#2E6FD8")
                         }
-                    };
-                    ServicesLayout.Children.Add(chip);
+                    });
                 }
                 ServicesSection.IsVisible = true;
             }
@@ -237,26 +212,21 @@ namespace CraftConnect_Mobile_App.Pages
 
         // ── Personal info card (Customer / Admin) ─────────────────────
 
-        private void PopulatePersonalInfoCard(JsonElement root)
+        private void PopulatePersonalInfoCard(MobileProfileDetails profile)
         {
-            var userProfile = root.TryGetProperty("userProfile", out var up) ? (JsonElement?)up : null;
-            if (userProfile == null) return;
-
-            var address = userProfile?.TryGetProperty("address", out var a) == true ? a.GetString() : null;
-            var city    = userProfile?.TryGetProperty("city",    out var c) == true ? c.GetString() : null;
-            var state   = userProfile?.TryGetProperty("state",   out var s) == true ? s.GetString() : null;
-            var country = userProfile?.TryGetProperty("country", out var co) == true ? co.GetString() : null;
+            var up = profile.UserProfile;
+            if (up == null) return;
 
             bool hasAny = false;
 
-            if (!string.IsNullOrWhiteSpace(address))
+            if (!string.IsNullOrWhiteSpace(up.Address))
             {
-                AddressLabel.Text = address;
+                AddressLabel.Text = up.Address;
                 AddressRow.IsVisible = true;
                 hasAny = true;
             }
 
-            var cityParts = new[] { city, state, country }
+            var cityParts = new[] { up.City, up.State, up.Country }
                 .Where(x => !string.IsNullOrWhiteSpace(x));
             var cityStr = string.Join(", ", cityParts);
             if (!string.IsNullOrWhiteSpace(cityStr))
@@ -286,6 +256,7 @@ namespace CraftConnect_Mobile_App.Pages
                     var fullUrl = $"{_apiConfig.BaseUrl.TrimEnd('/')}/{path.TrimStart('/')}";
                     source = ImageSource.FromUri(new Uri(fullUrl));
                 }
+
                 ProfilePhoto.Source = source;
                 ProfilePhotoFrame.IsVisible = true;
                 ProfileInitialsFrame.IsVisible = false;

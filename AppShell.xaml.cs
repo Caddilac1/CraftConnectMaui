@@ -49,6 +49,10 @@ namespace CraftConnect_Mobile_App
             Routing.RegisterRoute("CreateInvoicePage", typeof(CreateInvoicePage));
             Routing.RegisterRoute("ReviewInvoicePage", typeof(ReviewInvoicePage));
 
+            // ── Profile ────────────────────────────────────────────────
+            // Must use nameof so SettingsPage.OnMyProfileClicked resolves correctly
+            Routing.RegisterRoute(nameof(MyProfilePage), typeof(MyProfilePage));
+
             this.Navigated += AppShell_Navigated;
         }
 

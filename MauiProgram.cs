@@ -181,6 +181,9 @@ namespace CraftConnect_Mobile_App
             builder.Services.AddTransient<PaymentMethodsPage>();
             builder.Services.AddTransient<HelpSupportPage>();
 
+            // ── MyProfilePage (registered here so DI injects IProfileApiService) ──
+            builder.Services.AddTransient<MyProfilePage>();
+
 #if DEBUG
             builder.Logging.AddDebug();
 #endif
