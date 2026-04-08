@@ -12,18 +12,27 @@ namespace CraftConnect_Mobile_App.PageModels
     [QueryProperty(nameof(ConversationId), nameof(ConversationId))]
     [QueryProperty(nameof(OtherUserName), nameof(OtherUserName))]
     [QueryProperty(nameof(OtherUserId), nameof(OtherUserId))]
-    // Set when arriving via "Reply Privately" from a group chat
+    // Populated when arriving via "Reply Privately" from a group chat
     [QueryProperty(nameof(QuotedGroupSender), nameof(QuotedGroupSender))]
     [QueryProperty(nameof(QuotedGroupMessage), nameof(QuotedGroupMessage))]
     [QueryProperty(nameof(QuotedGroupMessageId), nameof(QuotedGroupMessageId))]
-    // Source group info — needed so the quote banner can navigate back
     [QueryProperty(nameof(SourceGroupId), nameof(SourceGroupId))]
     [QueryProperty(nameof(SourceGroupName), nameof(SourceGroupName))]
     public class PrivateChatPageModel : INotifyPropertyChanged
     {
+        // ── Dependencies ──────────────────────────────────────────────────────
+
         private readonly IPrivateChatService _dmService;
         private readonly AuthService _authService;
         private readonly IChatSignalRService _signalR;
+
+        // ── Storage key prefixes ──────────────────────────────────────────────
+
+        private const string PinnedKeyPrefix = "dm_pinned_";
+        private const string DeletedKeyPrefix = "dm_deleted_forme_";
+        private string MessagesKey => $"dm_{ConversationId}";
+
+        // ── Private state ─────────────────────────────────────────────────────
 
         private string _conversationId = string.Empty;
         private string _otherUserName = string.Empty;
@@ -43,17 +52,32 @@ namespace CraftConnect_Mobile_App.PageModels
         private string _replyingToMessage = string.Empty;
         private PrivateMessageItemViewModel? _replyTarget;
 
-        // Temp message tracking
-        private readonly HashSet<Guid> _tempIds = new();
+        // Selection mode
+        private bool _isSelectionMode;
+
+        // Highlight
+        private Guid? _highlightedMessageId;
+
+        // Persisted sets
+        private HashSet<Guid> _pinnedIds = new();
         private HashSet<Guid> _deletedForMeIds = new();
-        private const string DeletedPrefix = "dm_deleted_forme_";
+
+        // Temporary optimistic IDs awaiting server confirmation
+        private readonly HashSet<Guid> _tempIds = new();
+
+        // ── Public collections ────────────────────────────────────────────────
 
         public ObservableCollection<PrivateMessageItemViewModel> Messages { get; } = new();
+        public ObservableCollection<PrivateMessageItemViewModel> SelectedMessages { get; } = new();
+
+        // ── Commands ──────────────────────────────────────────────────────────
 
         public Command SendMessageCommand { get; }
         public Command LoadMessagesCommand { get; }
 
         public event PropertyChangedEventHandler? PropertyChanged;
+
+        // ── Constructor ───────────────────────────────────────────────────────
 
         public PrivateChatPageModel(
             IPrivateChatService dmService,
@@ -68,14 +92,12 @@ namespace CraftConnect_Mobile_App.PageModels
                 async () => await SendMessageAsync(),
                 () => !string.IsNullOrWhiteSpace(MessageText) && !IsBusy);
 
-            LoadMessagesCommand = new Command(async () => await LoadMessages());
+            LoadMessagesCommand = new Command(async () => await LoadMessagesAsync());
 
-            _signalR.PrivateMessageReceived += OnPrivateMessageReceived;
-            _signalR.PrivateMessageDeleted += OnPrivateMessageDeleted;
-            _signalR.Reconnected += OnReconnected;
+            SubscribeToSignalR();
         }
 
-        // ── Query properties ──────────────────────────────────────────────
+        // ── Query properties ──────────────────────────────────────────────────
 
         public string ConversationId
         {
@@ -95,20 +117,14 @@ namespace CraftConnect_Mobile_App.PageModels
             set { _otherUserId = Uri.UnescapeDataString(value); OnPropertyChanged(); }
         }
 
-        // Prequoted message from "Reply Privately" in group chat
+        // Cross-chat quote query params (cleared after first send)
         public string? QuotedGroupSender { get; set; }
         public string? QuotedGroupMessage { get; set; }
-
-        /// <summary>Id of the specific group message that was quoted.</summary>
         public string? QuotedGroupMessageId { get; set; }
-
-        /// <summary>GroupId of the group chat the quote came from.</summary>
         public string? SourceGroupId { get; set; }
-
-        /// <summary>Display name of the source group.</summary>
         public string? SourceGroupName { get; set; }
 
-        // ── Bindable properties ───────────────────────────────────────────
+        // ── Bindable properties ───────────────────────────────────────────────
 
         public string MessageText
         {
@@ -124,8 +140,15 @@ namespace CraftConnect_Mobile_App.PageModels
         public bool IsBusy
         {
             get => _isBusy;
-            set { _isBusy = value; OnPropertyChanged(); ((Command)SendMessageCommand).ChangeCanExecute(); }
+            set
+            {
+                _isBusy = value;
+                OnPropertyChanged();
+                ((Command)SendMessageCommand).ChangeCanExecute();
+            }
         }
+
+        // ── Context menu ──────────────────────────────────────────────────────
 
         public bool IsContextMenuVisible
         {
@@ -138,6 +161,16 @@ namespace CraftConnect_Mobile_App.PageModels
             get => _selectedMessage;
             private set { _selectedMessage = value; OnPropertyChanged(); }
         }
+
+        public void OpenContextMenu(PrivateMessageItemViewModel msg)
+        {
+            SelectedMessage = msg;
+            IsContextMenuVisible = true;
+        }
+
+        public void CloseContextMenu() => IsContextMenuVisible = false;
+
+        // ── Reply ─────────────────────────────────────────────────────────────
 
         public bool IsReplying
         {
@@ -157,19 +190,14 @@ namespace CraftConnect_Mobile_App.PageModels
             private set { _replyingToMessage = value; OnPropertyChanged(); }
         }
 
-        // ── Context menu ──────────────────────────────────────────────────
-
-        public void OpenContextMenu(PrivateMessageItemViewModel msg)
-        {
-            SelectedMessage = msg;
-            IsContextMenuVisible = true;
-        }
-
-        public void CloseContextMenu() => IsContextMenuVisible = false;
-
+        /// <summary>
+        /// Activates the reply banner for the currently selected message.
+        /// The selected message becomes the embedded reply reference on send.
+        /// </summary>
         public void ReplyToSelected()
         {
-            if (SelectedMessage == null) return;
+            if (SelectedMessage is null) return;
+
             _replyTarget = SelectedMessage;
             ReplyingToSender = SelectedMessage.DisplayName;
             ReplyingToMessage = SelectedMessage.Message ?? "📎 Attachment";
@@ -178,63 +206,222 @@ namespace CraftConnect_Mobile_App.PageModels
 
         public void CancelReply()
         {
-            IsReplying = false;
             _replyTarget = null;
             ReplyingToSender = string.Empty;
             ReplyingToMessage = string.Empty;
+            IsReplying = false;
         }
 
-        // ── Init ──────────────────────────────────────────────────────────
+        // ── Pin ───────────────────────────────────────────────────────────────
+
+        public void TogglePin(PrivateMessageItemViewModel msg)
+        {
+            if (msg.IsPinned)
+            {
+                _pinnedIds.Remove(msg.Id);
+                msg.SetPinned(false);
+            }
+            else
+            {
+                _pinnedIds.Add(msg.Id);
+                msg.SetPinned(true);
+            }
+
+            _ = Task.Run(PersistPinnedIdsAsync);
+        }
+
+        // ── Selection mode ────────────────────────────────────────────────────
+
+        public bool IsSelectionMode
+        {
+            get => _isSelectionMode;
+            private set { _isSelectionMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(SelectionCountText)); }
+        }
+
+        public string SelectionCountText =>
+            SelectedMessages.Count == 0 ? "Select messages" : $"{SelectedMessages.Count} selected";
+
+        public void EnterSelectionMode(PrivateMessageItemViewModel firstMsg)
+        {
+            SelectedMessages.Clear();
+            firstMsg.SetSelected(true);
+            SelectedMessages.Add(firstMsg);
+            IsSelectionMode = true;
+            OnPropertyChanged(nameof(SelectionCountText));
+        }
+
+        public void ToggleMessageSelection(PrivateMessageItemViewModel msg)
+        {
+            if (SelectedMessages.Contains(msg))
+            {
+                msg.SetSelected(false);
+                SelectedMessages.Remove(msg);
+            }
+            else
+            {
+                msg.SetSelected(true);
+                SelectedMessages.Add(msg);
+            }
+
+            OnPropertyChanged(nameof(SelectionCountText));
+
+            if (SelectedMessages.Count == 0)
+                CancelSelectionMode();
+        }
+
+        public void CancelSelectionMode()
+        {
+            foreach (var m in SelectedMessages)
+                m.SetSelected(false);
+
+            SelectedMessages.Clear();
+            IsSelectionMode = false;
+        }
+
+        public void StarSelectedMessages()
+        {
+            foreach (var m in SelectedMessages.Where(m => !m.IsStarred))
+                m.ToggleStar();
+        }
+
+        // ── Highlight ─────────────────────────────────────────────────────────
+
+        public void HighlightMessage(PrivateMessageItemViewModel msg)
+        {
+            // Clear previous highlight
+            if (_highlightedMessageId.HasValue)
+            {
+                Messages.FirstOrDefault(m => m.Id == _highlightedMessageId.Value)
+                        ?.SetHighlighted(false);
+            }
+
+            _highlightedMessageId = msg.Id;
+            msg.SetHighlighted(true);
+
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(1500);
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    msg.SetHighlighted(false);
+                    _highlightedMessageId = null;
+                });
+            });
+        }
+
+        // ── Lifecycle ─────────────────────────────────────────────────────────
 
         public async Task InitializeAsync()
         {
             await LoadCurrentUserAsync();
             await LoadDeletedIdsAsync();
+            await LoadPinnedIdsAsync();
 
-            // PENDING_ prefix: no real conversation ID yet.
             if (ConversationId.StartsWith("PENDING_", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var (realId, name) = await _dmService.OpenConversationAsync(OtherUserId);
-                    ConversationId = realId;
-                    if (string.IsNullOrEmpty(OtherUserName)) OtherUserName = name;
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[DM MODEL] OpenConversation failed: {ex.Message}");
-                    await Application.Current!.MainPage!.DisplayAlert(
-                        "Error", "Could not open private chat.", "OK");
-                    await Shell.Current.GoToAsync("..");
-                    return;
-                }
-            }
+                await ResolvePendingConversationAsync();
 
-            await LoadCachedMessages();
+            await LoadCachedMessagesAsync();
             await ConnectAndJoinAsync();
-            _ = Task.Run(async () => await LoadMessages());
+            _ = Task.Run(LoadMessagesAsync);
 
-            // Pre-fill reply bar if arriving via "Reply Privately"
+            // Pre-fill reply banner when arriving via "Reply Privately" from a group chat
             if (!string.IsNullOrEmpty(QuotedGroupSender) && !string.IsNullOrEmpty(QuotedGroupMessage))
             {
                 ReplyingToSender = QuotedGroupSender;
                 ReplyingToMessage = QuotedGroupMessage;
                 IsReplying = true;
+                // _replyTarget intentionally stays null: this is a cross-chat quote,
+                // not a reply to a message within this DM conversation.
             }
+        }
+
+        public async Task CleanupAsync()
+        {
+            UnsubscribeFromSignalR();
+
+            if (_signalR.IsConnected)
+                await _signalR.LeavePrivateConversationAsync(ConversationId);
+        }
+
+        // ── Delete ────────────────────────────────────────────────────────────
+
+        public async Task DeleteForSelfAsync(PrivateMessageItemViewModel msg)
+        {
+            _deletedForMeIds.Add(msg.Id);
+            _pinnedIds.Remove(msg.Id);
+            Messages.Remove(msg);
+
+            await Task.WhenAll(
+                PersistDeletedIdsAsync(),
+                PersistPinnedIdsAsync(),
+                PersistMessagesAsync());
+        }
+
+        public async Task DeleteForEveryoneAsync(PrivateMessageItemViewModel msg)
+        {
+            if (_signalR.IsConnected)
+            {
+                try
+                {
+                    await _signalR.DeletePrivateMessageAsync(ConversationId, msg.Id.ToString());
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[DM MODEL] Delete broadcast: {ex.Message}");
+                }
+            }
+
+            await _dmService.DeleteForEveryoneAsync(msg.Id.ToString());
+            await DeleteForSelfAsync(msg);
+        }
+
+        // ── Private helpers ───────────────────────────────────────────────────
+
+        private void SubscribeToSignalR()
+        {
+            _signalR.PrivateMessageReceived += OnPrivateMessageReceived;
+            _signalR.PrivateMessageDeleted += OnPrivateMessageDeleted;
+            _signalR.Reconnected += OnReconnected;
+        }
+
+        private void UnsubscribeFromSignalR()
+        {
+            _signalR.PrivateMessageReceived -= OnPrivateMessageReceived;
+            _signalR.PrivateMessageDeleted -= OnPrivateMessageDeleted;
+            _signalR.Reconnected -= OnReconnected;
         }
 
         private async Task LoadCurrentUserAsync()
         {
             var token = await _authService.GetTokenAsync();
             if (string.IsNullOrEmpty(token)) return;
+
             var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
             _currentUserId = jwt.Claims
-                .FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub || c.Type == "sub")
+                .FirstOrDefault(c => c.Type is JwtRegisteredClaimNames.Sub or "sub")
                 ?.Value ?? string.Empty;
-            var email = jwt.Claims
-                .FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Email || c.Type == "email")
+
+            _currentUserName = jwt.Claims
+                .FirstOrDefault(c => c.Type is JwtRegisteredClaimNames.Email or "email")
                 ?.Value ?? string.Empty;
-            _currentUserName = email;
+        }
+
+        private async Task ResolvePendingConversationAsync()
+        {
+            try
+            {
+                var (realId, name) = await _dmService.OpenConversationAsync(OtherUserId);
+                ConversationId = realId;
+                if (string.IsNullOrEmpty(OtherUserName)) OtherUserName = name;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DM MODEL] OpenConversation failed: {ex.Message}");
+                await Application.Current!.MainPage!.DisplayAlert(
+                    "Error", "Could not open private chat.", "OK");
+                await Shell.Current.GoToAsync("..");
+            }
         }
 
         private async Task ConnectAndJoinAsync()
@@ -242,7 +429,7 @@ namespace CraftConnect_Mobile_App.PageModels
             if (!_signalR.IsConnected)
                 await _signalR.ConnectAsync();
 
-            for (int i = 0; i < 5; i++)
+            for (int attempt = 0; attempt < 5; attempt++)
             {
                 if (_signalR.IsConnected)
                 {
@@ -253,63 +440,57 @@ namespace CraftConnect_Mobile_App.PageModels
             }
         }
 
-        public async Task CleanupAsync()
-        {
-            _signalR.PrivateMessageReceived -= OnPrivateMessageReceived;
-            _signalR.PrivateMessageDeleted -= OnPrivateMessageDeleted;
-            _signalR.Reconnected -= OnReconnected;
-
-            if (_signalR.IsConnected)
-                await _signalR.LeavePrivateConversationAsync(ConversationId);
-        }
-
         private async void OnReconnected(object? sender, string connectionId)
         {
             try { await _signalR.JoinPrivateConversationAsync(ConversationId); }
             catch (Exception ex) { Debug.WriteLine($"[DM MODEL] Re-join: {ex.Message}"); }
         }
 
-        // ── Message loading ───────────────────────────────────────────────
+        // ── Message loading ───────────────────────────────────────────────────
 
-        private async Task LoadCachedMessages()
+        private async Task LoadCachedMessagesAsync()
         {
             try
             {
-                var json = await SecureStorage.GetAsync($"dm_{ConversationId}");
+                var json = await SecureStorage.GetAsync(MessagesKey);
                 if (string.IsNullOrEmpty(json)) return;
+
                 var cached = JsonSerializer.Deserialize<List<PrivateMessageItem>>(json);
-                if (cached == null) return;
+                if (cached is null) return;
+
                 Messages.Clear();
-                foreach (var m in cached.OrderBy(m => m.SentAt))
+                foreach (var item in cached.OrderBy(m => m.SentAt))
                 {
-                    if (_deletedForMeIds.Contains(m.Id)) continue;
-                    Messages.Add(new PrivateMessageItemViewModel(m, _currentUserId));
+                    if (_deletedForMeIds.Contains(item.Id)) continue;
+                    var vm = BuildViewModel(item);
+                    Messages.Add(vm);
                 }
             }
-            catch (Exception ex) { Debug.WriteLine($"[DM MODEL] Cache: {ex.Message}"); }
+            catch (Exception ex) { Debug.WriteLine($"[DM MODEL] Cache load: {ex.Message}"); }
         }
 
-        private async Task LoadMessages()
+        private async Task LoadMessagesAsync()
         {
             if (string.IsNullOrEmpty(ConversationId)) return;
+
             try
             {
                 IsBusy = true;
-                var messages = await _dmService.GetMessagesAsync(ConversationId);
-                var filtered = messages
-                    .Where(m => !_deletedForMeIds.Contains(m.Id))
-                    .ToList();
 
-                await SecureStorage.SetAsync($"dm_{ConversationId}", JsonSerializer.Serialize(filtered));
+                var messages = await _dmService.GetMessagesAsync(ConversationId);
+                var filtered = messages.Where(m => !_deletedForMeIds.Contains(m.Id)).ToList();
+
+                await SecureStorage.SetAsync(MessagesKey, JsonSerializer.Serialize(filtered));
 
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
-                    var existing = Messages.Select(m => m.Id).ToHashSet();
-                    foreach (var m in filtered
-                        .Where(m => !existing.Contains(m.Id))
+                    var existingIds = Messages.Select(m => m.Id).ToHashSet();
+
+                    foreach (var item in filtered
+                        .Where(m => !existingIds.Contains(m.Id))
                         .OrderBy(m => m.SentAt))
                     {
-                        Messages.Add(new PrivateMessageItemViewModel(m, _currentUserId));
+                        Messages.Add(BuildViewModel(item));
                     }
                 });
             }
@@ -317,7 +498,7 @@ namespace CraftConnect_Mobile_App.PageModels
             finally { IsBusy = false; }
         }
 
-        // ── Send ──────────────────────────────────────────────────────────
+        // ── Send ──────────────────────────────────────────────────────────────
 
         private async Task SendMessageAsync()
         {
@@ -325,15 +506,16 @@ namespace CraftConnect_Mobile_App.PageModels
 
             var text = MessageText.Trim();
             var tempId = Guid.NewGuid();
-            PrivateMessageItemViewModel? tempVm = null;
-
-            // Capture the current reply/quote state before clearing it
-            var quotedSender = IsReplying && _replyTarget == null ? QuotedGroupSender : null;
-            var quotedMsg = IsReplying && _replyTarget == null ? QuotedGroupMessage : null;
-            var quotedMsgId = IsReplying && _replyTarget == null
-                ? (Guid.TryParse(QuotedGroupMessageId, out var qid) ? qid : (Guid?)null)
-                : null;
             var replyTarget = _replyTarget;
+
+            // Cross-chat group quote applies only when there's no DM reply target
+            var isCrossChatQuote = IsReplying && replyTarget is null;
+            var quotedSender = isCrossChatQuote ? QuotedGroupSender : null;
+            var quotedMsg = isCrossChatQuote ? QuotedGroupMessage : null;
+            var quotedMsgId = isCrossChatQuote && Guid.TryParse(QuotedGroupMessageId, out var qid)
+                                    ? qid : (Guid?)null;
+
+            PrivateMessageItemViewModel? tempVm = null;
 
             try
             {
@@ -346,20 +528,24 @@ namespace CraftConnect_Mobile_App.PageModels
                     Message = text,
                     SentAt = DateTime.UtcNow,
                     IsPending = true,
+                    // DM reply fields
+                    ReplyToMessageId = replyTarget?.Id,
+                    ReplyToSenderName = replyTarget?.DisplayName,
+                    ReplyToText = replyTarget?.Message,
+                    // Cross-chat group quote fields
                     QuotedGroupSender = quotedSender,
                     QuotedGroupMessage = quotedMsg,
                     QuotedGroupMessageId = quotedMsgId,
                     SourceGroupId = SourceGroupId,
-                    ReplyToMessageId = replyTarget?.Id
                 };
 
                 _tempIds.Add(tempId);
-                tempVm = new PrivateMessageItemViewModel(tempItem, _currentUserId);
+                tempVm = BuildViewModel(tempItem);
                 Messages.Add(tempVm);
 
+                // Clear input and reply state immediately for responsive UX
                 MessageText = string.Empty;
                 CancelReply();
-                // Clear the "Reply Privately" quote after first send
                 QuotedGroupSender = null;
                 QuotedGroupMessage = null;
                 QuotedGroupMessageId = null;
@@ -370,7 +556,7 @@ namespace CraftConnect_Mobile_App.PageModels
                     quotedGroupSender: quotedSender,
                     quotedGroupMessage: quotedMsg);
 
-                if (!ok || realId == null)
+                if (!ok || realId is null)
                     throw new Exception("Server rejected the message.");
 
                 await _signalR.SendPrivateMessageAsync(
@@ -386,13 +572,14 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 Debug.WriteLine($"[DM MODEL] Send: {ex.Message}");
                 _tempIds.Remove(tempId);
-                if (tempVm != null) Messages.Remove(tempVm);
+                if (tempVm is not null) Messages.Remove(tempVm);
                 MessageText = text;
+
                 await Application.Current!.MainPage!.DisplayAlert("Error", ex.Message, "OK");
             }
         }
 
-        // ── Receive ───────────────────────────────────────────────────────
+        // ── SignalR handlers ──────────────────────────────────────────────────
 
         private void OnPrivateMessageReceived(object? sender, PrivateMessageReceivedEventArgs e)
         {
@@ -404,19 +591,21 @@ namespace CraftConnect_Mobile_App.PageModels
                 if (Messages.Any(m => m.Id == id)) return;
                 if (_deletedForMeIds.Contains(id)) return;
 
+                // Remove the matching optimistic placeholder for own messages
                 if (e.SenderId == _currentUserId)
                 {
-                    var temps = Messages
+                    var stale = Messages
                         .Where(m => _tempIds.Contains(m.Id) && m.Message == e.Message)
                         .ToList();
-                    foreach (var t in temps)
+
+                    foreach (var t in stale)
                     {
                         _tempIds.Remove(t.Id);
                         Messages.Remove(t);
                     }
                 }
 
-                Messages.Add(new PrivateMessageItemViewModel(new PrivateMessageItem
+                var item = new PrivateMessageItem
                 {
                     Id = id,
                     ConversationId = e.ConversationId,
@@ -431,12 +620,12 @@ namespace CraftConnect_Mobile_App.PageModels
                     MediaType = e.MediaType ?? "none",
                     QuotedGroupSender = e.QuotedGroupSender,
                     QuotedGroupMessage = e.QuotedGroupMessage,
-                    // SourceGroupId comes from the model's current context if present
                     SourceGroupId = SourceGroupId,
                     IsSent = true,
-                    IsDelivered = true
-                }, _currentUserId));
+                    IsDelivered = true,
+                };
 
+                Messages.Add(BuildViewModel(item));
                 _ = Task.Run(PersistMessagesAsync);
             });
         }
@@ -446,40 +635,28 @@ namespace CraftConnect_Mobile_App.PageModels
             MainThread.BeginInvokeOnMainThread(async () =>
             {
                 if (!Guid.TryParse(messageId, out var id)) return;
+
                 var msg = Messages.FirstOrDefault(m => m.Id == id);
-                if (msg != null) await DeleteForSelfAsync(msg);
+                if (msg is not null) await DeleteForSelfAsync(msg);
             });
         }
 
-        // ── Delete ────────────────────────────────────────────────────────
+        // ── ViewModel factory ─────────────────────────────────────────────────
 
-        public async Task DeleteForSelfAsync(PrivateMessageItemViewModel msg)
+        private PrivateMessageItemViewModel BuildViewModel(PrivateMessageItem item)
         {
-            _deletedForMeIds.Add(msg.Id);
-            Messages.Remove(msg);
-            await PersistDeletedIdsAsync();
-            await PersistMessagesAsync();
+            var vm = new PrivateMessageItemViewModel(item, _currentUserId);
+            if (_pinnedIds.Contains(item.Id)) vm.SetPinned(true);
+            return vm;
         }
 
-        public async Task DeleteForEveryoneAsync(PrivateMessageItemViewModel msg)
-        {
-            if (_signalR.IsConnected)
-            {
-                try { await _signalR.DeletePrivateMessageAsync(ConversationId, msg.Id.ToString()); }
-                catch (Exception ex) { Debug.WriteLine($"[DM MODEL] Delete broadcast: {ex.Message}"); }
-            }
-
-            await _dmService.DeleteForEveryoneAsync(msg.Id.ToString());
-            await DeleteForSelfAsync(msg);
-        }
-
-        // ── Persistence ───────────────────────────────────────────────────
+        // ── Persistence ───────────────────────────────────────────────────────
 
         private async Task PersistMessagesAsync()
         {
             try
             {
-                var all = Messages
+                var snapshots = Messages
                     .Where(m => !_deletedForMeIds.Contains(m.Id))
                     .Select(m => new PrivateMessageItem
                     {
@@ -498,29 +675,63 @@ namespace CraftConnect_Mobile_App.PageModels
                         QuotedGroupMessage = m.QuotedGroupMessage,
                         QuotedGroupMessageId = m.QuotedGroupMessageId,
                         SourceGroupId = m.SourceGroupId,
+                        ReplyToMessageId = m.ReplyToId,
+                        ReplyToSenderName = m.ReplyToSenderName,
+                        ReplyToText = m.ReplyToText,
                         IsSent = m.IsSent,
-                        IsDelivered = m.IsDelivered
-                    }).ToList();
+                        IsDelivered = m.IsDelivered,
+                    })
+                    .ToList();
 
-                await SecureStorage.SetAsync($"dm_{ConversationId}", JsonSerializer.Serialize(all));
+                await SecureStorage.SetAsync(MessagesKey, JsonSerializer.Serialize(snapshots));
             }
-            catch (Exception ex) { Debug.WriteLine($"[DM MODEL] Persist: {ex.Message}"); }
+            catch (Exception ex) { Debug.WriteLine($"[DM MODEL] Persist messages: {ex.Message}"); }
+        }
+
+        private async Task LoadPinnedIdsAsync()
+        {
+            try
+            {
+                var json = await SecureStorage.GetAsync($"{PinnedKeyPrefix}{ConversationId}");
+                if (string.IsNullOrEmpty(json)) return;
+
+                var ids = JsonSerializer.Deserialize<List<string>>(json);
+                if (ids is null) return;
+
+                _pinnedIds = ids
+                    .Where(s => Guid.TryParse(s, out _))
+                    .Select(Guid.Parse)
+                    .ToHashSet();
+            }
+            catch (Exception ex) { Debug.WriteLine($"[DM MODEL] Load pinned: {ex.Message}"); }
+        }
+
+        private async Task PersistPinnedIdsAsync()
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(_pinnedIds.Select(id => id.ToString()).ToList());
+                await SecureStorage.SetAsync($"{PinnedKeyPrefix}{ConversationId}", json);
+            }
+            catch (Exception ex) { Debug.WriteLine($"[DM MODEL] Persist pinned: {ex.Message}"); }
         }
 
         private async Task LoadDeletedIdsAsync()
         {
             try
             {
-                var json = await SecureStorage.GetAsync($"{DeletedPrefix}{ConversationId}");
+                var json = await SecureStorage.GetAsync($"{DeletedKeyPrefix}{ConversationId}");
                 if (string.IsNullOrEmpty(json)) return;
+
                 var ids = JsonSerializer.Deserialize<List<string>>(json);
-                if (ids == null) return;
+                if (ids is null) return;
+
                 _deletedForMeIds = ids
                     .Where(s => Guid.TryParse(s, out _))
                     .Select(Guid.Parse)
                     .ToHashSet();
             }
-            catch { }
+            catch { /* non-critical – start with empty set */ }
         }
 
         private async Task PersistDeletedIdsAsync()
@@ -529,25 +740,22 @@ namespace CraftConnect_Mobile_App.PageModels
             {
                 var json = JsonSerializer.Serialize(
                     _deletedForMeIds.Select(id => id.ToString()).ToList());
-                await SecureStorage.SetAsync($"{DeletedPrefix}{ConversationId}", json);
+                await SecureStorage.SetAsync($"{DeletedKeyPrefix}{ConversationId}", json);
             }
-            catch { }
+            catch { /* non-critical */ }
         }
+
+        // ── INotifyPropertyChanged ────────────────────────────────────────────
 
         protected void OnPropertyChanged([CallerMemberName] string? name = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-        ~PrivateChatPageModel()
-        {
-            _signalR.PrivateMessageReceived -= OnPrivateMessageReceived;
-            _signalR.PrivateMessageDeleted -= OnPrivateMessageDeleted;
-            _signalR.Reconnected -= OnReconnected;
-        }
+        ~PrivateChatPageModel() => UnsubscribeFromSignalR();
     }
 
-    // ═══════════════════════════════════════════════════════════════════
+    // ═════════════════════════════════════════════════════════════════════════
     // PrivateMessageItemViewModel
-    // ═══════════════════════════════════════════════════════════════════
+    // ═════════════════════════════════════════════════════════════════════════
 
     public class PrivateMessageItemViewModel : INotifyPropertyChanged
     {
@@ -558,6 +766,9 @@ namespace CraftConnect_Mobile_App.PageModels
         private bool _isDownloading;
         private string _localFilePath = string.Empty;
         private bool _isStarred;
+        private bool _isPinned;
+        private bool _isSelected;
+        private bool _isHighlighted;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -566,6 +777,8 @@ namespace CraftConnect_Mobile_App.PageModels
             _msg = msg;
             _currentUserId = currentUserId;
         }
+
+        // ── Identity ──────────────────────────────────────────────────────────
 
         public Guid Id => _msg.Id;
         public Guid SenderId => _msg.SenderId;
@@ -589,39 +802,62 @@ namespace CraftConnect_Mobile_App.PageModels
         public bool HasMessageText => !string.IsNullOrWhiteSpace(_msg.Message);
 
         public string StatusIcon =>
-            _msg.IsPending ? "⏳" : _msg.IsDelivered ? "✓✓" : _msg.IsSent ? "✓" : "";
+            _msg.IsPending ? "⏳" :
+            _msg.IsDelivered ? "✓✓" :
+            _msg.IsSent ? "✓" : string.Empty;
 
         public string DisplayTime
         {
             get
             {
                 var diff = DateTime.Now - SentAt;
-                if (diff.TotalMinutes < 1) return "Just now";
-                if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m ago";
-                if (diff.TotalDays < 1) return SentAt.ToString("h:mm tt");
-                if (diff.TotalDays < 2) return $"Yesterday {SentAt:h:mm tt}";
-                return SentAt.ToString("MMM d, h:mm tt");
+                return diff switch
+                {
+                    { TotalMinutes: < 1 } => "Just now",
+                    { TotalHours: < 1 } => $"{(int)diff.TotalMinutes}m ago",
+                    { TotalDays: < 1 } => SentAt.ToString("h:mm tt"),
+                    { TotalDays: < 2 } => $"Yesterday {SentAt:h:mm tt}",
+                    _ => SentAt.ToString("MMM d, h:mm tt"),
+                };
             }
         }
 
-        // Attachment
+        // ── DM reply ──────────────────────────────────────────────────────────
+
+        public bool HasReply => _msg.ReplyToMessageId.HasValue && !string.IsNullOrEmpty(_msg.ReplyToText);
+        public Guid? ReplyToId => _msg.ReplyToMessageId;
+        public string? ReplyToSenderName => _msg.ReplyToSenderName;
+        public string? ReplyToText => _msg.ReplyToText;
+
+        // ── Cross-chat group quote ────────────────────────────────────────────
+
+        public bool HasGroupQuote => !string.IsNullOrEmpty(_msg.QuotedGroupSender) || !string.IsNullOrEmpty(_msg.QuotedGroupMessage);
+        public string? QuotedGroupSender => _msg.QuotedGroupSender;
+        public string? QuotedGroupMessage => _msg.QuotedGroupMessage;
+        public Guid? QuotedGroupMessageId => _msg.QuotedGroupMessageId;
+        public string? SourceGroupId => _msg.SourceGroupId;
+
+        // ── Attachment ────────────────────────────────────────────────────────
+
         public bool HasAttachment => _msg.HasAttachment && !string.IsNullOrEmpty(_msg.AttachmentUrl);
         public string AttachmentUrl => _msg.AttachmentUrl ?? string.Empty;
         public string? AttachmentName => _msg.AttachmentName;
         public string? AttachmentSize => _msg.AttachmentSize;
         public string? AttachmentType => _msg.AttachmentType;
         public string MediaType => _msg.MediaType;
+
         public bool IsDownloaded => _isDownloaded;
         public bool IsDownloading => _isDownloading;
         public string LocalFilePath => _localFilePath;
 
-        public bool IsImageAttachment =>
-            HasAttachment && (MediaType == "image" ||
-                new[] { "jpg", "jpeg", "png", "gif", "webp" }
-                    .Contains(AttachmentType?.TrimStart('.').ToLower()));
+        private static readonly HashSet<string> ImageExtensions =
+            new(StringComparer.OrdinalIgnoreCase) { "jpg", "jpeg", "png", "gif", "webp" };
 
-        public bool IsDocumentAttachment =>
-            HasAttachment && !IsImageAttachment;
+        public bool IsImageAttachment =>
+            HasAttachment &&
+            (MediaType == "image" || ImageExtensions.Contains(AttachmentType?.TrimStart('.') ?? string.Empty));
+
+        public bool IsDocumentAttachment => HasAttachment && !IsImageAttachment;
 
         public void MarkAsDownloading()
         {
@@ -643,43 +879,55 @@ namespace CraftConnect_Mobile_App.PageModels
             Notify(nameof(IsDownloading));
         }
 
-        // Reply
-        public bool HasReply => !string.IsNullOrEmpty(_msg.ReplyToMessageId?.ToString());
-        public Guid? ReplyToId => _msg.ReplyToMessageId;
+        // ── Star ──────────────────────────────────────────────────────────────
 
-        // Group quote (Reply Privately)
-        public bool HasGroupQuote =>
-            !string.IsNullOrEmpty(_msg.QuotedGroupSender) ||
-            !string.IsNullOrEmpty(_msg.QuotedGroupMessage);
-        public string? QuotedGroupSender => _msg.QuotedGroupSender;
-        public string? QuotedGroupMessage => _msg.QuotedGroupMessage;
-
-        /// <summary>
-        /// The specific group message ID that was quoted. Used by the page to pass
-        /// ScrollToMessageId back to ChatPage when the user taps the quote banner.
-        /// </summary>
-        public Guid? QuotedGroupMessageId => _msg.QuotedGroupMessageId;
-
-        /// <summary>
-        /// GroupId of the source group chat. Stored so navigating back works even
-        /// after the message has been cached and the query params are gone.
-        /// </summary>
-        public string? SourceGroupId => _msg.SourceGroupId;
-
-        // Star
         public bool IsStarred => _isStarred;
+        public string StarIcon => _isStarred ? "\ue838" : "\ue83a";
         public string StarLabel => _isStarred ? "Unstar" : "Star";
 
         public void ToggleStar()
         {
             _isStarred = !_isStarred;
-            Notify(nameof(IsStarred), nameof(StarLabel));
+            Notify(nameof(IsStarred), nameof(StarIcon), nameof(StarLabel));
         }
+
+        // ── Pin ───────────────────────────────────────────────────────────────
+
+        public bool IsPinned => _isPinned;
+        public string PinLabel => _isPinned ? "Unpin" : "Pin";
+
+        public void SetPinned(bool pinned)
+        {
+            _isPinned = pinned;
+            Notify(nameof(IsPinned), nameof(PinLabel));
+        }
+
+        // ── Selection ─────────────────────────────────────────────────────────
+
+        public bool IsSelected => _isSelected;
+
+        public void SetSelected(bool selected)
+        {
+            _isSelected = selected;
+            Notify(nameof(IsSelected));
+        }
+
+        // ── Highlight ─────────────────────────────────────────────────────────
+
+        public bool IsHighlighted => _isHighlighted;
+
+        public void SetHighlighted(bool highlighted)
+        {
+            _isHighlighted = highlighted;
+            Notify(nameof(IsHighlighted));
+        }
+
+        // ── INotifyPropertyChanged ────────────────────────────────────────────
 
         private void Notify(params string[] names)
         {
-            foreach (var n in names)
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+            foreach (var name in names)
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }

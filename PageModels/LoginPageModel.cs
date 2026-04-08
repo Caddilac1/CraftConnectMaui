@@ -48,7 +48,7 @@ namespace CraftConnect_Mobile_App.PageModels
 
             ForgotPasswordCommand = new Command(async () => await Shell.Current.GoToAsync("ForgotPasswordPage"));
             RefreshCaptchaCommand = new Command(async () => await LoadCaptchaAsync());
-            TestConnectionCommand = new Command(async () => await _authService.TestConnectionAsync());
+            
 
             // Social stubs — wire up real providers as needed
             LoginWithGoogleCommand = new Command(() => Debug.WriteLine("[SOCIAL] Google"));
@@ -176,7 +176,7 @@ namespace CraftConnect_Mobile_App.PageModels
         public ICommand NavigateToSignUpCommand { get; }
         public ICommand ForgotPasswordCommand { get; }
         public ICommand RefreshCaptchaCommand { get; }
-        public ICommand TestConnectionCommand { get; }
+        
         public ICommand LoginWithGoogleCommand { get; }
         public ICommand LoginWithFacebookCommand { get; }
         public ICommand LoginWithAppleCommand { get; }

@@ -1,5 +1,6 @@
 using CraftConnect_Mobile_App.PageModels;
 using CraftConnect_Mobile_App.Services;
+using Microsoft.Maui.Controls.Shapes;
 using System.Diagnostics;
 
 namespace CraftConnect_Mobile_App.Pages
@@ -9,8 +10,6 @@ namespace CraftConnect_Mobile_App.Pages
         private readonly PrivateChatPageModel _viewModel;
 
         // ── Long-press via PanGestureRecognizer ───────────────────────────
-        // PanUpdated fires on touch-DOWN (Started) immediately — giving us
-        // reliable 500 ms long-press without waiting for touch-UP.
         private CancellationTokenSource? _longPressCts;
         private PrivateMessageItemViewModel? _pendingLongPress;
         private const int LongPressMs = 500;
@@ -42,21 +41,28 @@ namespace CraftConnect_Mobile_App.Pages
         {
             base.OnDisappearing();
             _longPressCts?.Cancel();
+            _viewModel.CancelSelectionMode();
             try { await _viewModel.CleanupAsync(); }
             catch { }
         }
 
         // ── Long-press via PanGestureRecognizer ───────────────────────────
-        //
-        // GestureStatus.Started fires on the very first touch contact — before
-        // any movement. Timer starts there. If finger moves significantly
-        // (scroll intent) the timer is cancelled. If held for 500 ms, context
-        // menu opens while finger is still down.
 
         private void OnMessagePanUpdated(object sender, PanUpdatedEventArgs e)
         {
-            var msg = (sender as Element)?.BindingContext as PrivateMessageItemViewModel;
-            if (msg == null) return;
+            // In selection mode, tapping toggles selection instead of long-press menu
+            if (_viewModel.IsSelectionMode)
+            {
+                if (e.StatusType == GestureStatus.Started)
+                {
+                    var msg = (sender as Element)?.BindingContext as PrivateMessageItemViewModel;
+                    if (msg != null) _viewModel.ToggleMessageSelection(msg);
+                }
+                return;
+            }
+
+            var message = (sender as Element)?.BindingContext as PrivateMessageItemViewModel;
+            if (message == null) return;
 
             switch (e.StatusType)
             {
@@ -64,7 +70,7 @@ namespace CraftConnect_Mobile_App.Pages
                     if ((DateTime.UtcNow - _lastContextOpen).TotalMilliseconds < ContextCooldownMs)
                         return;
 
-                    if (_viewModel.IsContextMenuVisible && _viewModel.SelectedMessage == msg)
+                    if (_viewModel.IsContextMenuVisible && _viewModel.SelectedMessage == message)
                     {
                         _viewModel.CloseContextMenu();
                         return;
@@ -72,7 +78,7 @@ namespace CraftConnect_Mobile_App.Pages
 
                     _longPressCts?.Cancel();
                     _longPressCts = new CancellationTokenSource();
-                    _pendingLongPress = msg;
+                    _pendingLongPress = message;
                     var token = _longPressCts.Token;
 
                     Task.Run(async () =>
@@ -82,11 +88,11 @@ namespace CraftConnect_Mobile_App.Pages
                             await Task.Delay(LongPressMs, token);
                             MainThread.BeginInvokeOnMainThread(() =>
                             {
-                                if (!token.IsCancellationRequested && _pendingLongPress == msg)
+                                if (!token.IsCancellationRequested && _pendingLongPress == message)
                                 {
                                     _lastContextOpen = DateTime.UtcNow;
                                     _pendingLongPress = null;
-                                    _viewModel.OpenContextMenu(msg);
+                                    _viewModel.OpenContextMenu(message);
                                 }
                             });
                         }
@@ -95,7 +101,6 @@ namespace CraftConnect_Mobile_App.Pages
                     break;
 
                 case GestureStatus.Running:
-                    // Cancel if the user is actually scrolling
                     if (Math.Abs(e.TotalX) > 8 || Math.Abs(e.TotalY) > 8)
                     {
                         _longPressCts?.Cancel();
@@ -111,46 +116,24 @@ namespace CraftConnect_Mobile_App.Pages
             }
         }
 
-        // ── Group quote banner tap → navigate back to group chat ──────────
+        // ── Reply preview tap → scroll to original message ────────────────
 
-        private async void OnGroupQuoteTapped(object sender, TappedEventArgs e)
+        private void OnReplyPreviewTapped(object sender, TappedEventArgs e)
         {
             PrivateMessageItemViewModel? msg = null;
             if (e.Parameter is PrivateMessageItemViewModel pvm) msg = pvm;
             else if (sender is Element el) msg = el.BindingContext as PrivateMessageItemViewModel;
 
-            if (msg == null || !msg.HasGroupQuote) return;
+            if (msg?.ReplyToId == null) return;
 
-            // If we don't have a source group to navigate back to, just go back
-            if (string.IsNullOrEmpty(_viewModel.SourceGroupId))
-            {
-                await Shell.Current.GoToAsync("..");
-                return;
-            }
+            var original = _viewModel.Messages.FirstOrDefault(m => m.Id == msg.ReplyToId);
+            if (original == null) return;
 
-            try
-            {
-                // Build navigation query. ScrollToMessageId tells ChatPage which
-                // message to scroll to and highlight.
-                var queryParams = $"?GroupId={Uri.EscapeDataString(_viewModel.SourceGroupId)}" +
-                                  $"&GroupName={Uri.EscapeDataString(_viewModel.SourceGroupName ?? string.Empty)}";
-
-                if (msg.QuotedGroupMessageId.HasValue)
-                    queryParams += $"&ScrollToMessageId={Uri.EscapeDataString(msg.QuotedGroupMessageId.Value.ToString())}";
-
-                // Go back to the group chat page. Using ".." navigates back in the
-                // shell stack; if the group chat is still in the stack it will reuse it.
-                // We pass the scroll param via GoToAsync so OnAppearing can pick it up.
-                await Shell.Current.GoToAsync($"..{queryParams}");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DM PAGE] GroupQuoteTapped: {ex.Message}");
-                await Shell.Current.GoToAsync("..");
-            }
+            MessagesCollectionView.ScrollTo(original, position: ScrollToPosition.Center, animate: true);
+            _viewModel.HighlightMessage(original);
         }
 
-        // ── Input actions ─────────────────────────────────────────────────
+        // ── Input ─────────────────────────────────────────────────────────
 
         private void OnSendTapped(object sender, EventArgs e)
         {
@@ -160,6 +143,21 @@ namespace CraftConnect_Mobile_App.Pages
 
         private void OnCancelReplyTapped(object sender, EventArgs e) =>
             _viewModel.CancelReply();
+
+        private async void OnAttachmentButtonTapped(object sender, EventArgs e)
+        {
+            try
+            {
+                var result = await FilePicker.PickAsync(new PickOptions
+                {
+                    PickerTitle = "Select a file",
+                    FileTypes = FilePickerFileType.Images
+                });
+                if (result != null)
+                    await DisplayAlert("Coming Soon", "File upload coming soon!", "OK");
+            }
+            catch (Exception ex) { Debug.WriteLine($"[DM PAGE] FilePick: {ex.Message}"); }
+        }
 
         // ── Context menu ──────────────────────────────────────────────────
 
@@ -174,17 +172,37 @@ namespace CraftConnect_Mobile_App.Pages
             MessageEditor?.Focus();
         }
 
+        private async void OnContextForwardTapped(object sender, EventArgs e)
+        {
+            var msg = _viewModel.SelectedMessage;
+            _viewModel.CloseContextMenu();
+            if (msg == null) return;
+            // Forward stub — wire to real forwarding logic when ready
+            await DisplayAlert("Forward Message",
+                $"Forward to another chat — coming soon!\n\n\"{Truncate(msg.Message, 60)}\"", "OK");
+        }
+
         private async void OnContextCopyTapped(object sender, EventArgs e)
         {
             var text = _viewModel.SelectedMessage?.Message;
             _viewModel.CloseContextMenu();
             if (string.IsNullOrEmpty(text))
             {
-                await DisplayAlert("Nothing to Copy", "No text to copy.", "OK");
+                await DisplayAlert("Nothing to Copy", "This message has no text content.", "OK");
                 return;
             }
             await Clipboard.SetTextAsync(text);
-            await ShowToastAsync("Copied");
+            _ = ShowToastAsync("Message copied");
+        }
+
+        private async void OnContextPinTapped(object sender, EventArgs e)
+        {
+            var msg = _viewModel.SelectedMessage;
+            _viewModel.CloseContextMenu();
+            if (msg == null) return;
+
+            _viewModel.TogglePin(msg);
+            _ = ShowToastAsync(msg.IsPinned ? "Message pinned 📌" : "Message unpinned");
         }
 
         private async void OnContextStarTapped(object sender, EventArgs e)
@@ -193,7 +211,15 @@ namespace CraftConnect_Mobile_App.Pages
             _viewModel.CloseContextMenu();
             if (msg == null) return;
             msg.ToggleStar();
-            await ShowToastAsync(msg.IsStarred ? "Starred ⭐" : "Star removed");
+            _ = ShowToastAsync(msg.IsStarred ? "Message starred ⭐" : "Star removed");
+        }
+
+        private void OnContextSelectTapped(object sender, EventArgs e)
+        {
+            var msg = _viewModel.SelectedMessage;
+            _viewModel.CloseContextMenu();
+            if (msg == null) return;
+            _viewModel.EnterSelectionMode(msg);
         }
 
         private async void OnContextDeleteTapped(object sender, EventArgs e)
@@ -219,11 +245,58 @@ namespace CraftConnect_Mobile_App.Pages
             {
                 case "Delete for Me":
                     await _viewModel.DeleteForSelfAsync(msg);
-                    await ShowToastAsync("Message deleted");
+                    _ = ShowToastAsync("Message deleted");
                     break;
                 case "Delete for Everyone":
                     await _viewModel.DeleteForEveryoneAsync(msg);
-                    await ShowToastAsync("Deleted for everyone");
+                    _ = ShowToastAsync("Deleted for everyone");
+                    break;
+            }
+        }
+
+        // ── Selection mode toolbar ────────────────────────────────────────
+
+        private void OnCancelSelectionTapped(object sender, EventArgs e) =>
+            _viewModel.CancelSelectionMode();
+
+        private async void OnForwardSelectedTapped(object sender, EventArgs e)
+        {
+            var count = _viewModel.SelectedMessages.Count;
+            _viewModel.CancelSelectionMode();
+            await DisplayAlert("Forward", $"{count} message(s) — forward coming soon!", "OK");
+        }
+
+        private async void OnStarSelectedTapped(object sender, EventArgs e)
+        {
+            _viewModel.StarSelectedMessages();
+            var count = _viewModel.SelectedMessages.Count;
+            _viewModel.CancelSelectionMode();
+            _ = ShowToastAsync($"{count} message(s) starred ⭐");
+        }
+
+        private async void OnDeleteSelectedTapped(object sender, EventArgs e)
+        {
+            var count = _viewModel.SelectedMessages.Count;
+            if (count == 0) return;
+
+            var action = await DisplayActionSheet(
+                $"Delete {count} message(s)?", "Cancel", null,
+                "Delete for Everyone", "Delete for Me");
+
+            var messages = _viewModel.SelectedMessages.ToList();
+            _viewModel.CancelSelectionMode();
+
+            switch (action)
+            {
+                case "Delete for Me":
+                    foreach (var m in messages)
+                        await _viewModel.DeleteForSelfAsync(m);
+                    _ = ShowToastAsync($"{count} message(s) deleted");
+                    break;
+                case "Delete for Everyone":
+                    foreach (var m in messages)
+                        await _viewModel.DeleteForEveryoneAsync(m);
+                    _ = ShowToastAsync($"{count} message(s) deleted for everyone");
                     break;
             }
         }
@@ -232,6 +305,11 @@ namespace CraftConnect_Mobile_App.Pages
 
         private async void OnBackTapped(object sender, EventArgs e)
         {
+            if (_viewModel.IsSelectionMode)
+            {
+                _viewModel.CancelSelectionMode();
+                return;
+            }
             await Shell.Current.GoToAsync("..");
         }
 
@@ -250,7 +328,7 @@ namespace CraftConnect_Mobile_App.Pages
                     VerticalOptions = LayoutOptions.End,
                     Margin = new Thickness(0, 0, 0, 80),
                     ZIndex = 200,
-                    StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 20 },
+                    StrokeShape = new RoundRectangle { CornerRadius = 20 },
                     Content = new Label
                     {
                         Text = message,
@@ -271,5 +349,10 @@ namespace CraftConnect_Mobile_App.Pages
             }
             catch { }
         }
+
+        private static string Truncate(string? s, int max) =>
+            string.IsNullOrEmpty(s) ? string.Empty
+            : s.Length <= max ? s
+            : s[..max] + "…";
     }
 }
