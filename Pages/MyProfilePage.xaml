@@ -6,9 +6,11 @@
              Shell.NavBarIsVisible="False"
              BackgroundColor="#F0F4F8">
 
-    <Grid RowDefinitions="Auto,*,Auto">
+    <Grid RowDefinitions="Auto,*">
 
-        <!-- ── Top bar ── -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- TOP BAR                                                    -->
+        <!-- ══════════════════════════════════════════════════════════ -->
         <Grid Grid.Row="0" BackgroundColor="#1B2B3A" Padding="16,52,16,16"
               ColumnDefinitions="Auto,*,Auto">
             <ImageButton Grid.Column="0" Source="chevron_left.png"
@@ -24,216 +26,492 @@
                          Clicked="OnEditClicked"/>
         </Grid>
 
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- SCROLLABLE BODY                                            -->
+        <!-- ══════════════════════════════════════════════════════════ -->
         <ScrollView Grid.Row="1">
-            <VerticalStackLayout Spacing="16" Padding="16,20,16,30">
+            <VerticalStackLayout Spacing="16" Padding="16,20,16,36">
 
-                <!-- Loading indicator -->
+                <!-- ── Loading indicator ── -->
                 <ActivityIndicator x:Name="PageLoadingIndicator"
                                    IsRunning="True" IsVisible="True"
                                    Color="#2E6FD8" HorizontalOptions="Center"
-                                   Margin="0,40,0,0"/>
+                                   Margin="0,60,0,0"/>
 
-                <!-- ── Profile Hero Card ── -->
-                <Frame x:Name="ProfileCard" BackgroundColor="White" CornerRadius="16"
-                       Padding="24" HasShadow="False" BorderColor="#E8EDF2"
+                <!-- ── Error / empty state ── -->
+                <VerticalStackLayout x:Name="ErrorState" IsVisible="False"
+                                     Spacing="12" HorizontalOptions="Center"
+                                     Margin="0,60,0,0">
+                    <Label Text="😕" FontSize="48" HorizontalOptions="Center"/>
+                    <Label x:Name="ErrorLabel" Text="Could not load profile."
+                           FontSize="16" TextColor="#5A7184"
+                           HorizontalOptions="Center"
+                           HorizontalTextAlignment="Center"/>
+                    <Button Text="Retry" BackgroundColor="#2E6FD8"
+                            TextColor="White" CornerRadius="10"
+                            Padding="24,10" HorizontalOptions="Center"
+                            Clicked="OnRetryClicked"/>
+                </VerticalStackLayout>
+
+                <!-- ════════════════════════════════════════════════ -->
+                <!-- HERO CARD — all roles                            -->
+                <!-- ════════════════════════════════════════════════ -->
+                <Frame x:Name="ProfileCard" BackgroundColor="White"
+                       CornerRadius="20" Padding="24,28"
+                       HasShadow="False" BorderColor="#E8EDF2"
                        IsVisible="False">
-                    <VerticalStackLayout Spacing="12" HorizontalOptions="Center">
+                    <VerticalStackLayout Spacing="12"
+                                         HorizontalOptions="Center">
 
                         <!-- Avatar -->
-                        <Grid WidthRequest="96" HeightRequest="96" HorizontalOptions="Center">
+                        <Grid WidthRequest="100" HeightRequest="100"
+                              HorizontalOptions="Center">
+
                             <Frame x:Name="ProfileInitialsFrame"
-                                   WidthRequest="96" HeightRequest="96" CornerRadius="48"
-                                   Padding="0" HasShadow="False" IsClippedToBounds="True">
+                                   WidthRequest="100" HeightRequest="100"
+                                   CornerRadius="50" Padding="0"
+                                   HasShadow="False" IsClippedToBounds="True">
                                 <Frame.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <LinearGradientBrush StartPoint="0,0"
+                                                         EndPoint="1,1">
                                         <GradientStop Color="#4DA6E8" Offset="0"/>
                                         <GradientStop Color="#2E6FD8" Offset="1"/>
                                     </LinearGradientBrush>
                                 </Frame.Background>
                                 <Label x:Name="ProfileInitialsLabel" Text="?"
-                                       TextColor="White" FontSize="34" FontAttributes="Bold"
-                                       HorizontalOptions="Center" VerticalOptions="Center"/>
+                                       TextColor="White" FontSize="36"
+                                       FontAttributes="Bold"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"/>
                             </Frame>
+
                             <Frame x:Name="ProfilePhotoFrame"
-                                   WidthRequest="96" HeightRequest="96" CornerRadius="48"
-                                   Padding="0" HasShadow="False" IsClippedToBounds="True"
+                                   WidthRequest="100" HeightRequest="100"
+                                   CornerRadius="50" Padding="0"
+                                   HasShadow="False" IsClippedToBounds="True"
                                    IsVisible="False">
                                 <Image x:Name="ProfilePhoto" Aspect="AspectFill"
-                                       WidthRequest="96" HeightRequest="96"/>
+                                       WidthRequest="100" HeightRequest="100"/>
+                            </Frame>
+
+                            <!-- Verified tick (artisan only) -->
+                            <Frame x:Name="VerifiedBadge"
+                                   WidthRequest="28" HeightRequest="28"
+                                   CornerRadius="14" Padding="0"
+                                   BackgroundColor="#10B981" HasShadow="False"
+                                   IsClippedToBounds="True"
+                                   HorizontalOptions="End"
+                                   VerticalOptions="End"
+                                   Margin="0,0,2,2"
+                                   IsVisible="False">
+                                <Label Text="✓" TextColor="White" FontSize="14"
+                                       FontAttributes="Bold"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"/>
                             </Frame>
                         </Grid>
 
-                        <!-- Name + role badge -->
+                        <!-- Full name -->
                         <Label x:Name="ProfileNameLabel" Text="User"
                                FontSize="22" FontAttributes="Bold"
-                               TextColor="#1B2B3A" HorizontalOptions="Center"/>
+                               TextColor="#1B2B3A"
+                               HorizontalOptions="Center"/>
 
-                        <Frame x:Name="RoleBadgeFrame" CornerRadius="12" Padding="10,4"
-                               HasShadow="False" HorizontalOptions="Center">
-                            <Label x:Name="RoleBadgeLabel" FontSize="12" FontAttributes="Bold"
-                                   TextColor="White"/>
+                        <!-- Role badge -->
+                        <Frame x:Name="RoleBadgeFrame" CornerRadius="12"
+                               Padding="12,4" HasShadow="False"
+                               HorizontalOptions="Center">
+                            <Label x:Name="RoleBadgeLabel" FontSize="12"
+                                   FontAttributes="Bold" TextColor="White"/>
                         </Frame>
 
-                        <!-- Email & phone -->
-                        <Label x:Name="ProfileEmailLabel" Text=""
-                               FontSize="14" TextColor="#5A7184"
-                               HorizontalOptions="Center"/>
-                        <Label x:Name="ProfilePhoneLabel" Text=""
-                               FontSize="14" TextColor="#5A7184"
-                               HorizontalOptions="Center" IsVisible="False"/>
+                        <!-- Email -->
+                        <HorizontalStackLayout HorizontalOptions="Center"
+                                               Spacing="6">
+                            <Label Text="✉" FontSize="13" TextColor="#8A9BAD"
+                                   VerticalOptions="Center"/>
+                            <Label x:Name="ProfileEmailLabel" Text=""
+                                   FontSize="14" TextColor="#5A7184"
+                                   VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+
+                        <!-- Phone -->
+                        <HorizontalStackLayout x:Name="PhoneRow"
+                                               HorizontalOptions="Center"
+                                               Spacing="6" IsVisible="False">
+                            <Label Text="📞" FontSize="13" TextColor="#8A9BAD"
+                                   VerticalOptions="Center"/>
+                            <Label x:Name="ProfilePhoneLabel" FontSize="14"
+                                   TextColor="#5A7184"
+                                   VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
 
                         <!-- Bio -->
                         <Label x:Name="ProfileBioLabel" Text=""
                                FontSize="14" TextColor="#3D5166"
-                               HorizontalOptions="Center" IsVisible="False"
-                               LineBreakMode="WordWrap"/>
+                               HorizontalOptions="Center"
+                               IsVisible="False"
+                               HorizontalTextAlignment="Center"
+                               LineBreakMode="WordWrap"
+                               Margin="0,4,0,0"/>
 
                         <!-- Location -->
-                        <HorizontalStackLayout x:Name="LocationRow" HorizontalOptions="Center"
+                        <HorizontalStackLayout x:Name="LocationRow"
+                                               HorizontalOptions="Center"
                                                Spacing="4" IsVisible="False">
-                            <Image Source="location.png" WidthRequest="14" HeightRequest="14"
+                            <Image Source="location.png" WidthRequest="14"
+                                   HeightRequest="14"
                                    VerticalOptions="Center"/>
-                            <Label x:Name="ProfileLocationLabel" FontSize="13" TextColor="#5A7184"
+                            <Label x:Name="ProfileLocationLabel" FontSize="13"
+                                   TextColor="#5A7184"
                                    VerticalOptions="Center"/>
                         </HorizontalStackLayout>
+
+                        <!-- Member since -->
+                        <Label x:Name="MemberSinceLabel" FontSize="12"
+                               TextColor="#A0ADB8"
+                               HorizontalOptions="Center"
+                               IsVisible="False"/>
 
                     </VerticalStackLayout>
                 </Frame>
 
-                <!-- ── Artisan Stats Card ── -->
-                <Frame x:Name="ArtisanStatsCard" BackgroundColor="White" CornerRadius="16"
-                       Padding="0" HasShadow="False" BorderColor="#E8EDF2"
+                <!-- ════════════════════════════════════════════════ -->
+                <!-- ARTISAN — STATS STRIP                            -->
+                <!-- ════════════════════════════════════════════════ -->
+                <Frame x:Name="ArtisanStatsCard" BackgroundColor="White"
+                       CornerRadius="20" Padding="0,18"
+                       HasShadow="False" BorderColor="#E8EDF2"
                        IsVisible="False">
-                    <Grid ColumnDefinitions="*,1,*,1,*" Padding="0,16">
-                        <!-- Rating -->
-                        <VerticalStackLayout Grid.Column="0" HorizontalOptions="Center" Spacing="2">
-                            <Label x:Name="StatRatingLabel" Text="—" FontSize="20"
-                                   FontAttributes="Bold" TextColor="#1B2B3A"
+                    <Grid ColumnDefinitions="*,1,*,1,*">
+
+                        <VerticalStackLayout Grid.Column="0"
+                                             HorizontalOptions="Center"
+                                             Spacing="2">
+                            <Label x:Name="StatRatingLabel" Text="—"
+                                   FontSize="22" FontAttributes="Bold"
+                                   TextColor="#1B2B3A"
                                    HorizontalOptions="Center"/>
-                            <Label Text="Rating" FontSize="11" TextColor="#8A9BAD"
-                                   HorizontalOptions="Center"/>
-                        </VerticalStackLayout>
-                        <BoxView Grid.Column="1" WidthRequest="1" BackgroundColor="#E8EDF2"/>
-                        <!-- Projects -->
-                        <VerticalStackLayout Grid.Column="2" HorizontalOptions="Center" Spacing="2">
-                            <Label x:Name="StatProjectsLabel" Text="—" FontSize="20"
-                                   FontAttributes="Bold" TextColor="#1B2B3A"
-                                   HorizontalOptions="Center"/>
-                            <Label Text="Projects" FontSize="11" TextColor="#8A9BAD"
+                            <Label Text="Rating" FontSize="11"
+                                   TextColor="#8A9BAD"
                                    HorizontalOptions="Center"/>
                         </VerticalStackLayout>
-                        <BoxView Grid.Column="3" WidthRequest="1" BackgroundColor="#E8EDF2"/>
-                        <!-- Experience -->
-                        <VerticalStackLayout Grid.Column="4" HorizontalOptions="Center" Spacing="2">
-                            <Label x:Name="StatExperienceLabel" Text="—" FontSize="20"
-                                   FontAttributes="Bold" TextColor="#1B2B3A"
+
+                        <BoxView Grid.Column="1" WidthRequest="1"
+                                 BackgroundColor="#E8EDF2"/>
+
+                        <VerticalStackLayout Grid.Column="2"
+                                             HorizontalOptions="Center"
+                                             Spacing="2">
+                            <Label x:Name="StatProjectsLabel" Text="—"
+                                   FontSize="22" FontAttributes="Bold"
+                                   TextColor="#1B2B3A"
                                    HorizontalOptions="Center"/>
-                            <Label Text="Yrs Exp." FontSize="11" TextColor="#8A9BAD"
+                            <Label Text="Projects" FontSize="11"
+                                   TextColor="#8A9BAD"
+                                   HorizontalOptions="Center"/>
+                        </VerticalStackLayout>
+
+                        <BoxView Grid.Column="3" WidthRequest="1"
+                                 BackgroundColor="#E8EDF2"/>
+
+                        <VerticalStackLayout Grid.Column="4"
+                                             HorizontalOptions="Center"
+                                             Spacing="2">
+                            <Label x:Name="StatExperienceLabel" Text="—"
+                                   FontSize="22" FontAttributes="Bold"
+                                   TextColor="#1B2B3A"
+                                   HorizontalOptions="Center"/>
+                            <Label Text="Yrs Exp." FontSize="11"
+                                   TextColor="#8A9BAD"
                                    HorizontalOptions="Center"/>
                         </VerticalStackLayout>
                     </Grid>
                 </Frame>
 
-                <!-- ── Artisan Business Card ── -->
-                <Frame x:Name="ArtisanBusinessCard" BackgroundColor="White" CornerRadius="16"
-                       Padding="20" HasShadow="False" BorderColor="#E8EDF2"
+                <!-- ════════════════════════════════════════════════ -->
+                <!-- ARTISAN — BUSINESS INFO CARD                     -->
+                <!-- ════════════════════════════════════════════════ -->
+                <Frame x:Name="ArtisanBusinessCard" BackgroundColor="White"
+                       CornerRadius="20" Padding="20"
+                       HasShadow="False" BorderColor="#E8EDF2"
                        IsVisible="False">
-                    <VerticalStackLayout Spacing="14">
-                        <Label Text="BUSINESS INFO" TextColor="#8A9BAD" FontSize="11"
-                               FontAttributes="Bold" CharacterSpacing="1.2"/>
+                    <VerticalStackLayout Spacing="16">
+
+                        <Label Text="BUSINESS INFO" TextColor="#8A9BAD"
+                               FontSize="11" FontAttributes="Bold"
+                               CharacterSpacing="1.4"/>
 
                         <!-- Business name -->
-                        <Grid ColumnDefinitions="20,*" ColumnSpacing="10">
-                            <Image Grid.Column="0" Source="briefcase.png"
-                                   WidthRequest="16" HeightRequest="16" VerticalOptions="Center"/>
+                        <Grid ColumnDefinitions="22,*" ColumnSpacing="10">
+                            <Label Grid.Column="0" Text="🏢" FontSize="15"
+                                   VerticalOptions="Center"/>
                             <Label x:Name="BusinessNameLabel" Grid.Column="1"
-                                   FontSize="15" FontAttributes="Bold" TextColor="#1B2B3A"
+                                   FontSize="16" FontAttributes="Bold"
+                                   TextColor="#1B2B3A"
                                    VerticalOptions="Center"/>
                         </Grid>
 
                         <!-- Specialization -->
-                        <Grid ColumnDefinitions="20,*" ColumnSpacing="10">
-                            <Image Grid.Column="0" Source="tools.png"
-                                   WidthRequest="16" HeightRequest="16" VerticalOptions="Center"/>
+                        <Grid ColumnDefinitions="22,*" ColumnSpacing="10">
+                            <Label Grid.Column="0" Text="🔧" FontSize="15"
+                                   VerticalOptions="Center"/>
                             <Label x:Name="SpecializationLabel" Grid.Column="1"
-                                   FontSize="14" TextColor="#3D5166" VerticalOptions="Center"/>
+                                   FontSize="14" TextColor="#3D5166"
+                                   VerticalOptions="Center"/>
+                        </Grid>
+
+                        <!-- Artisan Speciality -->
+                        <Grid x:Name="ArtisanSpecialityRow"
+                              ColumnDefinitions="22,*" ColumnSpacing="10"
+                              IsVisible="False">
+                            <Label Grid.Column="0" Text="⭐" FontSize="15"
+                                   VerticalOptions="Center"/>
+                            <Label x:Name="ArtisanSpecialityLabel"
+                                   Grid.Column="1" FontSize="14"
+                                   TextColor="#3D5166"
+                                   VerticalOptions="Center"/>
                         </Grid>
 
                         <!-- Hourly rate -->
-                        <Grid x:Name="HourlyRateRow" ColumnDefinitions="20,*" ColumnSpacing="10"
-                              IsVisible="False">
-                            <Image Grid.Column="0" Source="card.png"
-                                   WidthRequest="16" HeightRequest="16" VerticalOptions="Center"/>
+                        <Grid x:Name="HourlyRateRow" ColumnDefinitions="22,*"
+                              ColumnSpacing="10" IsVisible="False">
+                            <Label Grid.Column="0" Text="💰" FontSize="15"
+                                   VerticalOptions="Center"/>
                             <Label x:Name="HourlyRateLabel" Grid.Column="1"
-                                   FontSize="14" TextColor="#3D5166" VerticalOptions="Center"/>
+                                   FontSize="14" TextColor="#3D5166"
+                                   VerticalOptions="Center"/>
+                        </Grid>
+
+                        <!-- Service radius -->
+                        <Grid x:Name="ServiceRadiusRow" ColumnDefinitions="22,*"
+                              ColumnSpacing="10" IsVisible="False">
+                            <Label Grid.Column="0" Text="📍" FontSize="15"
+                                   VerticalOptions="Center"/>
+                            <Label x:Name="ServiceRadiusLabel" Grid.Column="1"
+                                   FontSize="14" TextColor="#3D5166"
+                                   VerticalOptions="Center"/>
+                        </Grid>
+
+                        <!-- Business address -->
+                        <Grid x:Name="BusinessAddressRow"
+                              ColumnDefinitions="22,*" ColumnSpacing="10"
+                              IsVisible="False">
+                            <Label Grid.Column="0" Text="🏠" FontSize="15"
+                                   VerticalOptions="Start"
+                                   Margin="0,2,0,0"/>
+                            <Label x:Name="BusinessAddressLabel"
+                                   Grid.Column="1" FontSize="14"
+                                   TextColor="#3D5166"
+                                   LineBreakMode="WordWrap"/>
                         </Grid>
 
                         <!-- Availability -->
-                        <Grid ColumnDefinitions="20,*" ColumnSpacing="10">
-                            <Image Grid.Column="0" Source="availability.png"
-                                   WidthRequest="16" HeightRequest="16" VerticalOptions="Center"/>
-                            <Frame x:Name="AvailabilityBadge" CornerRadius="8" Padding="8,3"
-                                   HasShadow="False" HorizontalOptions="Start">
+                        <Grid ColumnDefinitions="22,*" ColumnSpacing="10">
+                            <Label Grid.Column="0" Text="🟢" FontSize="15"
+                                   VerticalOptions="Center"/>
+                            <Frame x:Name="AvailabilityBadge" Grid.Column="1"
+                                   CornerRadius="8" Padding="10,4"
+                                   HasShadow="False"
+                                   HorizontalOptions="Start">
                                 <Label x:Name="AvailabilityLabel" FontSize="12"
                                        FontAttributes="Bold" TextColor="White"/>
                             </Frame>
                         </Grid>
 
+                        <BoxView HeightRequest="1" BackgroundColor="#F0F4F8"
+                                 Margin="0,2"/>
+
                         <!-- About -->
-                        <VerticalStackLayout x:Name="AboutSection" Spacing="4" IsVisible="False">
-                            <Label Text="About" FontSize="13" FontAttributes="Bold"
-                                   TextColor="#8A9BAD"/>
-                            <Label x:Name="AboutLabel" FontSize="14" TextColor="#3D5166"
+                        <VerticalStackLayout x:Name="AboutSection"
+                                             Spacing="6" IsVisible="False">
+                            <Label Text="About" FontSize="13"
+                                   FontAttributes="Bold" TextColor="#8A9BAD"/>
+                            <Label x:Name="AboutLabel" FontSize="14"
+                                   TextColor="#3D5166"
                                    LineBreakMode="WordWrap"/>
                         </VerticalStackLayout>
 
-                        <!-- Services -->
-                        <VerticalStackLayout x:Name="ServicesSection" Spacing="6" IsVisible="False">
-                            <Label Text="Services Offered" FontSize="13" FontAttributes="Bold"
-                                   TextColor="#8A9BAD"/>
-                            <FlexLayout x:Name="ServicesLayout" Wrap="Wrap" Direction="Row"
-                                        JustifyContent="Start" AlignItems="Start"/>
+                        <!-- Professional bio -->
+                        <VerticalStackLayout x:Name="ProfBioSection"
+                                             Spacing="6" IsVisible="False">
+                            <Label Text="Professional Bio" FontSize="13"
+                                   FontAttributes="Bold" TextColor="#8A9BAD"/>
+                            <Label x:Name="ProfBioLabel" FontSize="14"
+                                   TextColor="#3D5166"
+                                   LineBreakMode="WordWrap"/>
+                        </VerticalStackLayout>
+
+                        <!-- Services offered -->
+                        <VerticalStackLayout x:Name="ServicesSection"
+                                             Spacing="8" IsVisible="False">
+                            <Label Text="Services Offered" FontSize="13"
+                                   FontAttributes="Bold" TextColor="#8A9BAD"/>
+                            <FlexLayout x:Name="ServicesLayout"
+                                        Wrap="Wrap" Direction="Row"
+                                        JustifyContent="Start"
+                                        AlignItems="Start"/>
                         </VerticalStackLayout>
 
                     </VerticalStackLayout>
                 </Frame>
 
-                <!-- ── Personal Info Card (Customer / Admin) ── -->
-                <Frame x:Name="PersonalInfoCard" BackgroundColor="White" CornerRadius="16"
-                       Padding="20" HasShadow="False" BorderColor="#E8EDF2"
+                <!-- ════════════════════════════════════════════════ -->
+                <!-- ARTISAN — CREDENTIALS CARD                       -->
+                <!-- ════════════════════════════════════════════════ -->
+                <Frame x:Name="CredentialsCard" BackgroundColor="White"
+                       CornerRadius="20" Padding="20"
+                       HasShadow="False" BorderColor="#E8EDF2"
                        IsVisible="False">
-                    <VerticalStackLayout Spacing="14">
-                        <Label Text="PERSONAL INFO" TextColor="#8A9BAD" FontSize="11"
-                               FontAttributes="Bold" CharacterSpacing="1.2"/>
+                    <VerticalStackLayout Spacing="16">
 
-                        <Grid x:Name="AddressRow" ColumnDefinitions="20,*" ColumnSpacing="10"
-                              IsVisible="False">
-                            <Image Grid.Column="0" Source="location.png"
-                                   WidthRequest="16" HeightRequest="16" VerticalOptions="Start"
-                                   Margin="0,2,0,0"/>
-                            <Label x:Name="AddressLabel" Grid.Column="1"
-                                   FontSize="14" TextColor="#3D5166" LineBreakMode="WordWrap"/>
+                        <Label Text="PROFESSIONAL CREDENTIALS"
+                               TextColor="#8A9BAD" FontSize="11"
+                               FontAttributes="Bold" CharacterSpacing="1.4"/>
+
+                        <!-- License -->
+                        <Grid x:Name="LicenseRow"
+                              ColumnDefinitions="22,*,Auto"
+                              ColumnSpacing="10" IsVisible="False">
+                            <Label Grid.Column="0" Text="📄" FontSize="15"
+                                   VerticalOptions="Center"/>
+                            <VerticalStackLayout Grid.Column="1" Spacing="1">
+                                <Label Text="License Number" FontSize="11"
+                                       TextColor="#8A9BAD"/>
+                                <Label x:Name="LicenseLabel" FontSize="14"
+                                       TextColor="#1B2B3A"/>
+                            </VerticalStackLayout>
+                            <Frame Grid.Column="2" BackgroundColor="#EBF9F3"
+                                   CornerRadius="6" Padding="6,2"
+                                   HasShadow="False" VerticalOptions="Center">
+                                <Label Text="Licensed" FontSize="10"
+                                       TextColor="#10B981"
+                                       FontAttributes="Bold"/>
+                            </Frame>
                         </Grid>
 
-                        <Grid x:Name="CityCountryRow" ColumnDefinitions="20,*" ColumnSpacing="10"
+                        <!-- Certification -->
+                        <Grid x:Name="CertificationRow"
+                              ColumnDefinitions="22,*" ColumnSpacing="10"
                               IsVisible="False">
-                            <Image Grid.Column="0" Source="globe.png"
-                                   WidthRequest="16" HeightRequest="16" VerticalOptions="Center"/>
-                            <Label x:Name="CityCountryLabel" Grid.Column="1"
-                                   FontSize="14" TextColor="#3D5166" VerticalOptions="Center"/>
+                            <Label Grid.Column="0" Text="🏅" FontSize="15"
+                                   VerticalOptions="Center"/>
+                            <VerticalStackLayout Grid.Column="1" Spacing="1">
+                                <Label Text="Certification" FontSize="11"
+                                       TextColor="#8A9BAD"/>
+                                <Label x:Name="CertificationLabel"
+                                       FontSize="14" TextColor="#1B2B3A"/>
+                            </VerticalStackLayout>
                         </Grid>
+
+                        <!-- Business registration -->
+                        <Grid x:Name="BusinessRegRow"
+                              ColumnDefinitions="22,*" ColumnSpacing="10"
+                              IsVisible="False">
+                            <Label Grid.Column="0" Text="📋" FontSize="15"
+                                   VerticalOptions="Center"/>
+                            <VerticalStackLayout Grid.Column="1" Spacing="1">
+                                <Label Text="Business Registration"
+                                       FontSize="11" TextColor="#8A9BAD"/>
+                                <Label x:Name="BusinessRegLabel"
+                                       FontSize="14" TextColor="#1B2B3A"/>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <!-- Tax ID -->
+                        <Grid x:Name="TaxIdRow" ColumnDefinitions="22,*"
+                              ColumnSpacing="10" IsVisible="False">
+                            <Label Grid.Column="0" Text="🧾" FontSize="15"
+                                   VerticalOptions="Center"/>
+                            <VerticalStackLayout Grid.Column="1" Spacing="1">
+                                <Label Text="Tax ID" FontSize="11"
+                                       TextColor="#8A9BAD"/>
+                                <Label x:Name="TaxIdLabel" FontSize="14"
+                                       TextColor="#1B2B3A"/>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <!-- Insurance -->
+                        <Grid x:Name="InsuranceRow" ColumnDefinitions="22,*"
+                              ColumnSpacing="10" IsVisible="False">
+                            <Label Grid.Column="0" Text="🛡️" FontSize="15"
+                                   VerticalOptions="Center"/>
+                            <VerticalStackLayout Grid.Column="1" Spacing="1">
+                                <Label Text="Insurance" FontSize="11"
+                                       TextColor="#8A9BAD"/>
+                                <Label x:Name="InsuranceLabel" FontSize="14"
+                                       TextColor="#1B2B3A"/>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <!-- No credentials fallback -->
+                        <Label x:Name="NoCredentialsLabel"
+                               Text="No credentials added yet."
+                               FontSize="14" TextColor="#A0ADB8"
+                               HorizontalOptions="Center"
+                               IsVisible="False"/>
 
                     </VerticalStackLayout>
                 </Frame>
 
-                <!-- Edit Profile button -->
+                <!-- ════════════════════════════════════════════════ -->
+                <!-- CUSTOMER / ADMIN — PERSONAL INFO CARD            -->
+                <!-- ════════════════════════════════════════════════ -->
+                <Frame x:Name="PersonalInfoCard" BackgroundColor="White"
+                       CornerRadius="20" Padding="20"
+                       HasShadow="False" BorderColor="#E8EDF2"
+                       IsVisible="False">
+                    <VerticalStackLayout Spacing="16">
+
+                        <Label Text="PERSONAL INFO" TextColor="#8A9BAD"
+                               FontSize="11" FontAttributes="Bold"
+                               CharacterSpacing="1.4"/>
+
+                        <Grid x:Name="AddressRow" ColumnDefinitions="22,*"
+                              ColumnSpacing="10" IsVisible="False">
+                            <Label Grid.Column="0" Text="🏠" FontSize="15"
+                                   VerticalOptions="Start"
+                                   Margin="0,2,0,0"/>
+                            <VerticalStackLayout Grid.Column="1" Spacing="1">
+                                <Label Text="Address" FontSize="11"
+                                       TextColor="#8A9BAD"/>
+                                <Label x:Name="AddressLabel" FontSize="14"
+                                       TextColor="#3D5166"
+                                       LineBreakMode="WordWrap"/>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <Grid x:Name="CityCountryRow" ColumnDefinitions="22,*"
+                              ColumnSpacing="10" IsVisible="False">
+                            <Label Grid.Column="0" Text="🌍" FontSize="15"
+                                   VerticalOptions="Center"/>
+                            <VerticalStackLayout Grid.Column="1" Spacing="1">
+                                <Label Text="Location" FontSize="11"
+                                       TextColor="#8A9BAD"/>
+                                <Label x:Name="CityCountryLabel" FontSize="14"
+                                       TextColor="#3D5166"/>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <Label x:Name="NoAddressLabel"
+                               Text="No address added yet. Tap Edit to update."
+                               FontSize="14" TextColor="#A0ADB8"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center"
+                               IsVisible="False"/>
+
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- ── Edit Profile CTA ── -->
                 <Button x:Name="EditProfileButton"
                         Text="Edit Profile"
                         BackgroundColor="#2E6FD8"
                         TextColor="White"
-                        CornerRadius="12"
+                        CornerRadius="14"
                         FontAttributes="Bold"
-                        HeightRequest="52"
+                        FontSize="16"
+                        HeightRequest="54"
                         IsVisible="False"
                         Clicked="OnEditClicked"
                         Margin="0,4,0,0"/>

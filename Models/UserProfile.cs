@@ -64,6 +64,14 @@ namespace CraftConnect_Mobile_App.Models
         public string About { get; set; }
         public string ProfessionalBio { get; set; }
         public string BusinessAddress { get; set; }
+        public string ArtisanSpeciality { get; set; }
+        public double? ServiceRadius { get; set; }
+        public string ServicesOffered { get; set; }
+        public string LicenseNumber { get; set; }
+        public string Certification { get; set; }
+        public string BusinessRegistration { get; set; }
+        public string TaxId { get; set; }
+        public string InsuranceDetails { get; set; }
         public bool IsVerified { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
