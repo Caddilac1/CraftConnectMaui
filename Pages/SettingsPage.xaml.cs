@@ -19,8 +19,6 @@ namespace CraftConnect_Mobile_App.Pages
         private ArtisanUser _artisanUser;
         private string _primaryRole;
 
-        // Track whether the switch toggle was changed programmatically
-        // to avoid firing the API call during initial data load.
         private bool _suppressAvailabilityToggle;
 
         public SettingsPage(AuthService authService, IUserService userService, ApiConfig apiConfig)
@@ -55,7 +53,6 @@ namespace CraftConnect_Mobile_App.Pages
 
                 _currentUser = await _userService.LoadUserProfileAsync();
 
-                // Resolve role from JWT
                 var token = await _authService.GetTokenAsync();
                 _primaryRole = "Customer";
 
@@ -75,7 +72,6 @@ namespace CraftConnect_Mobile_App.Pages
                     UserEmailLabel.Text = _currentUser.Email ?? "";
                     AvatarInitialsLabel.Text = GetInitials(_currentUser.FullName);
 
-                    // ── FIX: load remote URL with FromUri, local path with FromFile ──
                     var imageUrl = _currentUser.ProfileImageUrl;
                     System.Diagnostics.Debug.WriteLine($"[SETTINGS] ProfileImageUrl = '{imageUrl}'");
 
@@ -84,13 +80,11 @@ namespace CraftConnect_Mobile_App.Pages
                     else
                         ShowInitials();
 
-                    // Artisan-specific setup
                     if (_primaryRole.Equals("Artisan", StringComparison.OrdinalIgnoreCase) &&
                         _currentUser is ArtisanUser artisan)
                     {
                         _artisanUser = artisan;
 
-                        // Suppress the Toggled event while we set the initial value
                         _suppressAvailabilityToggle = true;
                         AvailabilitySwitch.IsToggled = artisan.IsAvailable;
                         _suppressAvailabilityToggle = false;
@@ -118,10 +112,6 @@ namespace CraftConnect_Mobile_App.Pages
 
         // ── Profile image helpers ─────────────────────────────────────
 
-        /// <summary>
-        /// Attempts to load the profile image from either a remote URL or a local
-        /// file path. Falls back to initials on any failure.
-        /// </summary>
         private async Task TryLoadProfileImageAsync(string path)
         {
             try
@@ -136,19 +126,16 @@ namespace CraftConnect_Mobile_App.Pages
                 if (path.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                     path.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Already a full remote URL
                     source = ImageSource.FromUri(new Uri(path));
                 }
                 else if (path.StartsWith("/") || path.StartsWith("images/", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Relative server path — prepend base URL from ApiConfig
                     var fullUrl = $"{_apiConfig.BaseUrl.TrimEnd('/')}/{path.TrimStart('/')}";
                     System.Diagnostics.Debug.WriteLine($"[SETTINGS] Resolved image URL: {fullUrl}");
                     source = ImageSource.FromUri(new Uri(fullUrl));
                 }
                 else
                 {
-                    // Genuine local file path (e.g. from MediaPicker)
                     source = ImageSource.FromFile(path);
                 }
 
@@ -168,18 +155,10 @@ namespace CraftConnect_Mobile_App.Pages
             }
         }
 
-
-        /// <summary>Called by the XAML Image's LoadError event if the source fails to decode.</summary>
         private void OnAvatarImageLoadError(object sender, EventArgs e)
         {
             System.Diagnostics.Debug.WriteLine("[SETTINGS] AvatarImage load error — showing initials.");
             ShowInitials();
-        }
-
-        private void ShowProfilePhoto()
-        {
-            AvatarPhotoFrame.IsVisible = true;
-            AvatarInitialsFrame.IsVisible = false;
         }
 
         private void ShowInitials()
@@ -210,12 +189,7 @@ namespace CraftConnect_Mobile_App.Pages
 
                 if (result == null) return;
 
-                // Show locally right away for instant feedback
                 await TryLoadProfileImageAsync(result.FullPath);
-
-                // TODO: upload the stream to your API
-                // using var stream = await result.OpenReadAsync();
-                // await _someApiService.UploadProfilePictureAsync(stream);
             }
             catch (Exception ex)
             {
@@ -244,16 +218,58 @@ namespace CraftConnect_Mobile_App.Pages
 
         // ── ACCOUNT handlers ─────────────────────────────────────────
 
-        private async void OnProfileSettingsClicked(object sender, EventArgs e)
+        /// <summary>
+        /// Navigates to a dedicated read-only public profile card page.
+        /// </summary>
+        private async void OnMyProfileClicked(object sender, EventArgs e)
         {
-            try { await Shell.Current.GoToAsync("ProfileSettingsPage"); }
-            catch { await DisplayAlert("Info", "Profile Settings page is not yet available.", "OK"); }
+            try
+            {
+                await Shell.Current.GoToAsync(nameof(MyProfilePage), new Dictionary<string, object>
+                {
+                    { "Role", _primaryRole }
+                });
+            }
+            catch
+            {
+                await DisplayAlert("Info", "My Profile page is not yet available.", "OK");
+            }
         }
 
+        /// <summary>
+        /// Navigates to an edit form whose fields adapt to the user's role:
+        ///   Customer / Admin → personal info (name, bio, address, photo)
+        ///   Artisan          → business info (business name, specialization, rate, etc.)
+        /// </summary>
         private async void OnEditProfileClicked(object sender, EventArgs e)
         {
-            try { await Shell.Current.GoToAsync("EditProfilePage"); }
-            catch { await DisplayAlert("Info", "Edit Profile page is not yet available.", "OK"); }
+            try
+            {
+                await Shell.Current.GoToAsync(nameof(EditProfilePage), new Dictionary<string, object>
+                {
+                    { "Role", _primaryRole }
+                });
+            }
+            catch
+            {
+                await DisplayAlert("Info", "Edit Profile page is not yet available.", "OK");
+            }
+        }
+
+        /// <summary>
+        /// Navigates to account settings: change password, preferred language, timezone.
+        /// Same for all roles.
+        /// </summary>
+        private async void OnProfileSettingsClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                await Shell.Current.GoToAsync(nameof(ProfileSettingsPage));
+            }
+            catch
+            {
+                await DisplayAlert("Info", "Profile Settings page is not yet available.", "OK");
+            }
         }
 
         private async void OnNotificationsClicked(object sender, EventArgs e)
@@ -264,15 +280,24 @@ namespace CraftConnect_Mobile_App.Pages
 
         // ── ARTISAN handlers ──────────────────────────────────────────
 
+        /// <summary>
+        /// Business Profile → advanced/legal fields only:
+        /// license, certification, business registration, tax ID, insurance, verification status.
+        /// </summary>
         private async void OnEditBusinessClicked(object sender, EventArgs e)
         {
-            try { await Shell.Current.GoToAsync("BusinessProfilePage"); }
-            catch { await DisplayAlert("Info", "Business Profile page is not yet available.", "OK"); }
+            try
+            {
+                await Shell.Current.GoToAsync(nameof(BusinessProfilePage));
+            }
+            catch
+            {
+                await DisplayAlert("Info", "Business Profile page is not yet available.", "OK");
+            }
         }
 
         private async void OnAvailabilityToggled(object sender, ToggledEventArgs e)
         {
-            // Skip when we set the switch value programmatically during load
             if (_suppressAvailabilityToggle) return;
 
             if (_artisanUser == null)
@@ -292,7 +317,6 @@ namespace CraftConnect_Mobile_App.Pages
                 {
                     await DisplayAlert("Error", "Failed to update availability.", "OK");
 
-                    // Revert the switch without triggering another API call
                     _suppressAvailabilityToggle = true;
                     AvailabilitySwitch.IsToggled = !e.Value;
                     _suppressAvailabilityToggle = false;

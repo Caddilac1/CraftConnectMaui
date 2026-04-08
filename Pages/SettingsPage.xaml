@@ -11,17 +11,15 @@
 
         <ScrollView Grid.Row="0">
             <VerticalStackLayout Spacing="0">
-
                 <!-- ── Dark Header ── -->
                 <Grid BackgroundColor="#1B2B3A"
                       Padding="20,60,20,40"
                       RowDefinitions="Auto,Auto,Auto"
                       RowSpacing="6">
 
-                    <!-- Avatar -->
+                    <!-- Avatar (tappable → MyProfilePage) -->
                     <Grid Grid.Row="0" WidthRequest="90" HeightRequest="90" HorizontalOptions="Center">
 
-                        <!-- Initials fallback (shown when no photo) -->
                         <Frame x:Name="AvatarInitialsFrame"
                                WidthRequest="90" HeightRequest="90" CornerRadius="45"
                                Padding="0" HasShadow="False"
@@ -38,7 +36,6 @@
                                    HorizontalOptions="Center" VerticalOptions="Center"/>
                         </Frame>
 
-                        <!-- Photo frame (shown when photo is available) -->
                         <Frame x:Name="AvatarPhotoFrame"
                                WidthRequest="90" HeightRequest="90" CornerRadius="45"
                                Padding="0" HasShadow="False"
@@ -49,7 +46,6 @@
                                    WidthRequest="90" HeightRequest="90"/>
                         </Frame>
 
-                        <!-- Loading indicator over avatar -->
                         <ActivityIndicator x:Name="AvatarLoadingIndicator"
                                            IsRunning="False" IsVisible="False"
                                            Color="White"
@@ -96,23 +92,25 @@
                                HasShadow="False" BorderColor="#E8EDF2">
                             <VerticalStackLayout Spacing="0">
 
+                                <!-- My Profile -->
                                 <Grid ColumnDefinitions="44,*,24" Padding="16,14" ColumnSpacing="12">
                                     <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
                                            Padding="0" HasShadow="False" WidthRequest="36" HeightRequest="36">
                                         <Image Source="person.png" WidthRequest="18" HeightRequest="18"
                                                HorizontalOptions="Center" VerticalOptions="Center"/>
                                     </Frame>
-                                    <Label Grid.Column="1" Text="Profile Settings" FontSize="15"
+                                    <Label Grid.Column="1" Text="My Profile" FontSize="15"
                                            TextColor="#1B2B3A" VerticalOptions="Center"/>
                                     <Image Grid.Column="2" Source="chevron_right.png"
                                            WidthRequest="16" HeightRequest="16" VerticalOptions="Center"/>
                                     <Grid.GestureRecognizers>
-                                        <TapGestureRecognizer Tapped="OnProfileSettingsClicked"/>
+                                        <TapGestureRecognizer Tapped="OnMyProfileClicked"/>
                                     </Grid.GestureRecognizers>
                                 </Grid>
 
                                 <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
 
+                                <!-- Edit Profile -->
                                 <Grid ColumnDefinitions="44,*,24" Padding="16,14" ColumnSpacing="12">
                                     <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
                                            Padding="0" HasShadow="False" WidthRequest="36" HeightRequest="36">
@@ -130,6 +128,25 @@
 
                                 <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
 
+                                <!-- Profile Settings -->
+                                <Grid ColumnDefinitions="44,*,24" Padding="16,14" ColumnSpacing="12">
+                                    <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
+                                           Padding="0" HasShadow="False" WidthRequest="36" HeightRequest="36">
+                                        <Image Source="person.png" WidthRequest="18" HeightRequest="18"
+                                               HorizontalOptions="Center" VerticalOptions="Center"/>
+                                    </Frame>
+                                    <Label Grid.Column="1" Text="Profile Settings" FontSize="15"
+                                           TextColor="#1B2B3A" VerticalOptions="Center"/>
+                                    <Image Grid.Column="2" Source="chevron_right.png"
+                                           WidthRequest="16" HeightRequest="16" VerticalOptions="Center"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnProfileSettingsClicked"/>
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+
+                                <BoxView HeightRequest="1" Color="#F0F4F8" Margin="16,0"/>
+
+                                <!-- Notifications -->
                                 <Grid ColumnDefinitions="44,*,24" Padding="16,14" ColumnSpacing="12">
                                     <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
                                            Padding="0" HasShadow="False" WidthRequest="36" HeightRequest="36">
