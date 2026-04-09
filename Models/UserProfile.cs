@@ -5,9 +5,9 @@ using System.Text.Json.Serialization;
 namespace CraftConnect_Mobile_App.Models
 {
     /// <summary>
-    /// Matches the UserDto returned by GET api/profilesapi/customer/me.
-    /// Property names match the JSON the API sends exactly so the default
-    /// deserializer maps them without extra configuration.
+    /// Unified mobile profile model.
+    /// Matches UserDto from GET api/profilesapi/customer/me
+    /// and the nested user object inside ArtisanProfileDto.
     /// </summary>
     public class UserProfile
     {
@@ -18,10 +18,6 @@ namespace CraftConnect_Mobile_App.Models
         public string PhoneNumber { get; set; }
         public string Role { get; set; }
 
-        // ── API sends "profilePicture" not "profileImageUrl" ──────────
-        // [JsonPropertyName] maps the camelCase JSON key to this property.
-        // ProfileImageUrl is a [JsonIgnore] alias so existing UI bindings
-        // that reference ProfileImageUrl keep compiling without changes.
         [JsonPropertyName("profilePicture")]
         public string ProfilePicture { get; set; }
 
@@ -32,56 +28,98 @@ namespace CraftConnect_Mobile_App.Models
             set => ProfilePicture = value;
         }
 
-        // ── Location fields ───────────────────────────────────────────
+        // ── Location ──────────────────────────────────────────────────
         public string Address { get; set; }
+        public string AddressLine2 { get; set; }
         public string PostalCode { get; set; }
         public string City { get; set; }
         public string State { get; set; }
         public string Country { get; set; }
 
-        // ── Profile fields ────────────────────────────────────────────
+        // ── Profile ───────────────────────────────────────────────────
         public string Bio { get; set; }
         public DateTime? DateJoined { get; set; }
+
+        // ── Preferences ───────────────────────────────────────────────
+        public string PreferredLanguage { get; set; }
+        public string Timezone { get; set; }
+
+        // ── Staff-specific (populated for Staff/Admin roles) ──────────
+        public string StaffTypeName { get; set; }
+        public DateTime? DateOfBirth { get; set; }
+        public string EmergencyContact { get; set; }
+
+        // ── Computed helpers ──────────────────────────────────────────
+        [JsonIgnore]
+        public bool IsArtisan => Role?.Equals("Artisan", StringComparison.OrdinalIgnoreCase) ?? false;
+
+        [JsonIgnore]
+        public bool IsStaffOrAdmin =>
+            Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true ||
+            Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
+
+        [JsonIgnore]
+        public string DisplayName => !string.IsNullOrWhiteSpace(FullName) ? FullName : Email ?? "User";
+
+        [JsonIgnore]
+        public string LocationDisplay
+        {
+            get
+            {
+                var parts = new[] { City, State, Country };
+                return string.Join(", ", System.Linq.Enumerable.Where(parts, p => !string.IsNullOrWhiteSpace(p)));
+            }
+        }
     }
 
     /// <summary>
     /// Extends UserProfile with artisan-specific fields.
-    /// Matches the ArtisanProfileDto returned by GET api/profilesapi/artisan/me.
+    /// Matches ArtisanProfileDto from GET api/profilesapi/artisan/me.
     /// </summary>
     public class ArtisanUser : UserProfile
     {
-        // ── Artisan profile fields ────────────────────────────────────
+        // ── Business core ─────────────────────────────────────────────
         public string BusinessName { get; set; }
         public string Slug { get; set; }
-        public string Specialization { get; set; }   // raw string from API e.g. "Plumbing, Electrical"
+        public string Specialization { get; set; }
+        public string ArtisanSpeciality { get; set; }
         public string ExperienceLevel { get; set; }
         public int YearsOfExperience { get; set; }
+
+        // ── Stats ─────────────────────────────────────────────────────
         public decimal AverageRating { get; set; }
         public int TotalReviews { get; set; }
         public int CompletedProjects { get; set; }
-        public string AvailabilityStatus { get; set; }   // "Available" | "Unavailable" | "Busy"
+
+        // ── Availability & pricing ────────────────────────────────────
+        public string AvailabilityStatus { get; set; }
         public decimal? HourlyRate { get; set; }
+        public double? ServiceRadius { get; set; }
+
+        // ── Descriptions ─────────────────────────────────────────────
         public string About { get; set; }
         public string ProfessionalBio { get; set; }
-        public string BusinessAddress { get; set; }
-        public string ArtisanSpeciality { get; set; }
-        public double? ServiceRadius { get; set; }
         public string ServicesOffered { get; set; }
+
+        // ── Location ─────────────────────────────────────────────────
+        public string BusinessAddress { get; set; }
+
+        // ── Credentials ───────────────────────────────────────────────
         public string LicenseNumber { get; set; }
         public string Certification { get; set; }
         public string BusinessRegistration { get; set; }
         public string TaxId { get; set; }
         public string InsuranceDetails { get; set; }
+
+        // ── Verification ──────────────────────────────────────────────
         public bool IsVerified { get; set; }
+        public DateTime? VerifiedDate { get; set; }
+
+        // ── Timestamps ────────────────────────────────────────────────
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
-        // ── Writable computed aliases for SettingsPageViewModel ───────
-
-        /// <summary>
-        /// Read/write. Getting derives from AvailabilityStatus;
-        /// setting updates AvailabilityStatus so the two stay in sync.
-        /// </summary>
+        // ── Computed / aliases ────────────────────────────────────────
         [JsonIgnore]
         public bool IsAvailable
         {
@@ -89,11 +127,12 @@ namespace CraftConnect_Mobile_App.Models
             set => AvailabilityStatus = value ? "Available" : "Unavailable";
         }
 
-        /// <summary>
-        /// Read/write list view of Specialization string.
-        /// Assigning a new list updates the Specialization string so the API
-        /// field stays in sync when UpdateUserAsync is called.
-        /// </summary>
+        [JsonIgnore]
+        public int CompletedJobs => CompletedProjects;
+
+        [JsonIgnore]
+        public double Rating => (double)AverageRating;
+
         private List<string> _specializations;
 
         [JsonIgnore]
@@ -109,14 +148,16 @@ namespace CraftConnect_Mobile_App.Models
             }
         }
 
-        // ── Read-only aliases (UI bindings that existed before) ───────
-
-        /// <summary>Alias for CompletedProjects — keeps old UI bindings compiling.</summary>
         [JsonIgnore]
-        public int CompletedJobs => CompletedProjects;
+        public bool HasCredentials =>
+            !string.IsNullOrWhiteSpace(LicenseNumber) ||
+            !string.IsNullOrWhiteSpace(Certification) ||
+            !string.IsNullOrWhiteSpace(BusinessRegistration) ||
+            !string.IsNullOrWhiteSpace(TaxId) ||
+            !string.IsNullOrWhiteSpace(InsuranceDetails);
 
-        /// <summary>Alias for AverageRating as double — keeps old UI bindings compiling.</summary>
         [JsonIgnore]
-        public double Rating => (double)AverageRating;
+        public string AvailabilityStatusUpper =>
+            (AvailabilityStatus ?? "").ToUpper();
     }
 }

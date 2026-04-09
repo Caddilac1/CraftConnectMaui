@@ -4,16 +4,16 @@ namespace CraftConnect_Mobile_App.Services
 {
     public interface IUserService
     {
-        // Existing methods
         Task<bool> HasUnreadUpdatesAsync();
         Task<bool> HasMissedCallsAsync();
         Task<string> GetCurrentUserIdAsync();
         Task<string> GetCurrentUserNameAsync();
         Task<string> GetCurrentUserProfileImageAsync();
 
-        // Settings page methods
         UserProfile GetCurrentUser();
-        Task<UserProfile> LoadUserProfileAsync(); // ✅ ADD THIS METHOD
+        Task<UserProfile> LoadUserProfileAsync();
+        Task<bool> HasArtisanProfileAsync();
+
         Task<bool> UpdateEmailAsync(string newEmail);
         Task<bool> UpdatePhoneNumberAsync(string phoneNumber);
         Task<bool> UpdateUserAsync(UserProfile user);
