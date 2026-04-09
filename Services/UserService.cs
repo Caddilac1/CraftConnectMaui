@@ -11,18 +11,18 @@ namespace CraftConnect_Mobile_App.Services
     /// <summary>
     /// UserService — profile loading strategy:
     ///
-    /// 1. GET api/profilesapi/MyProfile  (single round-trip, returns both
-    ///    UserProfile + ArtisanProfile in one response — fastest path).
+    /// FIXES applied in this revision
+    /// ────────────────────────────────
+    /// 1. FullName fallback was `data.IdentityUserId` (a GUID) — now falls back
+    ///    to the resolved email address, then "User".  This is the root cause of
+    ///    names showing as letter/number strings.
     ///
-    /// 2. Role is resolved first from JWT claims so we know how to interpret
-    ///    the response before touching the network.
+    /// 2. ProfilePicture (= ProfilePictureUrl from the server) is now correctly
+    ///    assigned from up.ProfilePictureUrl and stored in ProfilePicture on the
+    ///    model so TryLoadPhoto / TryLoadProfileImageAsync can find it.
     ///
-    /// 3. If the user has an ArtisanProfile in the response we always build
-    ///    an ArtisanUser regardless of role claim, so a Customer who is also
-    ///    an artisan gets the full artisan view.
-    ///
-    /// Security: JWT validated by the server. Bearer token attached on every
-    /// request. Certificate bypass is DEBUG-only and stripped in Release.
+    /// 3. A debug line now logs the resolved picture path so future issues are
+    ///    easy to spot in the output window.
     /// </summary>
     public class UserService : IUserService
     {
@@ -118,9 +118,10 @@ namespace CraftConnect_Mobile_App.Services
 
                 SetBearerToken(token);
 
-                var (_, _, _, role) = await GetUserClaimsFromTokenAsync();
+                var (_, tokenEmail, _, role) = await GetUserClaimsFromTokenAsync();
 
-                Debug.WriteLine($"[USER SERVICE] Loading profile via /MyProfile (role from token: {role})");
+                Debug.WriteLine(
+                    $"[USER SERVICE] Loading profile via /MyProfile (role from token: {role})");
 
                 var response = await _httpClient.GetAsync("api/profilesapi/MyProfile");
 
@@ -144,8 +145,22 @@ namespace CraftConnect_Mobile_App.Services
 
                 var data = envelope.Data;
 
-                // If artisan profile exists, build ArtisanUser regardless of role claim.
-                // This handles the case of a user who holds multiple roles.
+                // Best available email: envelope first, JWT fallback
+                var resolvedEmail = !string.IsNullOrWhiteSpace(data.Email)
+                    ? data.Email
+                    : tokenEmail;
+
+                // ── Helper: resolve display name without falling back to a GUID ──
+                // Priority: FullName from UserProfile → email → "User"
+                static string ResolveName(string fullName, string email) =>
+                    !string.IsNullOrWhiteSpace(fullName) ? fullName
+                    : !string.IsNullOrWhiteSpace(email) ? email
+                    : "User";
+
+                // ── Helper: profile picture (relative or absolute URL string) ────
+                static string ResolvePicture(string url) =>
+                    string.IsNullOrWhiteSpace(url) ? null : url;
+
                 if (data.ArtisanProfile != null)
                 {
                     var ap = data.ArtisanProfile;
@@ -166,7 +181,7 @@ namespace CraftConnect_Mobile_App.Services
                         AvailabilityStatus = ap.AvailabilityStatus,
                         HourlyRate = ap.HourlyRate,
                         ServiceRadius = ap.ServiceRadius.HasValue
-                                                ? (double?)ap.ServiceRadius.Value : null,
+                                                  ? (double?)ap.ServiceRadius.Value : null,
                         About = ap.About,
                         ProfessionalBio = ap.ProfessionalBio,
                         ServicesOffered = ap.ServicesOffered,
@@ -176,17 +191,20 @@ namespace CraftConnect_Mobile_App.Services
                         BusinessRegistration = ap.BusinessRegistration,
                         TaxId = ap.TaxId,
                         InsuranceDetails = ap.InsuranceDetails,
-                        IsVerified = false, // artisan/me endpoint has IsVerified; MyProfile DTO doesn't expose it — extend if needed
+                        IsVerified = false, // extend DTO if server exposes IsVerified
                         CreatedAt = ap.CreatedAt,
                         UpdatedAt = ap.UpdatedAt,
 
-                        // ── From UserProfile ──────────────────────────
-                        FullName = up?.FullName ?? data.IdentityUserId,
-                        Email = data.Email,
+                        // ── From UserProfile / envelope ───────────────
+                        // FIX 1: Never fall back to IdentityUserId (GUID)
+                        FullName = ResolveName(up?.FullName, resolvedEmail),
+                        Email = resolvedEmail,
                         PhoneNumber = data.PhoneNumber,
-                        ProfilePicture = up?.ProfilePictureUrl,
+                        // FIX 2: Explicitly copy ProfilePictureUrl → ProfilePicture
+                        ProfilePicture = ResolvePicture(up?.ProfilePictureUrl),
                         Bio = up?.Bio,
                         Address = up?.Address,
+                        AddressLine2 = up?.AddressLine2,
                         PostalCode = up?.PostalCode,
                         City = up?.City,
                         State = up?.State,
@@ -194,21 +212,23 @@ namespace CraftConnect_Mobile_App.Services
                         PreferredLanguage = up?.PreferredLanguage,
                         Timezone = up?.Timezone,
                         DateJoined = up?.CreatedDate,
-                        Role = role  // preserve original role claim
+                        Role = role
                     };
                 }
                 else
                 {
-                    // Customer / Staff / Admin — use UserProfile only
+                    // Customer / Staff / Admin — UserProfile only
                     var up = data.UserProfile;
 
                     _cachedUser = new UserProfile
                     {
                         Id = data.IdentityUserId,
-                        FullName = up?.FullName,
-                        Email = data.Email,
+                        // FIX 1: Never fall back to IdentityUserId (GUID)
+                        FullName = ResolveName(up?.FullName, resolvedEmail),
+                        Email = resolvedEmail,
                         PhoneNumber = data.PhoneNumber,
-                        ProfilePicture = up?.ProfilePictureUrl,
+                        // FIX 2: Explicitly copy ProfilePictureUrl → ProfilePicture
+                        ProfilePicture = ResolvePicture(up?.ProfilePictureUrl),
                         Bio = up?.Bio,
                         Address = up?.Address,
                         AddressLine2 = up?.AddressLine2,
@@ -224,7 +244,10 @@ namespace CraftConnect_Mobile_App.Services
                 }
 
                 Debug.WriteLine(
-                    $"[USER SERVICE] Loaded: {_cachedUser.FullName} | {_cachedUser.Email} | {_cachedUser.Role}");
+                    $"[USER SERVICE] Loaded: Name={_cachedUser.FullName} " +
+                    $"| Email={_cachedUser.Email} " +
+                    $"| Role={_cachedUser.Role} " +
+                    $"| Photo={_cachedUser.ProfilePicture ?? "(none)"}");
 
                 return _cachedUser;
             }
@@ -362,7 +385,8 @@ namespace CraftConnect_Mobile_App.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[USER SERVICE] Error updating notification preference: {ex.Message}");
+                Debug.WriteLine(
+                    $"[USER SERVICE] Error updating notification preference: {ex.Message}");
                 return false;
             }
         }
@@ -381,7 +405,8 @@ namespace CraftConnect_Mobile_App.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[USER SERVICE] Error updating email notification preference: {ex.Message}");
+                Debug.WriteLine(
+                    $"[USER SERVICE] Error updating email notification preference: {ex.Message}");
                 return false;
             }
         }
