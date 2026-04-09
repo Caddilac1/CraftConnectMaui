@@ -9,21 +9,22 @@ using System.Threading.Tasks;
 namespace CraftConnect_Mobile_App.Pages
 {
     /// <summary>
-    /// MyProfilePage — redesigned.
+    /// MyProfilePage — redesigned to match Settings page aesthetic.
     ///
-    /// Layout order:
-    ///   1. Hero card (avatar, name, role badge, contact, location, member since)
-    ///   2. Personal Info card  ← always shown for every role
-    ///   3. Artisan Stats strip ← shown when profile has ArtisanUser data
-    ///   4. Artisan Business card
-    ///   5. Artisan Credentials card
+    /// Color scheme:
+    ///   • Header  : #1B2B3A (dark navy, same as Settings)
+    ///   • Cards   : White with #F0F4F8 dividers
+    ///   • Accents : #2563EB blue / #4DA6E8 light blue
+    ///   • Text    : #1B2B3A primary / #8A9BAD muted
+    ///   • Page bg : #F0F4F8
+    ///
+    /// Layout:
+    ///   1. Dark header  — avatar, name, role badge, email, quick stats row, bio
+    ///   2. Artisan Stats strip  (artisan only)
+    ///   3. Personal Info card   (all roles)
+    ///   4. Artisan Business card (artisan only)
+    ///   5. Artisan Credentials card (artisan only)
     ///   6. Edit Profile button
-    ///
-    /// A user can be both Customer/Staff/Admin AND an artisan simultaneously.
-    /// Artisan sections appear whenever the loaded profile is an ArtisanUser,
-    /// regardless of the Role claim string.
-    ///
-    /// Data source: single GET api/profilesapi/MyProfile endpoint (one round-trip).
     /// </summary>
     public partial class MyProfilePage : ContentPage
     {
@@ -62,14 +63,10 @@ namespace CraftConnect_Mobile_App.Pages
                     return;
                 }
 
-                // 1. Hero card — always
-                PopulateHeroCard(profile);
-
-                // 2. Personal info — always, for all roles
+                PopulateHeader(profile);
                 PopulatePersonalInfoCard(profile);
                 PersonalInfoCard.IsVisible = true;
 
-                // 3-5. Artisan sections — only when the profile has artisan data
                 if (profile is ArtisanUser artisan)
                 {
                     PopulateArtisanStatsCard(artisan);
@@ -80,7 +77,6 @@ namespace CraftConnect_Mobile_App.Pages
                     CredentialsCard.IsVisible = true;
                 }
 
-                ProfileCard.IsVisible = true;
                 EditProfileButton.IsVisible = true;
                 ErrorState.IsVisible = false;
             }
@@ -101,31 +97,19 @@ namespace CraftConnect_Mobile_App.Pages
             }
         }
 
-        // ── Hero card ──────────────────────────────────────────────────
+        // ── Header ─────────────────────────────────────────────────────
 
-        private void PopulateHeroCard(UserProfile profile)
+        private void PopulateHeader(UserProfile profile)
         {
             var role = (profile.Role ?? "customer").Trim().ToLower();
 
-            // Name
-            ProfileNameLabel.Text = profile.DisplayName;
-            ProfileInitialsLabel.Text = GetInitials(profile.FullName);
+            var displayName = profile.DisplayName;
+            if (IsLikelyGuid(displayName))
+                displayName = profile.Email ?? "User";
 
-            // Email
+            ProfileNameLabel.Text = displayName;
+            ProfileInitialsLabel.Text = GetInitials(displayName);
             ProfileEmailLabel.Text = profile.Email ?? "";
-
-            // Phone vs Member-Since in contact row
-            if (!string.IsNullOrWhiteSpace(profile.PhoneNumber))
-            {
-                ProfilePhoneLabel.Text = profile.PhoneNumber;
-                PhoneColumn.IsVisible = true;
-                MemberColumn.IsVisible = false;
-            }
-            else
-            {
-                PhoneColumn.IsVisible = false;
-                MemberColumn.IsVisible = true;
-            }
 
             // Role badge
             RoleBadgeLabel.Text = role switch
@@ -136,47 +120,37 @@ namespace CraftConnect_Mobile_App.Pages
                 _ => "◆  CUSTOMER"
             };
 
-            // Role badge colour
-            switch (role)
+            (RoleBadgeFrame.BackgroundColor, RoleBadgeFrame.BorderColor, RoleBadgeLabel.TextColor) = role switch
             {
-                case "artisan":
-                    RoleBadgeFrame.BackgroundColor = Color.FromArgb("#1E3A5F");
-                    RoleBadgeFrame.BorderColor = Color.FromArgb("#2563EB");
-                    RoleBadgeLabel.TextColor = Color.FromArgb("#60A5FA");
-                    break;
-                case "admin":
-                    RoleBadgeFrame.BackgroundColor = Color.FromArgb("#2D1B69");
-                    RoleBadgeFrame.BorderColor = Color.FromArgb("#7C3AED");
-                    RoleBadgeLabel.TextColor = Color.FromArgb("#A78BFA");
-                    break;
-                case "staff":
-                    RoleBadgeFrame.BackgroundColor = Color.FromArgb("#1C2B1A");
-                    RoleBadgeFrame.BorderColor = Color.FromArgb("#16A34A");
-                    RoleBadgeLabel.TextColor = Color.FromArgb("#4ADE80");
-                    break;
-                default:
-                    RoleBadgeFrame.BackgroundColor = Color.FromArgb("#1E2A38");
-                    RoleBadgeFrame.BorderColor = Color.FromArgb("#2563EB");
-                    RoleBadgeLabel.TextColor = Color.FromArgb("#60A5FA");
-                    break;
-            }
+                "artisan" => (Color.FromArgb("#1E3A5F"), Color.FromArgb("#2563EB"), Color.FromArgb("#4DA6E8")),
+                "admin" => (Color.FromArgb("#2D1B69"), Color.FromArgb("#7C3AED"), Color.FromArgb("#A78BFA")),
+                "staff" => (Color.FromArgb("#14532D"), Color.FromArgb("#16A34A"), Color.FromArgb("#2DC98E")),
+                _ => (Color.FromArgb("#243447"), Color.FromArgb("#2563EB"), Color.FromArgb("#4DA6E8"))
+            };
 
-            // Bio bubble in hero (brief preview)
+            // Bio
             if (!string.IsNullOrWhiteSpace(profile.Bio))
             {
                 ProfileBioLabel.Text = profile.Bio;
                 BioBubble.IsVisible = true;
             }
 
-            // Location pill
+            // Quick stats row — phone
+            if (!string.IsNullOrWhiteSpace(profile.PhoneNumber))
+            {
+                ProfilePhoneLabel.Text = profile.PhoneNumber;
+                PhoneColumn.IsVisible = true;
+            }
+
+            // Quick stats row — location
             var location = profile.LocationDisplay;
             if (!string.IsNullOrWhiteSpace(location))
             {
                 ProfileLocationLabel.Text = location;
-                LocationPill.IsVisible = true;
+                LocationColumn.IsVisible = true;
             }
 
-            // Member since
+            // Quick stats row — member since
             var joinedDate = profile.DateJoined;
             if (profile is ArtisanUser au && !joinedDate.HasValue)
                 joinedDate = au.CreatedAt;
@@ -184,9 +158,7 @@ namespace CraftConnect_Mobile_App.Pages
             if (joinedDate.HasValue)
             {
                 MemberSinceLabel.Text = $"{joinedDate.Value:MMM yyyy}";
-                MemberSinceShortLabel.Text = $"{joinedDate.Value:MMM yyyy}";
-                MemberPill.IsVisible = true;
-                MemberSinceShortLabel.IsVisible = !PhoneColumn.IsVisible;
+                MemberColumn.IsVisible = true;
             }
 
             // Avatar
@@ -195,19 +167,17 @@ namespace CraftConnect_Mobile_App.Pages
             else
                 ShowInitials();
 
-            // Verified badge (artisan only)
+            // Verified badge
             if (profile is ArtisanUser artisan && artisan.IsVerified)
                 VerifiedBadge.IsVisible = true;
         }
 
-        // ── Personal Info card (ALL roles) ────────────────────────────
+        // ── Personal Info card ─────────────────────────────────────────
 
         private void PopulatePersonalInfoCard(UserProfile profile)
         {
             bool hasAny = false;
 
-            // Bio — only show here if NOT already shown in hero bubble
-            // (hero shows it for brevity; here we always show the full text)
             if (!string.IsNullOrWhiteSpace(profile.Bio))
             {
                 PersonalBioLabel.Text = profile.Bio;
@@ -215,7 +185,6 @@ namespace CraftConnect_Mobile_App.Pages
                 hasAny = true;
             }
 
-            // Email
             if (!string.IsNullOrWhiteSpace(profile.Email))
             {
                 PersonalEmailLabel.Text = profile.Email;
@@ -223,7 +192,6 @@ namespace CraftConnect_Mobile_App.Pages
                 hasAny = true;
             }
 
-            // Phone
             if (!string.IsNullOrWhiteSpace(profile.PhoneNumber))
             {
                 PersonalPhoneLabel.Text = profile.PhoneNumber;
@@ -231,7 +199,6 @@ namespace CraftConnect_Mobile_App.Pages
                 hasAny = true;
             }
 
-            // Date of birth (staff/admin)
             if (profile.DateOfBirth.HasValue)
             {
                 DateOfBirthLabel.Text = profile.DateOfBirth.Value.ToString("dd MMM yyyy");
@@ -239,7 +206,6 @@ namespace CraftConnect_Mobile_App.Pages
                 hasAny = true;
             }
 
-            // Emergency contact (staff/admin)
             if (!string.IsNullOrWhiteSpace(profile.EmergencyContact))
             {
                 EmergencyContactLabel.Text = profile.EmergencyContact;
@@ -247,7 +213,6 @@ namespace CraftConnect_Mobile_App.Pages
                 hasAny = true;
             }
 
-            // Staff type (staff/admin)
             if (!string.IsNullOrWhiteSpace(profile.StaffTypeName))
             {
                 StaffTypeLabel.Text = profile.StaffTypeName;
@@ -255,7 +220,6 @@ namespace CraftConnect_Mobile_App.Pages
                 hasAny = true;
             }
 
-            // Address
             if (!string.IsNullOrWhiteSpace(profile.Address))
             {
                 var addr = profile.Address;
@@ -266,7 +230,6 @@ namespace CraftConnect_Mobile_App.Pages
                 hasAny = true;
             }
 
-            // City / State / Country
             var cityStr = profile.LocationDisplay;
             if (!string.IsNullOrWhiteSpace(cityStr))
             {
@@ -275,7 +238,6 @@ namespace CraftConnect_Mobile_App.Pages
                 hasAny = true;
             }
 
-            // Postal code
             if (!string.IsNullOrWhiteSpace(profile.PostalCode))
             {
                 PostalCodeLabel.Text = profile.PostalCode;
@@ -283,7 +245,6 @@ namespace CraftConnect_Mobile_App.Pages
                 hasAny = true;
             }
 
-            // Language + Timezone — show both in the same row if either exists
             bool hasLanguage = !string.IsNullOrWhiteSpace(profile.PreferredLanguage);
             bool hasTimezone = !string.IsNullOrWhiteSpace(profile.Timezone);
             if (hasLanguage || hasTimezone)
@@ -294,7 +255,6 @@ namespace CraftConnect_Mobile_App.Pages
                 hasAny = true;
             }
 
-            // Date joined
             if (profile.DateJoined.HasValue)
             {
                 DateJoinedLabel.Text = profile.DateJoined.Value.ToString("dd MMM yyyy");
@@ -323,7 +283,6 @@ namespace CraftConnect_Mobile_App.Pages
             BusinessNameLabel.Text = au.BusinessName ?? "—";
             SpecializationLabel.Text = au.Specialization ?? "—";
 
-            // Artisan speciality (different from Specialization)
             if (!string.IsNullOrWhiteSpace(au.ArtisanSpeciality) &&
                 au.ArtisanSpeciality != au.Specialization)
             {
@@ -331,35 +290,30 @@ namespace CraftConnect_Mobile_App.Pages
                 ArtisanSpecialityRow.IsVisible = true;
             }
 
-            // Experience level
             if (!string.IsNullOrWhiteSpace(au.ExperienceLevel))
             {
                 ExperienceLevelLabel.Text = au.ExperienceLevel;
                 ExperienceLevelRow.IsVisible = true;
             }
 
-            // Rate
             if (au.HourlyRate.HasValue)
             {
                 HourlyRateLabel.Text = $"GH₵ {au.HourlyRate.Value:F0}/hr";
                 HourlyRateBox.IsVisible = true;
             }
 
-            // Service radius
             if (au.ServiceRadius.HasValue && au.ServiceRadius.Value > 0)
             {
                 ServiceRadiusLabel.Text = $"{au.ServiceRadius:F0} km";
                 ServiceRadiusBox.IsVisible = true;
             }
 
-            // Business address
             if (!string.IsNullOrWhiteSpace(au.BusinessAddress))
             {
                 BusinessAddressLabel.Text = au.BusinessAddress;
                 BusinessAddressRow.IsVisible = true;
             }
 
-            // Availability badge
             var status = au.AvailabilityStatusUpper;
             AvailabilityLabel.Text = status switch
             {
@@ -368,35 +322,32 @@ namespace CraftConnect_Mobile_App.Pages
                 "UNAVAILABLE" => "● Unavailable",
                 _ => au.AvailabilityStatus ?? "Unknown"
             };
-            AvailabilityBadge.BackgroundColor = status switch
+
+            (AvailabilityBadge.BackgroundColor, AvailabilityLabel.TextColor) = status switch
             {
-                "AVAILABLE" => Color.FromArgb("#14532D"),
-                "BUSY" => Color.FromArgb("#451A03"),
-                _ => Color.FromArgb("#450A0A")
+                "AVAILABLE" => (Color.FromArgb("#DCFCE7"), Color.FromArgb("#16A34A")),
+                "BUSY" => (Color.FromArgb("#FEF3C7"), Color.FromArgb("#D97706")),
+                _ => (Color.FromArgb("#FEF2F2"), Color.FromArgb("#DC2626"))
             };
 
-            // Slug
             if (!string.IsNullOrWhiteSpace(au.Slug))
             {
                 SlugLabel.Text = au.Slug;
                 SlugRow.IsVisible = true;
             }
 
-            // About
             if (!string.IsNullOrWhiteSpace(au.About))
             {
                 AboutLabel.Text = au.About;
                 AboutSection.IsVisible = true;
             }
 
-            // Professional Bio
             if (!string.IsNullOrWhiteSpace(au.ProfessionalBio))
             {
                 ProfBioLabel.Text = au.ProfessionalBio;
                 ProfBioSection.IsVisible = true;
             }
 
-            // Services
             if (!string.IsNullOrWhiteSpace(au.ServicesOffered))
             {
                 ServicesLayout.Children.Clear();
@@ -405,24 +356,23 @@ namespace CraftConnect_Mobile_App.Pages
                 {
                     ServicesLayout.Children.Add(new Frame
                     {
-                        BackgroundColor = Color.FromArgb("#1C2B3A"),
-                        CornerRadius = 9,
+                        BackgroundColor = Color.FromArgb("#EBF3FB"),
+                        CornerRadius = 8,
                         Padding = new Thickness(11, 5),
                         HasShadow = false,
                         Margin = new Thickness(0, 0, 6, 6),
-                        BorderColor = Color.FromArgb("#2563EB"),
+                        BorderColor = Color.FromArgb("#BFDBFE"),
                         Content = new Label
                         {
                             Text = svc.Trim(),
                             FontSize = 12,
-                            TextColor = Color.FromArgb("#60A5FA")
+                            TextColor = Color.FromArgb("#1D4ED8")
                         }
                     });
                 }
                 ServicesSection.IsVisible = true;
             }
 
-            // Last updated
             if (au.UpdatedAt.HasValue)
             {
                 UpdatedAtLabel.Text = au.UpdatedAt.Value.ToString("dd MMM yyyy, HH:mm");
@@ -468,22 +418,36 @@ namespace CraftConnect_Mobile_App.Pages
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(path)) { ShowInitials(); return; }
+
                 Uri uri;
                 if (path.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                     path.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
                     uri = new Uri(path);
+                }
                 else
                 {
-                    var baseUrl = _apiConfig.BaseUrl.TrimEnd('/');
-                    uri = new Uri($"{baseUrl}/{path.TrimStart('/')}");
+                    var baseUrl = _apiConfig.BaseUrl?.TrimEnd('/');
+                    var relative = path.TrimStart('/');
+                    uri = new Uri($"{baseUrl}/{relative}");
                 }
+
+                System.Diagnostics.Debug.WriteLine($"[MY PROFILE] Avatar URL: {uri}");
 
                 ProfilePhoto.Source = ImageSource.FromUri(uri);
                 ProfilePhotoFrame.IsVisible = true;
                 ProfileInitialsFrame.IsVisible = false;
+
+                Device.StartTimer(TimeSpan.FromSeconds(3), () =>
+                {
+                    if (ProfilePhoto.Source == null) ShowInitials();
+                    return false;
+                });
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[MY PROFILE] Avatar error: {ex.Message}");
                 ShowInitials();
             }
         }
@@ -494,10 +458,19 @@ namespace CraftConnect_Mobile_App.Pages
             ProfileInitialsFrame.IsVisible = true;
         }
 
-        private static string GetInitials(string? fullName)
+        // ── Helpers ────────────────────────────────────────────────────
+
+        private static bool IsLikelyGuid(string value) =>
+            !string.IsNullOrWhiteSpace(value) && Guid.TryParse(value, out _);
+
+        private static string GetInitials(string? displayName)
         {
-            if (string.IsNullOrWhiteSpace(fullName)) return "?";
-            var parts = fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (string.IsNullOrWhiteSpace(displayName)) return "?";
+
+            var atIdx = displayName.IndexOf('@');
+            if (atIdx > 0) return displayName[0].ToString().ToUpper();
+
+            var parts = displayName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
             return parts.Length == 1
                 ? parts[0][0].ToString().ToUpper()
                 : $"{parts[0][0]}{parts[^1][0]}".ToUpper();
@@ -513,8 +486,6 @@ namespace CraftConnect_Mobile_App.Pages
 
         private void ResetAllSections()
         {
-            // Cards
-            ProfileCard.IsVisible = false;
             PersonalInfoCard.IsVisible = false;
             ArtisanStatsCard.IsVisible = false;
             ArtisanBusinessCard.IsVisible = false;
@@ -522,17 +493,14 @@ namespace CraftConnect_Mobile_App.Pages
             EditProfileButton.IsVisible = false;
             ErrorState.IsVisible = false;
 
-            // Avatar
+            // Header reset
             ProfilePhotoFrame.IsVisible = false;
             ProfileInitialsFrame.IsVisible = true;
             VerifiedBadge.IsVisible = false;
-
-            // Hero optional
-            PhoneColumn.IsVisible = false;
-            MemberColumn.IsVisible = true;
             BioBubble.IsVisible = false;
-            LocationPill.IsVisible = false;
-            MemberPill.IsVisible = false;
+            PhoneColumn.IsVisible = false;
+            LocationColumn.IsVisible = false;
+            MemberColumn.IsVisible = false;
 
             // Personal info rows
             PersonalBioSection.IsVisible = false;
@@ -548,7 +516,7 @@ namespace CraftConnect_Mobile_App.Pages
             DateJoinedRow.IsVisible = false;
             NoPersonalInfoLabel.IsVisible = false;
 
-            // Artisan business rows
+            // Business rows
             ArtisanSpecialityRow.IsVisible = false;
             ExperienceLevelRow.IsVisible = false;
             HourlyRateBox.IsVisible = false;
