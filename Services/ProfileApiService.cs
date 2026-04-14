@@ -1,25 +1,61 @@
+using CraftConnect_Mobile_App.Models;
+using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text.Json;
-using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Linq;
-using CraftConnect_Mobile_App.Models;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace CraftConnect_Mobile_App.Services
 {
-    // ═══════════════════════════════════════════════════════════════
-    // PRIVATE API RESPONSE MODELS — match backend JSON shapes exactly
-    // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════
+    // CONSTANTS
+    // ═══════════════════════════════════════════════════════════════════════
 
-    internal class ProfilesResponse
+    internal static class ApiRoutes
+    {
+        public const string Profiles = "/api/ProfilesApi";
+        public const string MyProfile = "/api/ProfilesApi/MyProfile";
+        public const string ProfileById = "/api/ProfilesApi/{0}";
+        public const string HasArtisanProfile = "/api/ProfilesApi/HasArtisanProfile";
+        public const string DeleteArtisan = "/api/ProfilesApi/ArtisanProfile";
+        public const string DeleteUser = "/api/ProfilesApi/UserProfile";
+
+        public const string TrustScore = "/api/trust-score/{0}";
+        public const string TrustScoreHistory = "/api/trust-score/{0}/history";
+        public const string WorkReferrals = "/api/trust-score/{0}/referrals/work";
+        public const string VendorReferrals = "/api/trust-score/{0}/referrals/vendor";
+        public const string ColleagueReferrals = "/api/trust-score/{0}/referrals/colleague";
+    }
+
+    internal static class CacheKeys
+    {
+        public static string TrustScore(int id) => $"ts:{id}";
+        public static string TrustHistory(int id) => $"th:{id}";
+        public static string WorkReferrals(int id) => $"wr:{id}";
+        public static string VendorReferrals(int id) => $"vr:{id}";
+        public static string ColleagueReferrals(int id) => $"cr:{id}";
+        public static string AllReferrals(int id) => $"ar:{id}";
+        public static string MyProfile => "my_profile";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PRIVATE API RESPONSE MODELS — match backend JSON shapes exactly
+    // ═══════════════════════════════════════════════════════════════════════
+
+    internal sealed class ProfilesResponse
     {
         public List<ArtisanProfileDto> Profiles { get; set; }
     }
 
-    internal class ProfileDetailsResponse
+    internal sealed class ProfileDetailsResponse
     {
         public string IdentityUserId { get; set; }
         public string Email { get; set; }
@@ -28,7 +64,7 @@ namespace CraftConnect_Mobile_App.Services
         public ArtisanProfileDto ArtisanProfile { get; set; }
     }
 
-    internal class ArtisanProfileDto
+    internal sealed class ArtisanProfileDto
     {
         public string Id { get; set; }
         public string BusinessName { get; set; }
@@ -53,7 +89,7 @@ namespace CraftConnect_Mobile_App.Services
         public string Slug { get; set; }
     }
 
-    internal class UserProfileDto
+    internal sealed class UserProfileDto
     {
         public string FullName { get; set; }
         public string Bio { get; set; }
@@ -70,19 +106,77 @@ namespace CraftConnect_Mobile_App.Services
         public bool IsActive { get; set; }
     }
 
-    internal class HasProfileResponse
+    internal sealed class HasProfileResponse
     {
         public bool HasProfile { get; set; }
         public string Error { get; set; }
     }
 
-    internal class ApiResponse
+    internal sealed class ApiResponse
     {
         public string Message { get; set; }
         public string Error { get; set; }
     }
 
-    internal class CreateArtisanProfileRequest
+    // ─── Trust-score DTOs (mirror backend shapes) ───────────────────────
+
+    internal sealed class ApiResult<T>
+    {
+        public bool Success { get; set; }
+        public T Data { get; set; }
+        public string Error { get; set; }
+    }
+
+    internal sealed class TrustScoreResponseDto
+    {
+        public int CompanyId { get; set; }
+        public decimal Score { get; set; }
+        public string Band { get; set; }   // e.g. "Gold", "Silver"
+        public DateTime CalculatedAt { get; set; }
+        public Dictionary<string, decimal> Breakdown { get; set; }
+    }
+
+    internal sealed class TrustScoreHistoryItemDto
+    {
+        public decimal Score { get; set; }
+        public string Band { get; set; }
+        public DateTime RecordedAt { get; set; }
+        public string ChangeReason { get; set; }
+    }
+
+    internal sealed class WorkReferralDto
+    {
+        public int Id { get; set; }
+        public string ReferrerName { get; set; }
+        public string ProjectTitle { get; set; }
+        public decimal Rating { get; set; }
+        public string Comment { get; set; }
+        public DateTime SubmittedAt { get; set; }
+    }
+
+    internal sealed class VendorReferralDto
+    {
+        public int Id { get; set; }
+        public string VendorName { get; set; }
+        public string Category { get; set; }
+        public decimal Rating { get; set; }
+        public string Comment { get; set; }
+        public DateTime SubmittedAt { get; set; }
+    }
+
+    internal sealed class ColleagueReferralDto
+    {
+        public int Id { get; set; }
+        public string ColleagueName { get; set; }
+        public string Relationship { get; set; }
+        public decimal Rating { get; set; }
+        public string Comment { get; set; }
+        public DateTime SubmittedAt { get; set; }
+    }
+
+    // ─── Request models ─────────────────────────────────────────────────
+
+    internal sealed class CreateArtisanProfileRequest
     {
         public string BusinessName { get; set; }
         public string Specialization { get; set; }
@@ -103,7 +197,7 @@ namespace CraftConnect_Mobile_App.Services
         public string BusinessAddress { get; set; }
     }
 
-    internal class UpdateProfileRequest
+    internal sealed class UpdateProfileRequest
     {
         public string Email { get; set; }
         public string PhoneNumber { get; set; }
@@ -111,11 +205,11 @@ namespace CraftConnect_Mobile_App.Services
         public ArtisanProfileDto ArtisanProfile { get; set; }
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // PUBLIC MODELS FOR THE MOBILE APP
-    // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════
+    // PUBLIC MOBILE MODELS
+    // ═══════════════════════════════════════════════════════════════════════
 
-    public class MobileArtisanProfile
+    public sealed class MobileArtisanProfile
     {
         public string Id { get; set; }
         public string BusinessName { get; set; }
@@ -138,15 +232,15 @@ namespace CraftConnect_Mobile_App.Services
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public string Slug { get; set; }
-        
-        // Computed properties for display
-        public string DisplayName => !string.IsNullOrEmpty(BusinessName) ? BusinessName : "Unnamed Business";
+
+        // Computed display helpers
+        public string DisplayName => string.IsNullOrEmpty(BusinessName) ? "Unnamed Business" : BusinessName;
         public string DisplayRate => HourlyRate.HasValue ? $"${HourlyRate:F2}/hr" : "Rate not set";
         public string DisplayExperience => $"{YearsOfExperience} years ({ExperienceLevel})";
         public bool IsAvailable => AvailabilityStatus == "Available";
     }
 
-    public class MobileUserProfile
+    public sealed class MobileUserProfile
     {
         public string FullName { get; set; }
         public string Bio { get; set; }
@@ -158,28 +252,27 @@ namespace CraftConnect_Mobile_App.Services
         public string ProfilePictureUrl { get; set; }
         public string PreferredLanguage { get; set; }
         public string Timezone { get; set; }
-        
-        // Computed properties
-        public string FullAddress => string.IsNullOrEmpty(Address) ? "Address not set" : 
-            $"{Address}, {City}, {State} {PostalCode}, {Country}";
-        public string DisplayName => !string.IsNullOrEmpty(FullName) ? FullName : "User";
+
+        public string FullAddress => string.IsNullOrEmpty(Address)
+            ? "Address not set"
+            : $"{Address}, {City}, {State} {PostalCode}, {Country}";
+        public string DisplayName => string.IsNullOrEmpty(FullName) ? "User" : FullName;
     }
 
-    public class MobileProfileDetails
+    public sealed class MobileProfileDetails
     {
         public string IdentityUserId { get; set; }
         public string Email { get; set; }
         public string PhoneNumber { get; set; }
         public MobileUserProfile UserProfile { get; set; }
         public MobileArtisanProfile ArtisanProfile { get; set; }
-        
-        // Computed properties
+
         public bool HasArtisanProfile => ArtisanProfile != null;
         public bool HasUserProfile => UserProfile != null;
         public string DisplayName => UserProfile?.DisplayName ?? Email ?? "User";
     }
 
-    public class CreateMobileArtisanProfile
+    public sealed class CreateMobileArtisanProfile
     {
         public string BusinessName { get; set; }
         public string Specialization { get; set; }
@@ -200,7 +293,7 @@ namespace CraftConnect_Mobile_App.Services
         public string BusinessAddress { get; set; }
     }
 
-    public class UpdateMobileProfile
+    public sealed class UpdateMobileProfile
     {
         public string Email { get; set; }
         public string PhoneNumber { get; set; }
@@ -208,689 +301,733 @@ namespace CraftConnect_Mobile_App.Services
         public MobileArtisanProfile ArtisanProfile { get; set; }
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // PROFILE API SERVICE
-    // ═══════════════════════════════════════════════════════════════
+    // ─── Trust-score public models ───────────────────────────────────────
+
+    public sealed class MobileTrustScore
+    {
+        public int CompanyId { get; set; }
+        public decimal Score { get; set; }
+        public string Band { get; set; }
+        public DateTime CalculatedAt { get; set; }
+        public IReadOnlyDictionary<string, decimal> Breakdown { get; set; }
+
+        // Display helpers
+        public string DisplayScore => $"{Score:F1}";
+        public string DisplayBand => string.IsNullOrEmpty(Band) ? "Unrated" : Band;
+        public bool IsGold => Band?.Equals("Gold", StringComparison.OrdinalIgnoreCase) == true;
+        public bool IsSilver => Band?.Equals("Silver", StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    public sealed class MobileTrustScoreHistoryItem
+    {
+        public decimal Score { get; set; }
+        public string Band { get; set; }
+        public DateTime RecordedAt { get; set; }
+        public string ChangeReason { get; set; }
+    }
+
+    public sealed class MobileWorkReferral
+    {
+        public int Id { get; set; }
+        public string ReferrerName { get; set; }
+        public string ProjectTitle { get; set; }
+        public decimal Rating { get; set; }
+        public string Comment { get; set; }
+        public DateTime SubmittedAt { get; set; }
+        public string DisplayRating => $"{Rating:F1} ★";
+    }
+
+    public sealed class MobileVendorReferral
+    {
+        public int Id { get; set; }
+        public string VendorName { get; set; }
+        public string Category { get; set; }
+        public decimal Rating { get; set; }
+        public string Comment { get; set; }
+        public DateTime SubmittedAt { get; set; }
+        public string DisplayRating => $"{Rating:F1} ★";
+    }
+
+    public sealed class MobileColleagueReferral
+    {
+        public int Id { get; set; }
+        public string ColleagueName { get; set; }
+        public string Relationship { get; set; }
+        public decimal Rating { get; set; }
+        public string Comment { get; set; }
+        public DateTime SubmittedAt { get; set; }
+        public string DisplayRating => $"{Rating:F1} ★";
+    }
+
+    /// <summary>
+    /// Combines all referral types and the current trust score into one
+    /// hydrated snapshot — fetched in parallel for maximum speed.
+    /// </summary>
+    public sealed class MobileTrustScoreSnapshot
+    {
+        public MobileTrustScore CurrentScore { get; set; }
+        public IReadOnlyList<MobileWorkReferral> WorkReferrals { get; set; }
+        public IReadOnlyList<MobileVendorReferral> VendorReferrals { get; set; }
+        public IReadOnlyList<MobileColleagueReferral> ColleagueReferrals { get; set; }
+
+        public int TotalReferrals =>
+            (WorkReferrals?.Count ?? 0) +
+            (VendorReferrals?.Count ?? 0) +
+            (ColleagueReferrals?.Count ?? 0);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SERVICE INTERFACE
+    // ═══════════════════════════════════════════════════════════════════════
 
     public interface IProfileApiService
     {
-        Task<List<MobileArtisanProfile>> GetAllProfilesAsync();
-        Task<MobileProfileDetails> GetMyProfileAsync();
-        Task<MobileArtisanProfile> GetProfileAsync(string id);
-        Task<MobileArtisanProfile> CreateArtisanProfileAsync(CreateMobileArtisanProfile profile);
-        Task<bool> UpdateProfileAsync(UpdateMobileProfile profile);
-        Task<bool> DeleteArtisanProfileAsync();
-        Task<bool> DeleteUserProfileAsync();
-        Task<bool> HasArtisanProfileAsync();
-        Task<int> GetTotalProfilesCountAsync();
-        Task<bool> TestProfileApiAsync();
-        Task<bool> TestAuthAsync();
+        // ── Profile ──────────────────────────────────────────────────────
+        Task<List<MobileArtisanProfile>> GetAllProfilesAsync(CancellationToken ct = default);
+        Task<MobileProfileDetails> GetMyProfileAsync(CancellationToken ct = default);
+        Task<MobileArtisanProfile> GetProfileAsync(string id, CancellationToken ct = default);
+        Task<MobileArtisanProfile> CreateArtisanProfileAsync(CreateMobileArtisanProfile profile, CancellationToken ct = default);
+        Task<bool> UpdateProfileAsync(UpdateMobileProfile profile, CancellationToken ct = default);
+        Task<bool> DeleteArtisanProfileAsync(CancellationToken ct = default);
+        Task<bool> DeleteUserProfileAsync(CancellationToken ct = default);
+        Task<bool> HasArtisanProfileAsync(CancellationToken ct = default);
+        Task<int> GetTotalProfilesCountAsync(CancellationToken ct = default);
+
+        // ── Trust Score ───────────────────────────────────────────────────
+        Task<MobileTrustScore> GetTrustScoreAsync(int companyId, CancellationToken ct = default);
+        Task<IReadOnlyList<MobileTrustScoreHistoryItem>> GetTrustScoreHistoryAsync(int companyId, int maxRecords = 24, CancellationToken ct = default);
+        Task<IReadOnlyList<MobileWorkReferral>> GetWorkReferralsAsync(int companyId, int page = 1, int pageSize = 20, CancellationToken ct = default);
+        Task<IReadOnlyList<MobileVendorReferral>> GetVendorReferralsAsync(int companyId, int page = 1, int pageSize = 20, CancellationToken ct = default);
+        Task<IReadOnlyList<MobileColleagueReferral>> GetColleagueReferralsAsync(int companyId, int page = 1, int pageSize = 20, CancellationToken ct = default);
+
+        /// <summary>Fetches score + all three referral types in parallel — one round-trip cost.</summary>
+        Task<MobileTrustScoreSnapshot> GetTrustScoreSnapshotAsync(int companyId, int referralPageSize = 20, CancellationToken ct = default);
+
+        // ── Diagnostics ───────────────────────────────────────────────────
+        Task<bool> TestProfileApiAsync(CancellationToken ct = default);
+        Task<bool> TestAuthAsync(CancellationToken ct = default);
     }
 
-    public class ProfileApiService : IProfileApiService
+    // ═══════════════════════════════════════════════════════════════════════
+    // IMPLEMENTATION
+    // ═══════════════════════════════════════════════════════════════════════
+
+    public sealed class ProfileApiService : IProfileApiService, IDisposable
     {
-        private readonly HttpClient _httpClient;
-        private readonly string _baseUrl;
+        // ── Statics ──────────────────────────────────────────────────────
+
+        // Single shared SocketsHttpHandler for connection pooling across the app lifetime.
+        // Rotate DNS every 5 min to handle server-side IP changes.
+        private static readonly SocketsHttpHandler _sharedHandler = new()
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+            MaxConnectionsPerServer = 10,
+            EnableMultipleHttp2Connections = true,
+            // TLS hardening: TLS 1.2 minimum, validate cert properly
+            SslOptions = new System.Net.Security.SslClientAuthenticationOptions
+            {
+                EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12
+                                    | System.Security.Authentication.SslProtocols.Tls13,
+                CertificateRevocationCheckMode = System.Security.Cryptography.X509Certificates.X509RevocationMode.Online
+            },
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Brotli
+        };
 
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
             PropertyNameCaseInsensitive = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            NumberHandling = JsonNumberHandling.AllowReadingFromString
         };
 
-        public ProfileApiService(ApiConfig config)
+        // Short-lived in-memory cache. Avoids redundant network calls for read-heavy
+        // trust-score data that the backend itself caches for 15–60 s.
+        private readonly IMemoryCache _cache;
+        private readonly MemoryCacheEntryOptions _shortTtl = new() { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(15) };
+        private readonly MemoryCacheEntryOptions _mediumTtl = new() { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30) };
+        private readonly MemoryCacheEntryOptions _longTtl = new() { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60) };
+
+        private readonly HttpClient _httpClient;
+
+        // ── Constructor ──────────────────────────────────────────────────
+
+        public ProfileApiService(ApiConfig config, IMemoryCache cache = null)
         {
-            _baseUrl = config.BaseUrl.TrimEnd('/');
+            if (string.IsNullOrWhiteSpace(config?.BaseUrl))
+                throw new ArgumentException("BaseUrl must not be empty.", nameof(config));
 
-#if ANDROID
-            var handler = new Xamarin.Android.Net.AndroidMessageHandler
-            {
-                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
-                {
-                    Debug.WriteLine($"[PROFILE SSL] Host: {message.RequestUri.Host}, Errors: {errors}");
-                    return true; // For development only! Remove in production
-                }
-            };
-#else
-            var handler = new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
-                {
-                    Debug.WriteLine($"[PROFILE SSL] Host: {message.RequestUri.Host}, Errors: {errors}");
-                    return true; // For development only! Remove in production
-                }
-            };
-#endif
+            _cache = cache ?? new MemoryCache(new MemoryCacheOptions { SizeLimit = 512 });
 
-            _httpClient = new HttpClient(handler)
+            _httpClient = new HttpClient(_sharedHandler, disposeHandler: false)
             {
-                BaseAddress = new Uri(_baseUrl),
-                Timeout = TimeSpan.FromSeconds(30)
+                BaseAddress = new Uri(config.BaseUrl.TrimEnd('/')),
+                Timeout = TimeSpan.FromSeconds(20)
             };
 
-            Debug.WriteLine($"[PROFILE SERVICE] Initialized with BaseUrl: {_baseUrl}");
+            // Prefer HTTP/2, accept Brotli/GZip for reduced payload size
+            _httpClient.DefaultRequestHeaders.AcceptEncoding.ParseAdd("br, gzip");
+            _httpClient.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+
+            Log("Initialised", $"BaseUrl={config.BaseUrl}");
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // AUTH HEADER
-        // ═══════════════════════════════════════════════════════════════
-
-        private async Task<bool> SetAuthHeaderAsync()
-        {
-            try
-            {
-                var token = await SecureStorage.GetAsync("auth_token");
-
-                if (string.IsNullOrEmpty(token))
-                {
-                    Debug.WriteLine("[PROFILE SERVICE] ❌ No auth token found in SecureStorage");
-                    return false;
-                }
-
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", token);
-
-                Debug.WriteLine($"[PROFILE SERVICE] ✅ Auth header set. Token length: {token.Length}");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[PROFILE SERVICE] ❌ Error setting auth header: {ex.Message}");
-                return false;
-            }
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // GET ALL PROFILES  →  GET /api/ProfilesApi
-        // ═══════════════════════════════════════════════════════════════
-
-        public async Task<List<MobileArtisanProfile>> GetAllProfilesAsync()
-        {
-            try
-            {
-                Debug.WriteLine("[PROFILE SERVICE] 📡 Fetching all profiles...");
-
-                if (!await SetAuthHeaderAsync())
-                    throw new UnauthorizedAccessException("Not authenticated. Please login first.");
-
-                var sw = Stopwatch.StartNew();
-                var response = await _httpClient.GetAsync("/api/ProfilesApi");
-                sw.Stop();
-
-                Debug.WriteLine($"[PROFILE SERVICE] 📥 Response: {(int)response.StatusCode} in {sw.ElapsedMilliseconds}ms");
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    await HandleErrorResponseAsync(response, "GetAllProfiles");
-                    return new List<MobileArtisanProfile>();
-                }
-
-                var json = await response.Content.ReadAsStringAsync();
-                var result = JsonSerializer.Deserialize<List<ArtisanProfileDto>>(json, _jsonOptions);
-
-                var profiles = (result ?? new List<ArtisanProfileDto>()).Select(MapToMobileArtisanProfile).ToList();
-
-                Debug.WriteLine($"[PROFILE SERVICE] ✅ Fetched {profiles.Count} profiles");
-                return profiles;
-            }
-            catch (UnauthorizedAccessException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[PROFILE SERVICE] ❌ Error getting profiles: {ex.Message}");
-                throw new Exception($"Error getting profiles: {ex.Message}", ex);
-            }
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // GET MY PROFILE  →  GET /api/ProfilesApi/MyProfile
-        // ═══════════════════════════════════════════════════════════════
-
-        public async Task<MobileProfileDetails> GetMyProfileAsync()
-        {
-            try
-            {
-                Debug.WriteLine("[PROFILE SERVICE] 📡 Fetching my profile...");
-
-                if (!await SetAuthHeaderAsync())
-                    throw new UnauthorizedAccessException("Not authenticated. Please login first.");
-
-                var sw = Stopwatch.StartNew();
-                var response = await _httpClient.GetAsync("/api/ProfilesApi/MyProfile");
-                sw.Stop();
-
-                Debug.WriteLine($"[PROFILE SERVICE] 📥 Response: {(int)response.StatusCode} in {sw.ElapsedMilliseconds}ms");
-
-                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    Debug.WriteLine("[PROFILE SERVICE] ℹ️ No profile found");
-                    return new MobileProfileDetails();
-                }
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    await HandleErrorResponseAsync(response, "GetMyProfile");
-                    return new MobileProfileDetails();
-                }
-
-                var json = await response.Content.ReadAsStringAsync();
-                var result = JsonSerializer.Deserialize<ProfileDetailsResponse>(json, _jsonOptions);
-
-                if (result == null)
-                {
-                    Debug.WriteLine("[PROFILE SERVICE] ⚠️ Invalid response format");
-                    return new MobileProfileDetails();
-                }
-
-                var profile = new MobileProfileDetails
-                {
-                    IdentityUserId = result.IdentityUserId,
-                    Email = result.Email,
-                    PhoneNumber = result.PhoneNumber,
-                    UserProfile = result.UserProfile != null ? new MobileUserProfile
-                    {
-                        FullName = result.UserProfile.FullName,
-                        Bio = result.UserProfile.Bio,
-                        Address = result.UserProfile.Address,
-                        City = result.UserProfile.City,
-                        State = result.UserProfile.State,
-                        Country = result.UserProfile.Country,
-                        PostalCode = result.UserProfile.PostalCode,
-                        ProfilePictureUrl = result.UserProfile.ProfilePictureUrl,
-                        PreferredLanguage = result.UserProfile.PreferredLanguage,
-                        Timezone = result.UserProfile.Timezone
-                    } : null,
-                    ArtisanProfile = result.ArtisanProfile != null ? MapToMobileArtisanProfile(result.ArtisanProfile) : null
-                };
-
-                Debug.WriteLine($"[PROFILE SERVICE] ✅ Profile fetched successfully. HasArtisan: {profile.HasArtisanProfile}");
-                return profile;
-            }
-            catch (UnauthorizedAccessException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[PROFILE SERVICE] ❌ Error getting my profile: {ex.Message}");
-                throw;
-            }
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // GET PROFILE BY ID  →  GET /api/ProfilesApi/{id}
-        // ═══════════════════════════════════════════════════════════════
-
-        public async Task<MobileArtisanProfile> GetProfileAsync(string id)
-        {
-            try
-            {
-                Debug.WriteLine($"[PROFILE SERVICE] 📡 Fetching profile: {id}");
-
-                if (!await SetAuthHeaderAsync())
-                    throw new UnauthorizedAccessException("Not authenticated. Please login first.");
-
-                var sw = Stopwatch.StartNew();
-                var response = await _httpClient.GetAsync($"/api/ProfilesApi/{id}");
-                sw.Stop();
-
-                Debug.WriteLine($"[PROFILE SERVICE] 📥 Response: {(int)response.StatusCode} in {sw.ElapsedMilliseconds}ms");
-
-                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    Debug.WriteLine($"[PROFILE SERVICE] ℹ️ Profile {id} not found");
-                    return null;
-                }
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    await HandleErrorResponseAsync(response, "GetProfile");
-                    return null;
-                }
-
-                var json = await response.Content.ReadAsStringAsync();
-                var result = JsonSerializer.Deserialize<ArtisanProfileDto>(json, _jsonOptions);
-
-                if (result == null)
-                {
-                    Debug.WriteLine("[PROFILE SERVICE] ⚠️ Invalid response format");
-                    return null;
-                }
-
-                var profile = MapToMobileArtisanProfile(result);
-                Debug.WriteLine($"[PROFILE SERVICE] ✅ Profile {id} fetched successfully");
-                return profile;
-            }
-            catch (UnauthorizedAccessException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[PROFILE SERVICE] ❌ Error getting profile: {ex.Message}");
-                throw;
-            }
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // CREATE ARTISAN PROFILE  →  POST /api/ProfilesApi
-        // ═══════════════════════════════════════════════════════════════
-
-        public async Task<MobileArtisanProfile> CreateArtisanProfileAsync(CreateMobileArtisanProfile profile)
-        {
-            try
-            {
-                Debug.WriteLine("[PROFILE SERVICE] 📤 Creating artisan profile...");
-
-                if (!await SetAuthHeaderAsync())
-                    throw new UnauthorizedAccessException("Not authenticated. Please login first.");
-
-                var request = new CreateArtisanProfileRequest
-                {
-                    BusinessName = profile.BusinessName,
-                    Specialization = profile.Specialization,
-                    YearsOfExperience = profile.YearsOfExperience,
-                    ExperienceLevel = profile.ExperienceLevel,
-                    LicenseNumber = profile.LicenseNumber,
-                    Certification = profile.Certification,
-                    BusinessRegistration = profile.BusinessRegistration,
-                    TaxId = profile.TaxId,
-                    InsuranceDetails = profile.InsuranceDetails,
-                    AvailabilityStatus = profile.AvailabilityStatus,
-                    HourlyRate = profile.HourlyRate,
-                    ServiceRadius = profile.ServiceRadius,
-                    About = profile.About,
-                    ServicesOffered = profile.ServicesOffered,
-                    ArtisanSpeciality = profile.ArtisanSpeciality,
-                    ProfessionalBio = profile.ProfessionalBio,
-                    BusinessAddress = profile.BusinessAddress
-                };
-
-                var json = JsonSerializer.Serialize(request, _jsonOptions);
-                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-
-                var sw = Stopwatch.StartNew();
-                var response = await _httpClient.PostAsync("/api/ProfilesApi", content);
-                sw.Stop();
-
-                Debug.WriteLine($"[PROFILE SERVICE] 📥 Response: {(int)response.StatusCode} in {sw.ElapsedMilliseconds}ms");
-
-                if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
-                {
-                    var errorJson = await response.Content.ReadAsStringAsync();
-                    Debug.WriteLine($"[PROFILE SERVICE] ⚠️ Bad request: {errorJson}");
-                    return null;
-                }
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    await HandleErrorResponseAsync(response, "CreateArtisanProfile");
-                    return null;
-                }
-
-                var responseJson = await response.Content.ReadAsStringAsync();
-                var result = JsonSerializer.Deserialize<ArtisanProfileDto>(responseJson, _jsonOptions);
-
-                if (result == null)
-                {
-                    Debug.WriteLine("[PROFILE SERVICE] ⚠️ Invalid response format");
-                    return null;
-                }
-
-                var createdProfile = MapToMobileArtisanProfile(result);
-                Debug.WriteLine($"[PROFILE SERVICE] ✅ Artisan profile created successfully. ID: {createdProfile.Id}");
-                return createdProfile;
-            }
-            catch (UnauthorizedAccessException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[PROFILE SERVICE] ❌ Error creating profile: {ex.Message}");
-                return null;
-            }
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // UPDATE PROFILE  →  PUT /api/ProfilesApi
-        // ═══════════════════════════════════════════════════════════════
-
-        public async Task<bool> UpdateProfileAsync(UpdateMobileProfile profile)
-        {
-            try
-            {
-                Debug.WriteLine("[PROFILE SERVICE] 📤 Updating profile...");
-
-                if (!await SetAuthHeaderAsync())
-                    throw new UnauthorizedAccessException("Not authenticated. Please login first.");
-
-                var request = new UpdateProfileRequest
-                {
-                    Email = profile.Email,
-                    PhoneNumber = profile.PhoneNumber,
-                    UserProfile = profile.UserProfile != null ? new UserProfileDto
-                    {
-                        FullName = profile.UserProfile.FullName,
-                        Bio = profile.UserProfile.Bio,
-                        Address = profile.UserProfile.Address,
-                        City = profile.UserProfile.City,
-                        State = profile.UserProfile.State,
-                        Country = profile.UserProfile.Country,
-                        PostalCode = profile.UserProfile.PostalCode,
-                        ProfilePictureUrl = profile.UserProfile.ProfilePictureUrl,
-                        PreferredLanguage = profile.UserProfile.PreferredLanguage,
-                        Timezone = profile.UserProfile.Timezone
-                    } : null,
-                    ArtisanProfile = profile.ArtisanProfile != null ? new ArtisanProfileDto
-                    {
-                        BusinessName = profile.ArtisanProfile.BusinessName,
-                        Specialization = profile.ArtisanProfile.Specialization,
-                        YearsOfExperience = profile.ArtisanProfile.YearsOfExperience,
-                        ExperienceLevel = profile.ArtisanProfile.ExperienceLevel,
-                        LicenseNumber = profile.ArtisanProfile.LicenseNumber,
-                        Certification = profile.ArtisanProfile.Certification,
-                        BusinessRegistration = profile.ArtisanProfile.BusinessRegistration,
-                        TaxId = profile.ArtisanProfile.TaxId,
-                        InsuranceDetails = profile.ArtisanProfile.InsuranceDetails,
-                        AvailabilityStatus = profile.ArtisanProfile.AvailabilityStatus,
-                        HourlyRate = profile.ArtisanProfile.HourlyRate,
-                        ServiceRadius = profile.ArtisanProfile.ServiceRadius,
-                        About = profile.ArtisanProfile.About,
-                        ServicesOffered = profile.ArtisanProfile.ServicesOffered,
-                        ArtisanSpeciality = profile.ArtisanProfile.ArtisanSpeciality,
-                        ProfessionalBio = profile.ArtisanProfile.ProfessionalBio,
-                        BusinessAddress = profile.ArtisanProfile.BusinessAddress
-                    } : null
-                };
-
-                var json = JsonSerializer.Serialize(request, _jsonOptions);
-                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-
-                var sw = Stopwatch.StartNew();
-                var response = await _httpClient.PutAsync("/api/ProfilesApi", content);
-                sw.Stop();
-
-                Debug.WriteLine($"[PROFILE SERVICE] 📥 Response: {(int)response.StatusCode} in {sw.ElapsedMilliseconds}ms");
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    await HandleErrorResponseAsync(response, "UpdateProfile");
-                    return false;
-                }
-
-                var responseJson = await response.Content.ReadAsStringAsync();
-                var result = JsonSerializer.Deserialize<ApiResponse>(responseJson, _jsonOptions);
-
-                Debug.WriteLine($"[PROFILE SERVICE] ✅ Profile updated successfully: {result?.Message ?? "Success"}");
-                return true;
-            }
-            catch (UnauthorizedAccessException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[PROFILE SERVICE] ❌ Error updating profile: {ex.Message}");
-                return false;
-            }
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // DELETE ARTISAN PROFILE  →  DELETE /api/ProfilesApi/ArtisanProfile
-        // ═══════════════════════════════════════════════════════════════
-
-        public async Task<bool> DeleteArtisanProfileAsync()
-        {
-            try
-            {
-                Debug.WriteLine("[PROFILE SERVICE] 🗑️ Deleting artisan profile...");
-
-                if (!await SetAuthHeaderAsync())
-                    return false;
-
-                var sw = Stopwatch.StartNew();
-                var response = await _httpClient.DeleteAsync("/api/ProfilesApi/ArtisanProfile");
-                sw.Stop();
-
-                Debug.WriteLine($"[PROFILE SERVICE] 📥 Response: {(int)response.StatusCode} in {sw.ElapsedMilliseconds}ms");
-
-                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    Debug.WriteLine("[PROFILE SERVICE] ℹ️ No artisan profile found to delete");
-                    return false;
-                }
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    await HandleErrorResponseAsync(response, "DeleteArtisanProfile");
-                    return false;
-                }
-
-                var responseJson = await response.Content.ReadAsStringAsync();
-                var result = JsonSerializer.Deserialize<ApiResponse>(responseJson, _jsonOptions);
-
-                Debug.WriteLine($"[PROFILE SERVICE] ✅ Artisan profile deleted: {result?.Message ?? "Success"}");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[PROFILE SERVICE] ❌ Error deleting artisan profile: {ex.Message}");
-                return false;
-            }
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // DELETE USER PROFILE (SOFT DELETE)  →  DELETE /api/ProfilesApi/UserProfile
-        // ═══════════════════════════════════════════════════════════════
-
-        public async Task<bool> DeleteUserProfileAsync()
-        {
-            try
-            {
-                Debug.WriteLine("[PROFILE SERVICE] 🗑️ Soft deleting user profile...");
-
-                if (!await SetAuthHeaderAsync())
-                    return false;
-
-                var sw = Stopwatch.StartNew();
-                var response = await _httpClient.DeleteAsync("/api/ProfilesApi/UserProfile");
-                sw.Stop();
-
-                Debug.WriteLine($"[PROFILE SERVICE] 📥 Response: {(int)response.StatusCode} in {sw.ElapsedMilliseconds}ms");
-
-                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    Debug.WriteLine("[PROFILE SERVICE] ℹ️ No user profile found to delete");
-                    return false;
-                }
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    await HandleErrorResponseAsync(response, "DeleteUserProfile");
-                    return false;
-                }
-
-                var responseJson = await response.Content.ReadAsStringAsync();
-                var result = JsonSerializer.Deserialize<ApiResponse>(responseJson, _jsonOptions);
-
-                Debug.WriteLine($"[PROFILE SERVICE] ✅ User profile soft deleted: {result?.Message ?? "Success"}");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[PROFILE SERVICE] ❌ Error deleting user profile: {ex.Message}");
-                return false;
-            }
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // CHECK IF USER HAS ARTISAN PROFILE  →  GET /api/ProfilesApi/HasArtisanProfile
-        // ═══════════════════════════════════════════════════════════════
-
-        public async Task<bool> HasArtisanProfileAsync()
-        {
-            try
-            {
-                Debug.WriteLine("[PROFILE SERVICE] 🔍 Checking if user has artisan profile...");
-
-                if (!await SetAuthHeaderAsync())
-                    return false;
-
-                var response = await _httpClient.GetAsync("/api/ProfilesApi/HasArtisanProfile");
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    Debug.WriteLine($"[PROFILE SERVICE] ❌ HasArtisanProfile check failed: {response.StatusCode}");
-                    return false;
-                }
-
-                var json = await response.Content.ReadAsStringAsync();
-                var result = JsonSerializer.Deserialize<HasProfileResponse>(json, _jsonOptions);
-
-                var hasProfile = result?.HasProfile ?? false;
-                Debug.WriteLine($"[PROFILE SERVICE] ✅ Has artisan profile: {hasProfile}");
-                return hasProfile;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[PROFILE SERVICE] ❌ Error checking artisan profile: {ex.Message}");
-                return false;
-            }
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // GET TOTAL PROFILES COUNT
-        // ═══════════════════════════════════════════════════════════════
-
-        public async Task<int> GetTotalProfilesCountAsync()
-        {
-            try
-            {
-                var profiles = await GetAllProfilesAsync();
-                return profiles?.Count ?? 0;
-            }
-            catch
-            {
-                return 0;
-            }
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // TEST METHODS
-        // ═══════════════════════════════════════════════════════════════
-
-        public async Task<bool> TestProfileApiAsync()
-        {
-            try
-            {
-                Debug.WriteLine($"[PROFILE SERVICE] Testing: {_baseUrl}/api/ProfilesApi");
-                var response = await _httpClient.GetAsync("/api/ProfilesApi");
-                Debug.WriteLine($"[PROFILE SERVICE] Test response: {(int)response.StatusCode}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var content = await response.Content.ReadAsStringAsync();
-                    Debug.WriteLine($"[PROFILE SERVICE] ✅ Test success: {content?.Length ?? 0} chars");
-                    return true;
-                }
-
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[PROFILE SERVICE] ❌ Test exception: {ex.Message}");
-                return false;
-            }
-        }
-
-        public async Task<bool> TestAuthAsync()
-        {
-            try
-            {
-                Debug.WriteLine("[PROFILE SERVICE] Testing authenticated endpoint...");
-
-                if (!await SetAuthHeaderAsync())
-                {
-                    Debug.WriteLine("[PROFILE SERVICE] ❌ No token available");
-                    return false;
-                }
-
-                var response = await _httpClient.GetAsync("/api/ProfilesApi/MyProfile");
-                Debug.WriteLine($"[PROFILE SERVICE] Auth test response: {(int)response.StatusCode}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    Debug.WriteLine("[PROFILE SERVICE] ✅ Auth test success");
-                    return true;
-                }
-
-                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                {
-                    Debug.WriteLine("[PROFILE SERVICE] ❌ Auth test failed: Unauthorized");
-                    return false;
-                }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                Debug.WriteLine($"[PROFILE SERVICE] ❌ Auth test failed: {errorContent}");
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[PROFILE SERVICE] ❌ Auth test exception: {ex.Message}");
-                return false;
-            }
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // PRIVATE HELPERS
-        // ═══════════════════════════════════════════════════════════════
+        // ── Auth header (never log the raw token) ────────────────────────
 
         /// <summary>
-        /// Centralised error handler — logs details and throws for 401s.
+        /// Attaches the Bearer token from SecureStorage.
+        /// Validates the token is structurally a JWT (3 dot-separated Base64 segments)
+        /// before setting the header, to avoid sending obviously corrupt credentials.
         /// </summary>
-        private async Task HandleErrorResponseAsync(HttpResponseMessage response, string caller)
+        private async Task<string> GetValidatedTokenAsync()
         {
-            var body = await response.Content.ReadAsStringAsync();
-            Debug.WriteLine($"[PROFILE SERVICE] ❌ {caller} error {(int)response.StatusCode}: {body}");
-
-            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            string token;
+            try { token = await SecureStorage.GetAsync("auth_token"); }
+            catch (Exception ex)
             {
-                SecureStorage.Remove("auth_token");
-                throw new UnauthorizedAccessException("Session expired. Please login again.");
+                Log("GetToken", $"SecureStorage error: {ex.GetType().Name}");
+                return null;
             }
+
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                Log("GetToken", "No token found");
+                return null;
+            }
+
+            // Lightweight structural check — 3 Base64url segments
+            if (token.Split('.').Length != 3)
+            {
+                Log("GetToken", "Token has unexpected structure — clearing");
+                SecureStorage.Remove("auth_token");
+                return null;
+            }
+
+            return token;
         }
 
-        private MobileArtisanProfile MapToMobileArtisanProfile(ArtisanProfileDto dto)
+        private async Task<bool> ApplyAuthHeaderAsync()
         {
-            if (dto == null) return null;
+            var token = await GetValidatedTokenAsync();
+            if (token is null) return false;
 
-            return new MobileArtisanProfile
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", token);
+            return true;
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // PROFILE METHODS
+        // ─────────────────────────────────────────────────────────────────
+
+        public async Task<List<MobileArtisanProfile>> GetAllProfilesAsync(CancellationToken ct = default)
+        {
+            await RequireAuthAsync(ct);
+            var response = await SendAsync(HttpMethod.Get, ApiRoutes.Profiles, ct: ct);
+            var dtos = await DeserializeAsync<List<ArtisanProfileDto>>(response, ct);
+            return dtos?.Select(MapToMobileArtisanProfile).ToList() ?? new List<MobileArtisanProfile>();
+        }
+
+        public async Task<MobileProfileDetails> GetMyProfileAsync(CancellationToken ct = default)
+        {
+            if (_cache.TryGetValue(CacheKeys.MyProfile, out MobileProfileDetails cached))
+                return cached;
+
+            await RequireAuthAsync(ct);
+            var response = await SendAsync(HttpMethod.Get, ApiRoutes.MyProfile, ct: ct);
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                return new MobileProfileDetails();
+
+            EnsureSuccess(response, nameof(GetMyProfileAsync));
+
+            var result = await DeserializeAsync<ProfileDetailsResponse>(response, ct);
+            if (result is null) return new MobileProfileDetails();
+
+            var profile = new MobileProfileDetails
             {
-                Id = dto.Id,
-                BusinessName = dto.BusinessName,
-                Specialization = dto.Specialization,
-                YearsOfExperience = dto.YearsOfExperience,
-                ExperienceLevel = dto.ExperienceLevel,
-                LicenseNumber = dto.LicenseNumber,
-                Certification = dto.Certification,
-                BusinessRegistration = dto.BusinessRegistration,
-                TaxId = dto.TaxId,
-                InsuranceDetails = dto.InsuranceDetails,
-                AvailabilityStatus = dto.AvailabilityStatus,
-                HourlyRate = dto.HourlyRate,
-                ServiceRadius = dto.ServiceRadius,
-                About = dto.About,
-                ServicesOffered = dto.ServicesOffered,
-                ArtisanSpeciality = dto.ArtisanSpeciality,
-                ProfessionalBio = dto.ProfessionalBio,
-                BusinessAddress = dto.BusinessAddress,
-                CreatedAt = dto.CreatedAt,
-                UpdatedAt = dto.UpdatedAt,
-                Slug = dto.Slug
+                IdentityUserId = result.IdentityUserId,
+                Email = result.Email,
+                PhoneNumber = result.PhoneNumber,
+                UserProfile = result.UserProfile != null ? MapToMobileUserProfile(result.UserProfile) : null,
+                ArtisanProfile = result.ArtisanProfile != null ? MapToMobileArtisanProfile(result.ArtisanProfile) : null
+            };
+
+            _cache.Set(CacheKeys.MyProfile, profile, _longTtl);
+            return profile;
+        }
+
+        public async Task<MobileArtisanProfile> GetProfileAsync(string id, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Profile ID required.", nameof(id));
+
+            await RequireAuthAsync(ct);
+            var response = await SendAsync(HttpMethod.Get, string.Format(ApiRoutes.ProfileById, Uri.EscapeDataString(id)), ct: ct);
+
+            if (response.StatusCode == HttpStatusCode.NotFound) return null;
+            EnsureSuccess(response, nameof(GetProfileAsync));
+
+            var dto = await DeserializeAsync<ArtisanProfileDto>(response, ct);
+            return dto is null ? null : MapToMobileArtisanProfile(dto);
+        }
+
+        public async Task<MobileArtisanProfile> CreateArtisanProfileAsync(CreateMobileArtisanProfile profile, CancellationToken ct = default)
+        {
+            if (profile is null) throw new ArgumentNullException(nameof(profile));
+
+            await RequireAuthAsync(ct);
+
+            var request = new CreateArtisanProfileRequest
+            {
+                BusinessName = profile.BusinessName,
+                Specialization = profile.Specialization,
+                YearsOfExperience = profile.YearsOfExperience,
+                ExperienceLevel = profile.ExperienceLevel,
+                LicenseNumber = profile.LicenseNumber,
+                Certification = profile.Certification,
+                BusinessRegistration = profile.BusinessRegistration,
+                TaxId = profile.TaxId,
+                InsuranceDetails = profile.InsuranceDetails,
+                AvailabilityStatus = profile.AvailabilityStatus,
+                HourlyRate = profile.HourlyRate,
+                ServiceRadius = profile.ServiceRadius,
+                About = profile.About,
+                ServicesOffered = profile.ServicesOffered,
+                ArtisanSpeciality = profile.ArtisanSpeciality,
+                ProfessionalBio = profile.ProfessionalBio,
+                BusinessAddress = profile.BusinessAddress
+            };
+
+            var response = await SendAsync(HttpMethod.Post, ApiRoutes.Profiles, body: request, ct: ct);
+
+            if (response.StatusCode == HttpStatusCode.BadRequest) return null;
+            EnsureSuccess(response, nameof(CreateArtisanProfileAsync));
+
+            _cache.Remove(CacheKeys.MyProfile);
+            var dto = await DeserializeAsync<ArtisanProfileDto>(response, ct);
+            return dto is null ? null : MapToMobileArtisanProfile(dto);
+        }
+
+        public async Task<bool> UpdateProfileAsync(UpdateMobileProfile profile, CancellationToken ct = default)
+        {
+            if (profile is null) throw new ArgumentNullException(nameof(profile));
+
+            await RequireAuthAsync(ct);
+
+            var request = new UpdateProfileRequest
+            {
+                Email = profile.Email,
+                PhoneNumber = profile.PhoneNumber,
+                UserProfile = profile.UserProfile != null ? new UserProfileDto
+                {
+                    FullName = profile.UserProfile.FullName,
+                    Bio = profile.UserProfile.Bio,
+                    Address = profile.UserProfile.Address,
+                    City = profile.UserProfile.City,
+                    State = profile.UserProfile.State,
+                    Country = profile.UserProfile.Country,
+                    PostalCode = profile.UserProfile.PostalCode,
+                    ProfilePictureUrl = profile.UserProfile.ProfilePictureUrl,
+                    PreferredLanguage = profile.UserProfile.PreferredLanguage,
+                    Timezone = profile.UserProfile.Timezone
+                } : null,
+                ArtisanProfile = profile.ArtisanProfile != null ? new ArtisanProfileDto
+                {
+                    BusinessName = profile.ArtisanProfile.BusinessName,
+                    Specialization = profile.ArtisanProfile.Specialization,
+                    YearsOfExperience = profile.ArtisanProfile.YearsOfExperience,
+                    ExperienceLevel = profile.ArtisanProfile.ExperienceLevel,
+                    LicenseNumber = profile.ArtisanProfile.LicenseNumber,
+                    Certification = profile.ArtisanProfile.Certification,
+                    BusinessRegistration = profile.ArtisanProfile.BusinessRegistration,
+                    TaxId = profile.ArtisanProfile.TaxId,
+                    InsuranceDetails = profile.ArtisanProfile.InsuranceDetails,
+                    AvailabilityStatus = profile.ArtisanProfile.AvailabilityStatus,
+                    HourlyRate = profile.ArtisanProfile.HourlyRate,
+                    ServiceRadius = profile.ArtisanProfile.ServiceRadius,
+                    About = profile.ArtisanProfile.About,
+                    ServicesOffered = profile.ArtisanProfile.ServicesOffered,
+                    ArtisanSpeciality = profile.ArtisanProfile.ArtisanSpeciality,
+                    ProfessionalBio = profile.ArtisanProfile.ProfessionalBio,
+                    BusinessAddress = profile.ArtisanProfile.BusinessAddress
+                } : null
+            };
+
+            var response = await SendAsync(HttpMethod.Put, ApiRoutes.Profiles, body: request, ct: ct);
+            EnsureSuccess(response, nameof(UpdateProfileAsync));
+
+            _cache.Remove(CacheKeys.MyProfile);
+            return true;
+        }
+
+        public async Task<bool> DeleteArtisanProfileAsync(CancellationToken ct = default)
+        {
+            await RequireAuthAsync(ct);
+            var response = await SendAsync(HttpMethod.Delete, ApiRoutes.DeleteArtisan, ct: ct);
+
+            if (response.StatusCode == HttpStatusCode.NotFound) return false;
+            EnsureSuccess(response, nameof(DeleteArtisanProfileAsync));
+
+            _cache.Remove(CacheKeys.MyProfile);
+            return true;
+        }
+
+        public async Task<bool> DeleteUserProfileAsync(CancellationToken ct = default)
+        {
+            await RequireAuthAsync(ct);
+            var response = await SendAsync(HttpMethod.Delete, ApiRoutes.DeleteUser, ct: ct);
+
+            if (response.StatusCode == HttpStatusCode.NotFound) return false;
+            EnsureSuccess(response, nameof(DeleteUserProfileAsync));
+
+            _cache.Remove(CacheKeys.MyProfile);
+            return true;
+        }
+
+        public async Task<bool> HasArtisanProfileAsync(CancellationToken ct = default)
+        {
+            await RequireAuthAsync(ct);
+            var response = await SendAsync(HttpMethod.Get, ApiRoutes.HasArtisanProfile, ct: ct);
+            if (!response.IsSuccessStatusCode) return false;
+
+            var result = await DeserializeAsync<HasProfileResponse>(response, ct);
+            return result?.HasProfile ?? false;
+        }
+
+        public async Task<int> GetTotalProfilesCountAsync(CancellationToken ct = default)
+        {
+            try { return (await GetAllProfilesAsync(ct))?.Count ?? 0; }
+            catch { return 0; }
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // TRUST SCORE METHODS
+        // ─────────────────────────────────────────────────────────────────
+
+        public async Task<MobileTrustScore> GetTrustScoreAsync(int companyId, CancellationToken ct = default)
+        {
+            ValidateCompanyId(companyId);
+
+            var key = CacheKeys.TrustScore(companyId);
+            if (_cache.TryGetValue(key, out MobileTrustScore hit)) return hit;
+
+            await RequireAuthAsync(ct);
+            var url = string.Format(ApiRoutes.TrustScore, companyId);
+            var response = await SendAsync(HttpMethod.Get, url, ct: ct);
+
+            if (response.StatusCode == HttpStatusCode.NotFound) return null;
+            if (response.StatusCode == HttpStatusCode.Forbidden) throw new UnauthorizedAccessException("Access denied to this company's trust score.");
+            EnsureSuccess(response, nameof(GetTrustScoreAsync));
+
+            var envelope = await DeserializeAsync<ApiResult<TrustScoreResponseDto>>(response, ct);
+            if (envelope?.Success != true || envelope.Data is null) return null;
+
+            var result = MapToMobileTrustScore(envelope.Data);
+            _cache.Set(key, result, _shortTtl);
+            return result;
+        }
+
+        public async Task<IReadOnlyList<MobileTrustScoreHistoryItem>> GetTrustScoreHistoryAsync(
+            int companyId, int maxRecords = 24, CancellationToken ct = default)
+        {
+            ValidateCompanyId(companyId);
+
+            var key = CacheKeys.TrustHistory(companyId);
+            if (_cache.TryGetValue(key, out IReadOnlyList<MobileTrustScoreHistoryItem> hit)) return hit;
+
+            await RequireAuthAsync(ct);
+            var url = $"{string.Format(ApiRoutes.TrustScoreHistory, companyId)}?maxRecords={maxRecords}";
+            var response = await SendAsync(HttpMethod.Get, url, ct: ct);
+
+            EnsureSuccessOrForbid(response, nameof(GetTrustScoreHistoryAsync));
+
+            var envelope = await DeserializeAsync<ApiResult<IReadOnlyList<TrustScoreHistoryItemDto>>>(response, ct);
+            var result = envelope?.Data?.Select(MapToMobileHistoryItem).ToList()
+                           ?? new List<MobileTrustScoreHistoryItem>();
+
+            _cache.Set(key, (IReadOnlyList<MobileTrustScoreHistoryItem>)result, _longTtl);
+            return result;
+        }
+
+        public async Task<IReadOnlyList<MobileWorkReferral>> GetWorkReferralsAsync(
+            int companyId, int page = 1, int pageSize = 20, CancellationToken ct = default)
+        {
+            ValidateCompanyId(companyId);
+
+            var key = CacheKeys.WorkReferrals(companyId);
+            if (page == 1 && _cache.TryGetValue(key, out IReadOnlyList<MobileWorkReferral> hit)) return hit;
+
+            await RequireAuthAsync(ct);
+            var url = $"{string.Format(ApiRoutes.WorkReferrals, companyId)}?page={page}&pageSize={pageSize}";
+            var response = await SendAsync(HttpMethod.Get, url, ct: ct);
+
+            EnsureSuccessOrForbid(response, nameof(GetWorkReferralsAsync));
+
+            var envelope = await DeserializeAsync<ApiResult<IReadOnlyList<WorkReferralDto>>>(response, ct);
+            var result = envelope?.Data?.Select(MapToMobileWorkReferral).ToList()
+                           ?? new List<MobileWorkReferral>();
+
+            if (page == 1) _cache.Set(key, (IReadOnlyList<MobileWorkReferral>)result, _mediumTtl);
+            return result;
+        }
+
+        public async Task<IReadOnlyList<MobileVendorReferral>> GetVendorReferralsAsync(
+            int companyId, int page = 1, int pageSize = 20, CancellationToken ct = default)
+        {
+            ValidateCompanyId(companyId);
+
+            var key = CacheKeys.VendorReferrals(companyId);
+            if (page == 1 && _cache.TryGetValue(key, out IReadOnlyList<MobileVendorReferral> hit)) return hit;
+
+            await RequireAuthAsync(ct);
+            var url = $"{string.Format(ApiRoutes.VendorReferrals, companyId)}?page={page}&pageSize={pageSize}";
+            var response = await SendAsync(HttpMethod.Get, url, ct: ct);
+
+            EnsureSuccessOrForbid(response, nameof(GetVendorReferralsAsync));
+
+            var envelope = await DeserializeAsync<ApiResult<IReadOnlyList<VendorReferralDto>>>(response, ct);
+            var result = envelope?.Data?.Select(MapToMobileVendorReferral).ToList()
+                           ?? new List<MobileVendorReferral>();
+
+            if (page == 1) _cache.Set(key, (IReadOnlyList<MobileVendorReferral>)result, _mediumTtl);
+            return result;
+        }
+
+        public async Task<IReadOnlyList<MobileColleagueReferral>> GetColleagueReferralsAsync(
+            int companyId, int page = 1, int pageSize = 20, CancellationToken ct = default)
+        {
+            ValidateCompanyId(companyId);
+
+            var key = CacheKeys.ColleagueReferrals(companyId);
+            if (page == 1 && _cache.TryGetValue(key, out IReadOnlyList<MobileColleagueReferral> hit)) return hit;
+
+            await RequireAuthAsync(ct);
+            var url = $"{string.Format(ApiRoutes.ColleagueReferrals, companyId)}?page={page}&pageSize={pageSize}";
+            var response = await SendAsync(HttpMethod.Get, url, ct: ct);
+
+            EnsureSuccessOrForbid(response, nameof(GetColleagueReferralsAsync));
+
+            var envelope = await DeserializeAsync<ApiResult<IReadOnlyList<ColleagueReferralDto>>>(response, ct);
+            var result = envelope?.Data?.Select(MapToMobileColleagueReferral).ToList()
+                           ?? new List<MobileColleagueReferral>();
+
+            if (page == 1) _cache.Set(key, (IReadOnlyList<MobileColleagueReferral>)result, _mediumTtl);
+            return result;
+        }
+
+        /// <summary>
+        /// Fires all five trust-score requests concurrently with Task.WhenAll.
+        /// Total latency ≈ slowest single request rather than the sum of all five.
+        /// </summary>
+        public async Task<MobileTrustScoreSnapshot> GetTrustScoreSnapshotAsync(
+            int companyId, int referralPageSize = 20, CancellationToken ct = default)
+        {
+            ValidateCompanyId(companyId);
+            await RequireAuthAsync(ct);
+
+            var (scoreTask, workTask, vendorTask, colleagueTask) = (
+                GetTrustScoreAsync(companyId, ct),
+                GetWorkReferralsAsync(companyId, pageSize: referralPageSize, ct: ct),
+                GetVendorReferralsAsync(companyId, pageSize: referralPageSize, ct: ct),
+                GetColleagueReferralsAsync(companyId, pageSize: referralPageSize, ct: ct)
+            );
+
+            await Task.WhenAll(scoreTask, workTask, vendorTask, colleagueTask);
+
+            return new MobileTrustScoreSnapshot
+            {
+                CurrentScore = scoreTask.Result,
+                WorkReferrals = workTask.Result,
+                VendorReferrals = vendorTask.Result,
+                ColleagueReferrals = colleagueTask.Result
             };
         }
+
+        // ─────────────────────────────────────────────────────────────────
+        // DIAGNOSTICS
+        // ─────────────────────────────────────────────────────────────────
+
+        public async Task<bool> TestProfileApiAsync(CancellationToken ct = default)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync(ApiRoutes.Profiles, ct);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex) { Log("TestProfileApi", ex.GetType().Name); return false; }
+        }
+
+        public async Task<bool> TestAuthAsync(CancellationToken ct = default)
+        {
+            try
+            {
+                if (!await ApplyAuthHeaderAsync()) return false;
+                var response = await _httpClient.GetAsync(ApiRoutes.MyProfile, ct);
+                return response.IsSuccessStatusCode ||
+                       response.StatusCode == HttpStatusCode.NotFound; // profile absent ≠ auth failure
+            }
+            catch (Exception ex) { Log("TestAuth", ex.GetType().Name); return false; }
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // PRIVATE HELPERS
+        // ─────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Central HTTP dispatch. Serialises optional body, always logs timing.
+        /// Never throws on non-2xx — callers inspect the status code themselves.
+        /// </summary>
+        private async Task<HttpResponseMessage> SendAsync(
+            HttpMethod method,
+            string relativeUrl,
+            object body = null,
+            CancellationToken ct = default)
+        {
+            var request = new HttpRequestMessage(method, relativeUrl);
+
+            if (body is not null)
+                request.Content = new StringContent(
+                    JsonSerializer.Serialize(body, _jsonOptions),
+                    System.Text.Encoding.UTF8,
+                    "application/json");
+
+            var sw = Stopwatch.StartNew();
+            var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+            sw.Stop();
+
+            Log(method.Method, $"{relativeUrl} → {(int)response.StatusCode} [{sw.ElapsedMilliseconds} ms]");
+            return response;
+        }
+
+        private async Task<T> DeserializeAsync<T>(HttpResponseMessage response, CancellationToken ct)
+        {
+            await using var stream = await response.Content.ReadAsStreamAsync(ct);
+            return await JsonSerializer.DeserializeAsync<T>(stream, _jsonOptions, ct);
+        }
+
+        private async Task RequireAuthAsync(CancellationToken ct)
+        {
+            if (!await ApplyAuthHeaderAsync())
+                throw new UnauthorizedAccessException("Not authenticated. Please log in first.");
+        }
+
+        private static void EnsureSuccess(HttpResponseMessage response, string caller)
+        {
+            if (!response.IsSuccessStatusCode)
+                throw new HttpRequestException($"{caller} failed with HTTP {(int)response.StatusCode}.");
+        }
+
+        private static void EnsureSuccessOrForbid(HttpResponseMessage response, string caller)
+        {
+            if (response.StatusCode == HttpStatusCode.Forbidden)
+                throw new UnauthorizedAccessException($"{caller}: access denied.");
+            EnsureSuccess(response, caller);
+        }
+
+        private static void ValidateCompanyId(int companyId)
+        {
+            if (companyId <= 0)
+                throw new ArgumentOutOfRangeException(nameof(companyId), "Company ID must be a positive integer.");
+        }
+
+        [System.Diagnostics.Conditional("DEBUG")]
+        private static void Log(string tag, string message,
+            [CallerMemberName] string member = "")
+            => Debug.WriteLine($"[PROFILE:{tag}] ({member}) {message}");
+
+        // ─────────────────────────────────────────────────────────────────
+        // MAPPERS
+        // ─────────────────────────────────────────────────────────────────
+
+        private static MobileArtisanProfile MapToMobileArtisanProfile(ArtisanProfileDto d) => d is null ? null : new()
+        {
+            Id = d.Id,
+            BusinessName = d.BusinessName,
+            Specialization = d.Specialization,
+            YearsOfExperience = d.YearsOfExperience,
+            ExperienceLevel = d.ExperienceLevel,
+            LicenseNumber = d.LicenseNumber,
+            Certification = d.Certification,
+            BusinessRegistration = d.BusinessRegistration,
+            TaxId = d.TaxId,
+            InsuranceDetails = d.InsuranceDetails,
+            AvailabilityStatus = d.AvailabilityStatus,
+            HourlyRate = d.HourlyRate,
+            ServiceRadius = d.ServiceRadius,
+            About = d.About,
+            ServicesOffered = d.ServicesOffered,
+            ArtisanSpeciality = d.ArtisanSpeciality,
+            ProfessionalBio = d.ProfessionalBio,
+            BusinessAddress = d.BusinessAddress,
+            CreatedAt = d.CreatedAt,
+            UpdatedAt = d.UpdatedAt,
+            Slug = d.Slug
+        };
+
+        private static MobileUserProfile MapToMobileUserProfile(UserProfileDto d) => d is null ? null : new()
+        {
+            FullName = d.FullName,
+            Bio = d.Bio,
+            Address = d.Address,
+            City = d.City,
+            State = d.State,
+            Country = d.Country,
+            PostalCode = d.PostalCode,
+            ProfilePictureUrl = d.ProfilePictureUrl,
+            PreferredLanguage = d.PreferredLanguage,
+            Timezone = d.Timezone
+        };
+
+        private static MobileTrustScore MapToMobileTrustScore(TrustScoreResponseDto d) => d is null ? null : new()
+        {
+            CompanyId = d.CompanyId,
+            Score = d.Score,
+            Band = d.Band,
+            CalculatedAt = d.CalculatedAt,
+            Breakdown = d.Breakdown
+        };
+
+        private static MobileTrustScoreHistoryItem MapToMobileHistoryItem(TrustScoreHistoryItemDto d) => new()
+        {
+            Score = d.Score,
+            Band = d.Band,
+            RecordedAt = d.RecordedAt,
+            ChangeReason = d.ChangeReason
+        };
+
+        private static MobileWorkReferral MapToMobileWorkReferral(WorkReferralDto d) => new()
+        {
+            Id = d.Id,
+            ReferrerName = d.ReferrerName,
+            ProjectTitle = d.ProjectTitle,
+            Rating = d.Rating,
+            Comment = d.Comment,
+            SubmittedAt = d.SubmittedAt
+        };
+
+        private static MobileVendorReferral MapToMobileVendorReferral(VendorReferralDto d) => new()
+        {
+            Id = d.Id,
+            VendorName = d.VendorName,
+            Category = d.Category,
+            Rating = d.Rating,
+            Comment = d.Comment,
+            SubmittedAt = d.SubmittedAt
+        };
+
+        private static MobileColleagueReferral MapToMobileColleagueReferral(ColleagueReferralDto d) => new()
+        {
+            Id = d.Id,
+            ColleagueName = d.ColleagueName,
+            Relationship = d.Relationship,
+            Rating = d.Rating,
+            Comment = d.Comment,
+            SubmittedAt = d.SubmittedAt
+        };
+
+        // ─────────────────────────────────────────────────────────────────
+
+        public void Dispose() => _httpClient.Dispose();
     }
 }

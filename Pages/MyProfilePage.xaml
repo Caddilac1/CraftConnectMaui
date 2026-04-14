@@ -4,28 +4,29 @@
              x:Class="CraftConnect_Mobile_App.Pages.MyProfilePage"
              Title=""
              Shell.NavBarIsVisible="False"
-             BackgroundColor="#F0F4F8">
+             BackgroundColor="#EFF3F8">
 
     <Grid RowDefinitions="Auto,*">
 
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- DARK HEADER (matches Settings page style)                  -->
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <Grid Grid.Row="0" BackgroundColor="#1B2B3A"
-              RowDefinitions="Auto,Auto,Auto,Auto"
+        <!-- ═══════════════════════════════════════════════ -->
+        <!-- DARK NAVY HEADER                                -->
+        <!-- ═══════════════════════════════════════════════ -->
+        <Grid Grid.Row="0"
+              BackgroundColor="#1B2D3E"
+              RowDefinitions="Auto,Auto,Auto"
               RowSpacing="0">
 
             <!-- Top bar: back + title + edit -->
             <Grid Grid.Row="0"
-                  Padding="20,52,20,16"
-                  ColumnDefinitions="44,*,44">
+                  Padding="16,52,16,16"
+                  ColumnDefinitions="40,*,40">
 
                 <Frame Grid.Column="0"
-                       BackgroundColor="#243447" CornerRadius="12"
+                       BackgroundColor="#243B52" CornerRadius="12"
                        Padding="0" HasShadow="False"
-                       WidthRequest="38" HeightRequest="38"
+                       WidthRequest="40" HeightRequest="40"
                        VerticalOptions="Center">
-                    <ImageButton Source="chevron_left.png"
+                    <ImageButton Source="chevron_left.svg"
                                  WidthRequest="16" HeightRequest="16"
                                  BackgroundColor="Transparent"
                                  Clicked="OnBackClicked"
@@ -38,11 +39,11 @@
                        CharacterSpacing="0.3"/>
 
                 <Frame Grid.Column="2"
-                       BackgroundColor="#243447" CornerRadius="12"
+                       BackgroundColor="#243B52" CornerRadius="12"
                        Padding="0" HasShadow="False"
-                       WidthRequest="38" HeightRequest="38"
+                       WidthRequest="40" HeightRequest="40"
                        VerticalOptions="Center">
-                    <ImageButton Source="edit.png"
+                    <ImageButton Source="edit.svg"
                                  WidthRequest="16" HeightRequest="16"
                                  BackgroundColor="Transparent"
                                  Clicked="OnEditClicked"
@@ -50,218 +51,177 @@
                 </Frame>
             </Grid>
 
-            <!-- Avatar + Name + Role (centred, like Settings) -->
-            <VerticalStackLayout Grid.Row="1"
-                                 HorizontalOptions="Center"
-                                 Spacing="10"
-                                 Padding="20,0,20,0">
+            <!-- Profile row: avatar + name / email / badge -->
+            <Grid Grid.Row="1"
+                  ColumnDefinitions="Auto,*"
+                  ColumnSpacing="16"
+                  Padding="16,0,16,20">
 
                 <!-- Avatar stack -->
-                <Grid WidthRequest="90" HeightRequest="90"
-                      HorizontalOptions="Center">
+                <Grid Grid.Column="0"
+                      WidthRequest="68" HeightRequest="68"
+                      VerticalOptions="Center">
 
-                    <!-- Initials frame -->
                     <Frame x:Name="ProfileInitialsFrame"
-                           WidthRequest="90" HeightRequest="90"
-                           CornerRadius="45" Padding="0"
+                           WidthRequest="68" HeightRequest="68"
+                           CornerRadius="34" Padding="0"
                            HasShadow="False" IsClippedToBounds="True"
-                           HorizontalOptions="Center" VerticalOptions="Center">
-                        <Frame.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#4DA6E8" Offset="0"/>
-                                <GradientStop Color="#2E6FD8" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Frame.Background>
+                           HorizontalOptions="Center" VerticalOptions="Center"
+                           BackgroundColor="#2E4D6A">
                         <Label x:Name="ProfileInitialsLabel" Text="?"
-                               FontSize="32" FontAttributes="Bold"
-                               TextColor="White"
+                               FontSize="24" FontAttributes="Bold"
+                               TextColor="#FFFFFF"
                                HorizontalOptions="Center"
                                VerticalOptions="Center"/>
                     </Frame>
 
-                    <!-- Photo frame -->
                     <Frame x:Name="ProfilePhotoFrame"
-                           WidthRequest="90" HeightRequest="90"
-                           CornerRadius="45" Padding="0"
+                           WidthRequest="68" HeightRequest="68"
+                           CornerRadius="34" Padding="0"
                            HasShadow="False" IsClippedToBounds="True"
                            HorizontalOptions="Center" VerticalOptions="Center"
                            IsVisible="False">
                         <Image x:Name="ProfilePhoto"
                                Aspect="AspectFill"
-                               WidthRequest="90" HeightRequest="90"/>
+                               WidthRequest="68" HeightRequest="68"/>
                     </Frame>
 
-                    <!-- Verified badge -->
                     <Frame x:Name="VerifiedBadge"
-                           WidthRequest="26" HeightRequest="26"
-                           CornerRadius="13" Padding="0"
+                           WidthRequest="20" HeightRequest="20"
+                           CornerRadius="10" Padding="0"
                            HasShadow="False" IsClippedToBounds="True"
                            HorizontalOptions="End" VerticalOptions="End"
-                           Margin="0,0,2,2"
+                           Margin="0,0,1,1"
                            IsVisible="False"
-                           BackgroundColor="#2DC98E">
-                        <Label Text="✓" TextColor="White"
-                               FontSize="12" FontAttributes="Bold"
+                           BackgroundColor="#1D9E75">
+                        <Image Source="shield_check.svg"
+                               WidthRequest="11" HeightRequest="11"
                                HorizontalOptions="Center"
                                VerticalOptions="Center"/>
                     </Frame>
                 </Grid>
 
-                <!-- Name -->
-                <Label x:Name="ProfileNameLabel" Text="User"
-                       FontSize="20" FontAttributes="Bold"
-                       TextColor="#FFFFFF"
-                       HorizontalOptions="Center"
-                       CharacterSpacing="0.2"/>
+                <!-- Name / email / role badge -->
+                <VerticalStackLayout Grid.Column="1"
+                                     VerticalOptions="Center" Spacing="4">
 
-                <!-- Role badge -->
-                <Frame x:Name="RoleBadgeFrame"
-                       CornerRadius="20" Padding="14,5"
-                       HasShadow="False"
-                       HorizontalOptions="Center"
-                       BackgroundColor="#243447"
-                       BorderColor="#2563EB">
-                    <Label x:Name="RoleBadgeLabel"
-                           FontSize="10" FontAttributes="Bold"
-                           TextColor="#4DA6E8"
-                           CharacterSpacing="1.5"/>
-                </Frame>
-
-                <!-- Email -->
-                <Label x:Name="ProfileEmailLabel" Text=""
-                       FontSize="13" TextColor="#A0B4C8"
-                       HorizontalOptions="Center"
-                       LineBreakMode="MiddleTruncation"/>
-
-            </VerticalStackLayout>
-
-            <!-- Quick stats row (phone | location | member since) -->
-            <Grid Grid.Row="2"
-                  ColumnDefinitions="*,1,*,1,*"
-                  Margin="20,20,20,0"
-                  ColumnSpacing="0">
-
-                <!-- Phone -->
-                <VerticalStackLayout x:Name="PhoneColumn" Grid.Column="0"
-                                     HorizontalOptions="Center" Spacing="3"
-                                     IsVisible="False">
-                    <Label Text="📞" FontSize="16" HorizontalOptions="Center"/>
-                    <Label x:Name="ProfilePhoneLabel"
-                           FontSize="11" TextColor="#A0B4C8"
-                           HorizontalOptions="Center"
-                           HorizontalTextAlignment="Center"/>
-                    <Label Text="PHONE" FontSize="8" TextColor="#4DA6E8"
-                           FontAttributes="Bold" CharacterSpacing="0.8"
-                           HorizontalOptions="Center"/>
-                </VerticalStackLayout>
-
-                <!-- Divider -->
-                <BoxView Grid.Column="1" WidthRequest="1"
-                         BackgroundColor="#2C3E50" VerticalOptions="Fill"/>
-
-                <!-- Location -->
-                <VerticalStackLayout x:Name="LocationColumn" Grid.Column="2"
-                                     HorizontalOptions="Center" Spacing="3"
-                                     IsVisible="False">
-                    <Label Text="📍" FontSize="16" HorizontalOptions="Center"/>
-                    <Label x:Name="ProfileLocationLabel"
-                           FontSize="11" TextColor="#A0B4C8"
-                           HorizontalOptions="Center"
-                           HorizontalTextAlignment="Center"
+                    <Label x:Name="ProfileNameLabel" Text="User"
+                           FontSize="18" FontAttributes="Bold"
+                           TextColor="#FFFFFF"
                            LineBreakMode="TailTruncation"/>
-                    <Label Text="LOCATION" FontSize="8" TextColor="#4DA6E8"
-                           FontAttributes="Bold" CharacterSpacing="0.8"
-                           HorizontalOptions="Center"/>
-                </VerticalStackLayout>
 
-                <!-- Divider -->
-                <BoxView Grid.Column="3" WidthRequest="1"
-                         BackgroundColor="#2C3E50" VerticalOptions="Fill"/>
+                    <Label x:Name="ProfileEmailLabel" Text=""
+                           FontSize="13" TextColor="#8BAFC9"
+                           LineBreakMode="TailTruncation"/>
 
-                <!-- Member since -->
-                <VerticalStackLayout x:Name="MemberColumn" Grid.Column="4"
-                                     HorizontalOptions="Center" Spacing="3"
-                                     IsVisible="False">
-                    <Label Text="🗓" FontSize="16" HorizontalOptions="Center"/>
-                    <Label x:Name="MemberSinceLabel"
-                           FontSize="11" TextColor="#A0B4C8"
-                           HorizontalOptions="Center"
-                           HorizontalTextAlignment="Center"/>
-                    <Label Text="MEMBER SINCE" FontSize="8" TextColor="#4DA6E8"
-                           FontAttributes="Bold" CharacterSpacing="0.8"
-                           HorizontalOptions="Center"/>
+                    <Frame x:Name="RoleBadgeFrame"
+                           CornerRadius="20" Padding="10,4"
+                           HasShadow="False"
+                           HorizontalOptions="Start"
+                           Margin="0,2,0,0"
+                           BackgroundColor="#243B52"
+                           BorderColor="#3A5A78">
+                        <Label x:Name="RoleBadgeLabel"
+                               FontSize="10" FontAttributes="Bold"
+                               TextColor="#7DB8E0"
+                               CharacterSpacing="0.6"/>
+                    </Frame>
                 </VerticalStackLayout>
             </Grid>
 
-            <!-- Bio bubble inside header -->
-            <Frame x:Name="BioBubble" Grid.Row="3"
-                   IsVisible="False"
-                   BackgroundColor="#243447" CornerRadius="12"
-                   Padding="14,10" HasShadow="False"
-                   BorderColor="#2C3E50"
-                   Margin="20,14,20,0">
-                <Label x:Name="ProfileBioLabel" Text=""
-                       FontSize="13" TextColor="#A0B4C8"
-                       HorizontalTextAlignment="Center"
-                       LineBreakMode="WordWrap"/>
-            </Frame>
+            <!-- Stats strip -->
+            <Grid Grid.Row="2"
+                  ColumnDefinitions="*,1,*,1,*,1,*"
+                  Margin="16,0,16,0"
+                  BackgroundColor="#243B52"
+                  HeightRequest="64">
 
-            <!-- Bottom padding inside header - visible when BioBubble is NOT visible -->
-            <BoxView Grid.Row="3" HeightRequest="24"
-                     BackgroundColor="Transparent">
-                <BoxView.Triggers>
-                    <DataTrigger TargetType="BoxView"
-                                 Binding="{Binding Source={x:Reference BioBubble}, Path=IsVisible}"
-                                 Value="True">
-                        <Setter Property="IsVisible" Value="False"/>
-                    </DataTrigger>
-                    <DataTrigger TargetType="BoxView"
-                                 Binding="{Binding Source={x:Reference BioBubble}, Path=IsVisible}"
-                                 Value="False">
-                        <Setter Property="IsVisible" Value="True"/>
-                    </DataTrigger>
-                </BoxView.Triggers>
-            </BoxView>
+                <Frame Grid.Column="0" Grid.ColumnSpan="7"
+                       CornerRadius="16" Padding="0"
+                       HasShadow="False" BackgroundColor="#243B52"
+                       BorderColor="#2E4D6A"
+                       Margin="0,0,0,20"/>
+
+                <VerticalStackLayout Grid.Column="0" HorizontalOptions="Center"
+                                     VerticalOptions="Center" Spacing="3">
+                    <Label x:Name="StatRatingLabel" Text="—"
+                           FontSize="15" FontAttributes="Bold"
+                           TextColor="#FFFFFF" HorizontalOptions="Center"/>
+                    <Label Text="Rating" FontSize="9" TextColor="#8BAFC9"
+                           HorizontalOptions="Center" CharacterSpacing="0.4"/>
+                </VerticalStackLayout>
+
+                <BoxView Grid.Column="1" WidthRequest="1"
+                         BackgroundColor="#2E4D6A" VerticalOptions="Fill"
+                         Margin="0,12"/>
+
+                <VerticalStackLayout Grid.Column="2" HorizontalOptions="Center"
+                                     VerticalOptions="Center" Spacing="3">
+                    <Label x:Name="StatProjectsLabel" Text="—"
+                           FontSize="15" FontAttributes="Bold"
+                           TextColor="#FFFFFF" HorizontalOptions="Center"/>
+                    <Label Text="Projects" FontSize="9" TextColor="#8BAFC9"
+                           HorizontalOptions="Center" CharacterSpacing="0.4"/>
+                </VerticalStackLayout>
+
+                <BoxView Grid.Column="3" WidthRequest="1"
+                         BackgroundColor="#2E4D6A" VerticalOptions="Fill"
+                         Margin="0,12"/>
+
+                <VerticalStackLayout Grid.Column="4" HorizontalOptions="Center"
+                                     VerticalOptions="Center" Spacing="3">
+                    <Label x:Name="StatReviewsLabel" Text="—"
+                           FontSize="15" FontAttributes="Bold"
+                           TextColor="#FFFFFF" HorizontalOptions="Center"/>
+                    <Label Text="Reviews" FontSize="9" TextColor="#8BAFC9"
+                           HorizontalOptions="Center" CharacterSpacing="0.4"/>
+                </VerticalStackLayout>
+
+                <BoxView Grid.Column="5" WidthRequest="1"
+                         BackgroundColor="#2E4D6A" VerticalOptions="Fill"
+                         Margin="0,12"/>
+
+                <VerticalStackLayout Grid.Column="6" HorizontalOptions="Center"
+                                     VerticalOptions="Center" Spacing="3">
+                    <Label x:Name="StatExperienceLabel" Text="—"
+                           FontSize="15" FontAttributes="Bold"
+                           TextColor="#FFFFFF" HorizontalOptions="Center"/>
+                    <Label Text="Exp." FontSize="9" TextColor="#8BAFC9"
+                           HorizontalOptions="Center" CharacterSpacing="0.4"/>
+                </VerticalStackLayout>
+            </Grid>
 
         </Grid>
 
-        <!-- Curved connector between header and body -->
-        <Grid Grid.Row="0" VerticalOptions="End" HeightRequest="28">
-            <Frame BackgroundColor="#F0F4F8"
-                   Padding="0" HasShadow="False" BorderColor="Transparent"
-                   Margin="0,14,0,-1">
-                <Frame.CornerRadius>24</Frame.CornerRadius>
-            </Frame>
-        </Grid>
-
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- SCROLLABLE BODY                                             -->
-        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- ═══════════════════════════════════════════════ -->
+        <!-- SCROLLABLE BODY                                 -->
+        <!-- ═══════════════════════════════════════════════ -->
         <ScrollView Grid.Row="1">
-            <VerticalStackLayout Spacing="14" Padding="16,8,16,48">
+            <VerticalStackLayout Spacing="10" Padding="16,16,16,48">
 
-                <!-- ── Loading ── -->
+                <!-- Loading -->
                 <ActivityIndicator x:Name="PageLoadingIndicator"
                                    IsRunning="True" IsVisible="True"
                                    Color="#2563EB"
                                    HorizontalOptions="Center"
                                    Margin="0,60,0,0"/>
 
-                <!-- ── Error state ── -->
+                <!-- Error state -->
                 <VerticalStackLayout x:Name="ErrorState" IsVisible="False"
-                                     Spacing="16" HorizontalOptions="Center"
+                                     Spacing="14" HorizontalOptions="Center"
                                      Margin="0,60,0,0">
-                    <Label Text="⚠" FontSize="48"
-                           HorizontalOptions="Center" TextColor="#2563EB"/>
+                    <Image Source="info.svg"
+                           WidthRequest="40" HeightRequest="40"
+                           HorizontalOptions="Center"/>
                     <Label x:Name="ErrorLabel" Text="Could not load profile."
-                           FontSize="15" TextColor="#64748B"
+                           FontSize="14" TextColor="#64748B"
                            HorizontalOptions="Center"
                            HorizontalTextAlignment="Center"/>
                     <Frame BackgroundColor="White" CornerRadius="12"
-                           Padding="28,11" HasShadow="False"
+                           Padding="24,10" HasShadow="False"
                            HorizontalOptions="Center"
                            BorderColor="#BFDBFE">
-                        <Label Text="Try Again" TextColor="#2563EB"
+                        <Label Text="Try again" TextColor="#2563EB"
                                FontSize="14" FontAttributes="Bold"/>
                         <Frame.GestureRecognizers>
                             <TapGestureRecognizer Tapped="OnRetryClicked"/>
@@ -269,748 +229,1013 @@
                     </Frame>
                 </VerticalStackLayout>
 
-                <!-- ══════════════════════════════════════════════════ -->
-                <!-- ARTISAN STATS STRIP                                -->
-                <!-- ══════════════════════════════════════════════════ -->
-                <Frame x:Name="ArtisanStatsCard"
-                       CornerRadius="16" Padding="0"
-                       HasShadow="False" BorderColor="#E8EDF2"
+                <!-- ═══════════════════════════════════════ -->
+                <!-- TRUST SCORE CARD                        -->
+                <!-- ═══════════════════════════════════════ -->
+                <Frame x:Name="TrustScoreCard"
+                       CornerRadius="20" Padding="0"
+                       HasShadow="False"
+                       BorderColor="Transparent"
                        IsVisible="False"
-                       BackgroundColor="White">
-                    <Grid ColumnDefinitions="*,1,*,1,*,1,*"
-                          Padding="0,16">
-
-                        <VerticalStackLayout Grid.Column="0"
-                                             HorizontalOptions="Center" Spacing="3">
-                            <Label x:Name="StatRatingLabel" Text="—"
-                                   FontSize="20" FontAttributes="Bold"
-                                   TextColor="#1B2B3A"
-                                   HorizontalOptions="Center"/>
-                            <Label Text="RATING" FontSize="8"
-                                   TextColor="#8A9BAD" CharacterSpacing="1"
-                                   HorizontalOptions="Center"/>
-                        </VerticalStackLayout>
-
-                        <BoxView Grid.Column="1" WidthRequest="1"
-                                 BackgroundColor="#E8EDF2"/>
-
-                        <VerticalStackLayout Grid.Column="2"
-                                             HorizontalOptions="Center" Spacing="3">
-                            <Label x:Name="StatProjectsLabel" Text="—"
-                                   FontSize="20" FontAttributes="Bold"
-                                   TextColor="#1B2B3A"
-                                   HorizontalOptions="Center"/>
-                            <Label Text="PROJECTS" FontSize="8"
-                                   TextColor="#8A9BAD" CharacterSpacing="1"
-                                   HorizontalOptions="Center"/>
-                        </VerticalStackLayout>
-
-                        <BoxView Grid.Column="3" WidthRequest="1"
-                                 BackgroundColor="#E8EDF2"/>
-
-                        <VerticalStackLayout Grid.Column="4"
-                                             HorizontalOptions="Center" Spacing="3">
-                            <Label x:Name="StatReviewsLabel" Text="—"
-                                   FontSize="20" FontAttributes="Bold"
-                                   TextColor="#1B2B3A"
-                                   HorizontalOptions="Center"/>
-                            <Label Text="REVIEWS" FontSize="8"
-                                   TextColor="#8A9BAD" CharacterSpacing="1"
-                                   HorizontalOptions="Center"/>
-                        </VerticalStackLayout>
-
-                        <BoxView Grid.Column="5" WidthRequest="1"
-                                 BackgroundColor="#E8EDF2"/>
-
-                        <VerticalStackLayout Grid.Column="6"
-                                             HorizontalOptions="Center" Spacing="3">
-                            <Label x:Name="StatExperienceLabel" Text="—"
-                                   FontSize="20" FontAttributes="Bold"
-                                   TextColor="#1B2B3A"
-                                   HorizontalOptions="Center"/>
-                            <Label Text="YRS EXP" FontSize="8"
-                                   TextColor="#8A9BAD" CharacterSpacing="1"
-                                   HorizontalOptions="Center"/>
-                        </VerticalStackLayout>
-                    </Grid>
-                </Frame>
-
-                <!-- ══════════════════════════════════════════════════ -->
-                <!-- PERSONAL INFO CARD                                 -->
-                <!-- ══════════════════════════════════════════════════ -->
-                <Frame x:Name="PersonalInfoCard"
-                       CornerRadius="16" Padding="0"
-                       HasShadow="False" BorderColor="#E8EDF2"
-                       IsVisible="False"
-                       BackgroundColor="White">
+                       BackgroundColor="#1B2D3E">
                     <VerticalStackLayout Spacing="0">
 
-                        <!-- Section header -->
-                        <Label Text="PERSONAL INFO"
-                               TextColor="#8A9BAD" FontSize="12"
-                               FontAttributes="Bold" CharacterSpacing="1.2"
-                               Margin="16,14,16,10"/>
+                        <!-- Score hero section -->
+                        <Grid ColumnDefinitions="*,Auto"
+                              Padding="20,20,20,16">
 
-                        <BoxView HeightRequest="1" Color="#F0F4F8"/>
+                            <!-- Left: label + score number + band -->
+                            <VerticalStackLayout Grid.Column="0"
+                                                 VerticalOptions="Center" Spacing="4">
+                                <Label Text="TRUST SCORE"
+                                       FontSize="9" FontAttributes="Bold"
+                                       TextColor="#8BAFC9" CharacterSpacing="1.4"/>
 
-                        <!-- About / Bio -->
-                        <VerticalStackLayout x:Name="PersonalBioSection"
-                                             IsVisible="False" Spacing="4"
-                                             Padding="16,12,16,0">
-                            <Label Text="ABOUT ME" FontSize="8"
-                                   TextColor="#8A9BAD" CharacterSpacing="1"/>
-                            <Label x:Name="PersonalBioLabel" FontSize="14"
-                                   TextColor="#1B2B3A"
-                                   LineBreakMode="WordWrap" LineHeight="1.5"/>
+                                <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10"
+                                      VerticalOptions="Center">
+                                    <Label x:Name="TrustScoreValueLabel" Text="—"
+                                           Grid.Column="0"
+                                           FontSize="52" FontAttributes="Bold"
+                                           TextColor="#FFFFFF"
+                                           LineHeight="1"/>
+                                    <VerticalStackLayout Grid.Column="1"
+                                                         VerticalOptions="End"
+                                                         Spacing="3" Margin="0,0,0,6">
+                                        <Label Text="/ 100" FontSize="14"
+                                               TextColor="#8BAFC9"/>
+                                        <!-- Band pill -->
+                                        <Frame x:Name="TrustBandPill"
+                                               CornerRadius="20" Padding="10,4"
+                                               HasShadow="False"
+                                               BackgroundColor="#F59E0B"
+                                               BorderColor="Transparent">
+                                            <Label x:Name="TrustBandLabel" Text="—"
+                                                   FontSize="10" FontAttributes="Bold"
+                                                   TextColor="#1B2D3E"
+                                                   CharacterSpacing="0.6"/>
+                                        </Frame>
+                                    </VerticalStackLayout>
+                                </Grid>
+
+                                <Label x:Name="TrustCalcLabel"
+                                       Text="Calculated —"
+                                       FontSize="11" TextColor="#4A7A9B"
+                                       Margin="0,2,0,0"/>
+                            </VerticalStackLayout>
+
+                            <!-- Right: score ring visual -->
+                            <Grid Grid.Column="1"
+                                  WidthRequest="80" HeightRequest="80"
+                                  VerticalOptions="Center">
+                                <!-- Outer ring track -->
+                                <Frame WidthRequest="80" HeightRequest="80"
+                                       CornerRadius="40" Padding="0"
+                                       HasShadow="False" IsClippedToBounds="True"
+                                       BackgroundColor="#243B52"
+                                       BorderColor="#2E4D6A"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"/>
+                                <!-- Inner circle -->
+                                <Frame WidthRequest="56" HeightRequest="56"
+                                       CornerRadius="28" Padding="0"
+                                       HasShadow="False"
+                                       BackgroundColor="#1B2D3E"
+                                       BorderColor="Transparent"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"/>
+                                <!-- Score indicator icon -->
+                                <Image x:Name="TrustBandIcon"
+                                       Source="shield_check.svg"
+                                       WidthRequest="24" HeightRequest="24"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"/>
+                            </Grid>
+                        </Grid>
+
+                        <!-- Score breakdown mini-bar -->
+                        <BoxView HeightRequest="0.5" Color="#243B52"/>
+                        <StackLayout x:Name="TrustBreakdownSection"
+                                     IsVisible="False"
+                                     Padding="20,14,20,14" Spacing="10">
+                            <Label Text="SCORE BREAKDOWN"
+                                   FontSize="8" FontAttributes="Bold"
+                                   TextColor="#4A7A9B" CharacterSpacing="1.2"/>
+                            <!-- Breakdown items injected in code-behind -->
+                            <VerticalStackLayout x:Name="TrustBreakdownLayout"
+                                                 Spacing="8"/>
+                        </StackLayout>
+
+                        <!-- ─── Referrals summary strip ─── -->
+                        <BoxView HeightRequest="0.5" Color="#243B52"/>
+                        <Grid ColumnDefinitions="*,1,*,1,*"
+                              Padding="0,0,0,0"
+                              x:Name="ReferralSummaryStrip"
+                              IsVisible="False">
+
+                            <!-- Work referrals -->
+                            <VerticalStackLayout Grid.Column="0"
+                                                 Spacing="2" Padding="0,14"
+                                                 HorizontalOptions="Center">
+                                <Label x:Name="WorkReferralCountLabel" Text="—"
+                                       FontSize="18" FontAttributes="Bold"
+                                       TextColor="#FFFFFF" HorizontalOptions="Center"/>
+                                <Label Text="Work" FontSize="9"
+                                       TextColor="#4A7A9B"
+                                       HorizontalOptions="Center" CharacterSpacing="0.4"/>
+                            </VerticalStackLayout>
+
+                            <BoxView Grid.Column="1" WidthRequest="0.5"
+                                     BackgroundColor="#243B52" VerticalOptions="Fill"
+                                     Margin="0,10"/>
+
+                            <!-- Vendor referrals -->
+                            <VerticalStackLayout Grid.Column="2"
+                                                 Spacing="2" Padding="0,14"
+                                                 HorizontalOptions="Center">
+                                <Label x:Name="VendorReferralCountLabel" Text="—"
+                                       FontSize="18" FontAttributes="Bold"
+                                       TextColor="#FFFFFF" HorizontalOptions="Center"/>
+                                <Label Text="Vendor" FontSize="9"
+                                       TextColor="#4A7A9B"
+                                       HorizontalOptions="Center" CharacterSpacing="0.4"/>
+                            </VerticalStackLayout>
+
+                            <BoxView Grid.Column="3" WidthRequest="0.5"
+                                     BackgroundColor="#243B52" VerticalOptions="Fill"
+                                     Margin="0,10"/>
+
+                            <!-- Colleague referrals -->
+                            <VerticalStackLayout Grid.Column="4"
+                                                 Spacing="2" Padding="0,14"
+                                                 HorizontalOptions="Center">
+                                <Label x:Name="ColleagueReferralCountLabel" Text="—"
+                                       FontSize="18" FontAttributes="Bold"
+                                       TextColor="#FFFFFF" HorizontalOptions="Center"/>
+                                <Label Text="Colleague" FontSize="9"
+                                       TextColor="#4A7A9B"
+                                       HorizontalOptions="Center" CharacterSpacing="0.4"/>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <!-- ─── History accordion toggle ─── -->
+                        <BoxView HeightRequest="0.5" Color="#243B52"/>
+                        <Grid ColumnDefinitions="*,Auto"
+                              Padding="20,14"
+                              x:Name="TrustHistoryToggle">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnTrustHistoryToggled"/>
+                            </Grid.GestureRecognizers>
+                            <Label Grid.Column="0"
+                                   Text="Score History"
+                                   FontSize="13" FontAttributes="Bold"
+                                   TextColor="#7DB8E0"
+                                   VerticalOptions="Center"/>
+                            <Image x:Name="HistoryChevron"
+                                   Grid.Column="1"
+                                   Source="chevron_down.svg"
+                                   WidthRequest="14" HeightRequest="14"
+                                   VerticalOptions="Center"/>
+                        </Grid>
+
+                        <!-- History list (collapsed by default) -->
+                        <VerticalStackLayout x:Name="TrustHistoryPanel"
+                                             IsVisible="False"
+                                             Spacing="0">
+                            <BoxView HeightRequest="0.5" Color="#243B52"/>
+                            <VerticalStackLayout x:Name="TrustHistoryLayout"
+                                                 Spacing="0"
+                                                 Padding="20,10,20,6"/>
+                            <Label x:Name="NoHistoryLabel"
+                                   Text="No history available yet."
+                                   FontSize="12" TextColor="#4A7A9B"
+                                   IsVisible="False"
+                                   HorizontalOptions="Center"
+                                   Margin="0,8,0,12"/>
                         </VerticalStackLayout>
 
-                        <!-- Email row -->
-                        <Grid x:Name="PersonalEmailRow"
-                              ColumnDefinitions="44,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
-                                   Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="✉" FontSize="16"
-                                       TextColor="#2563EB"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center"/>
-                            </Frame>
-                            <VerticalStackLayout Grid.Column="1"
-                                                 VerticalOptions="Center" Spacing="1">
-                                <Label Text="EMAIL" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
-                                <Label x:Name="PersonalEmailLabel"
-                                       FontSize="14" TextColor="#1B2B3A"
-                                       LineBreakMode="TailTruncation"/>
+                        <!-- ─── Referral details accordion toggle ─── -->
+                        <BoxView HeightRequest="0.5" Color="#243B52"/>
+                        <Grid ColumnDefinitions="*,Auto"
+                              Padding="20,14"
+                              x:Name="ReferralDetailsToggle">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnReferralDetailsToggled"/>
+                            </Grid.GestureRecognizers>
+                            <Label Grid.Column="0"
+                                   Text="Referral Details"
+                                   FontSize="13" FontAttributes="Bold"
+                                   TextColor="#7DB8E0"
+                                   VerticalOptions="Center"/>
+                            <Image x:Name="ReferralChevron"
+                                   Grid.Column="1"
+                                   Source="chevron_down.svg"
+                                   WidthRequest="14" HeightRequest="14"
+                                   VerticalOptions="Center"/>
+                        </Grid>
+
+                        <!-- Referral details panel (collapsed) -->
+                        <VerticalStackLayout x:Name="ReferralDetailsPanel"
+                                             IsVisible="False"
+                                             Spacing="0">
+                            <BoxView HeightRequest="0.5" Color="#243B52"/>
+
+                            <!-- Work referrals sub-section -->
+                            <VerticalStackLayout x:Name="WorkReferralSection"
+                                                 IsVisible="False"
+                                                 Spacing="0" Padding="20,14,20,0">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"
+                                      Margin="0,0,0,10">
+                                    <Frame Grid.Column="0"
+                                           BackgroundColor="#243B52" CornerRadius="8"
+                                           Padding="7,4" HasShadow="False">
+                                        <Label Text="WORK" FontSize="8"
+                                               TextColor="#7DB8E0" FontAttributes="Bold"
+                                               CharacterSpacing="0.8"/>
+                                    </Frame>
+                                    <BoxView Grid.Column="1" HeightRequest="0.5"
+                                             BackgroundColor="#243B52"
+                                             VerticalOptions="Center"/>
+                                </Grid>
+                                <VerticalStackLayout x:Name="WorkReferralLayout"
+                                                     Spacing="10"/>
                             </VerticalStackLayout>
-                        </Grid>
-                        <BoxView HeightRequest="1" Color="#F0F4F8"
-                                 IsVisible="{Binding Source={x:Reference PersonalEmailRow}, Path=IsVisible}"/>
 
-                        <!-- Phone row -->
-                        <Grid x:Name="PersonalPhoneRow"
-                              ColumnDefinitions="44,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
-                                   Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="📞" FontSize="16"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center"/>
-                            </Frame>
-                            <VerticalStackLayout Grid.Column="1"
-                                                 VerticalOptions="Center" Spacing="1">
-                                <Label Text="PHONE" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
-                                <Label x:Name="PersonalPhoneLabel"
-                                       FontSize="14" TextColor="#1B2B3A"/>
+                            <!-- Vendor referrals sub-section -->
+                            <VerticalStackLayout x:Name="VendorReferralSection"
+                                                 IsVisible="False"
+                                                 Spacing="0" Padding="20,14,20,0">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"
+                                      Margin="0,0,0,10">
+                                    <Frame Grid.Column="0"
+                                           BackgroundColor="#243B52" CornerRadius="8"
+                                           Padding="7,4" HasShadow="False">
+                                        <Label Text="VENDOR" FontSize="8"
+                                               TextColor="#7DB8E0" FontAttributes="Bold"
+                                               CharacterSpacing="0.8"/>
+                                    </Frame>
+                                    <BoxView Grid.Column="1" HeightRequest="0.5"
+                                             BackgroundColor="#243B52"
+                                             VerticalOptions="Center"/>
+                                </Grid>
+                                <VerticalStackLayout x:Name="VendorReferralLayout"
+                                                     Spacing="10"/>
                             </VerticalStackLayout>
-                        </Grid>
-                        <BoxView HeightRequest="1" Color="#F0F4F8"
-                                 IsVisible="{Binding Source={x:Reference PersonalPhoneRow}, Path=IsVisible}"/>
 
-                        <!-- Date of Birth -->
-                        <Grid x:Name="DateOfBirthRow"
-                              ColumnDefinitions="44,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
-                                   Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="🎂" FontSize="16"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center"/>
-                            </Frame>
-                            <VerticalStackLayout Grid.Column="1"
-                                                 VerticalOptions="Center" Spacing="1">
-                                <Label Text="DATE OF BIRTH" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
-                                <Label x:Name="DateOfBirthLabel"
-                                       FontSize="14" TextColor="#1B2B3A"/>
+                            <!-- Colleague referrals sub-section -->
+                            <VerticalStackLayout x:Name="ColleagueReferralSection"
+                                                 IsVisible="False"
+                                                 Spacing="0" Padding="20,14,20,14">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"
+                                      Margin="0,0,0,10">
+                                    <Frame Grid.Column="0"
+                                           BackgroundColor="#243B52" CornerRadius="8"
+                                           Padding="7,4" HasShadow="False">
+                                        <Label Text="COLLEAGUE" FontSize="8"
+                                               TextColor="#7DB8E0" FontAttributes="Bold"
+                                               CharacterSpacing="0.8"/>
+                                    </Frame>
+                                    <BoxView Grid.Column="1" HeightRequest="0.5"
+                                             BackgroundColor="#243B52"
+                                             VerticalOptions="Center"/>
+                                </Grid>
+                                <VerticalStackLayout x:Name="ColleagueReferralLayout"
+                                                     Spacing="10"/>
                             </VerticalStackLayout>
-                        </Grid>
-                        <BoxView HeightRequest="1" Color="#F0F4F8"
-                                 IsVisible="{Binding Source={x:Reference DateOfBirthRow}, Path=IsVisible}"/>
 
-                        <!-- Emergency Contact -->
-                        <Grid x:Name="EmergencyContactRow"
-                              ColumnDefinitions="44,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#FEF2F2" CornerRadius="10"
-                                   Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="🚨" FontSize="16"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center"/>
-                            </Frame>
-                            <VerticalStackLayout Grid.Column="1"
-                                                 VerticalOptions="Center" Spacing="1">
-                                <Label Text="EMERGENCY CONTACT" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
-                                <Label x:Name="EmergencyContactLabel"
-                                       FontSize="14" TextColor="#1B2B3A"
-                                       LineBreakMode="WordWrap"/>
-                            </VerticalStackLayout>
-                        </Grid>
-                        <BoxView HeightRequest="1" Color="#F0F4F8"
-                                 IsVisible="{Binding Source={x:Reference EmergencyContactRow}, Path=IsVisible}"/>
+                            <Label x:Name="NoReferralsLabel"
+                                   Text="No referrals found."
+                                   FontSize="12" TextColor="#4A7A9B"
+                                   IsVisible="False"
+                                   HorizontalOptions="Center"
+                                   Margin="0,8,0,16"/>
+                        </VerticalStackLayout>
 
-                        <!-- Staff Type -->
-                        <Grid x:Name="StaffTypeRow"
-                              ColumnDefinitions="44,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
-                                   Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="🏷" FontSize="16"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center"/>
-                            </Frame>
-                            <VerticalStackLayout Grid.Column="1"
-                                                 VerticalOptions="Center" Spacing="1">
-                                <Label Text="STAFF TYPE" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
-                                <Label x:Name="StaffTypeLabel"
-                                       FontSize="14" TextColor="#1B2B3A"/>
-                            </VerticalStackLayout>
-                        </Grid>
-                        <BoxView HeightRequest="1" Color="#F0F4F8"
-                                 IsVisible="{Binding Source={x:Reference StaffTypeRow}, Path=IsVisible}"/>
-
-                        <!-- Address -->
-                        <Grid x:Name="AddressRow"
-                              ColumnDefinitions="44,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
-                                   Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="🏠" FontSize="16"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center"/>
-                            </Frame>
-                            <VerticalStackLayout Grid.Column="1"
-                                                 VerticalOptions="Center" Spacing="1">
-                                <Label Text="ADDRESS" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
-                                <Label x:Name="AddressLabel"
-                                       FontSize="14" TextColor="#1B2B3A"
-                                       LineBreakMode="WordWrap"/>
-                            </VerticalStackLayout>
-                        </Grid>
-                        <BoxView HeightRequest="1" Color="#F0F4F8"
-                                 IsVisible="{Binding Source={x:Reference AddressRow}, Path=IsVisible}"/>
-
-                        <!-- City / Country -->
-                        <Grid x:Name="CityCountryRow"
-                              ColumnDefinitions="44,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
-                                   Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="🌍" FontSize="16"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center"/>
-                            </Frame>
-                            <VerticalStackLayout Grid.Column="1"
-                                                 VerticalOptions="Center" Spacing="1">
-                                <Label Text="LOCATION" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
-                                <Label x:Name="CityCountryLabel"
-                                       FontSize="14" TextColor="#1B2B3A"/>
-                            </VerticalStackLayout>
-                        </Grid>
-                        <BoxView HeightRequest="1" Color="#F0F4F8"
-                                 IsVisible="{Binding Source={x:Reference CityCountryRow}, Path=IsVisible}"/>
-
-                        <!-- Postal Code -->
-                        <Grid x:Name="PostalCodeRow"
-                              ColumnDefinitions="44,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
-                                   Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="📮" FontSize="16"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center"/>
-                            </Frame>
-                            <VerticalStackLayout Grid.Column="1"
-                                                 VerticalOptions="Center" Spacing="1">
-                                <Label Text="POSTAL CODE" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
-                                <Label x:Name="PostalCodeLabel"
-                                       FontSize="14" TextColor="#1B2B3A"/>
-                            </VerticalStackLayout>
-                        </Grid>
-                        <BoxView HeightRequest="1" Color="#F0F4F8"
-                                 IsVisible="{Binding Source={x:Reference PostalCodeRow}, Path=IsVisible}"/>
-
-                        <!-- Language & Timezone -->
-                        <Grid x:Name="LanguageTimezoneRow"
-                              ColumnDefinitions="*,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0"
-                                   BackgroundColor="#F8FAFC" CornerRadius="10"
-                                   Padding="12,8" HasShadow="False"
-                                   BorderColor="#E8EDF2">
-                                <VerticalStackLayout Spacing="2">
-                                    <Label Text="🌐  LANGUAGE" FontSize="8"
-                                           TextColor="#2563EB" FontAttributes="Bold"
-                                           CharacterSpacing="0.6"/>
-                                    <Label x:Name="LanguageLabel"
-                                           FontSize="13" TextColor="#1B2B3A"/>
-                                </VerticalStackLayout>
-                            </Frame>
-                            <Frame Grid.Column="1"
-                                   BackgroundColor="#F8FAFC" CornerRadius="10"
-                                   Padding="12,8" HasShadow="False"
-                                   BorderColor="#E8EDF2">
-                                <VerticalStackLayout Spacing="2">
-                                    <Label Text="🕐  TIMEZONE" FontSize="8"
-                                           TextColor="#2563EB" FontAttributes="Bold"
-                                           CharacterSpacing="0.6"/>
-                                    <Label x:Name="TimezoneLabel"
-                                           FontSize="13" TextColor="#1B2B3A"
-                                           LineBreakMode="TailTruncation"/>
-                                </VerticalStackLayout>
-                            </Frame>
-                        </Grid>
-                        <BoxView HeightRequest="1" Color="#F0F4F8"
-                                 IsVisible="{Binding Source={x:Reference LanguageTimezoneRow}, Path=IsVisible}"/>
-
-                        <!-- Date Joined -->
-                        <Grid x:Name="DateJoinedRow"
-                              ColumnDefinitions="44,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
-                                   Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="📅" FontSize="16"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center"/>
-                            </Frame>
-                            <VerticalStackLayout Grid.Column="1"
-                                                 VerticalOptions="Center" Spacing="1">
-                                <Label Text="MEMBER SINCE" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
-                                <Label x:Name="DateJoinedLabel"
-                                       FontSize="14" TextColor="#1B2B3A"/>
-                            </VerticalStackLayout>
-                        </Grid>
-
-                        <Label x:Name="NoPersonalInfoLabel"
-                               Text="No personal information added yet."
-                               FontSize="13" TextColor="#8A9BAD"
+                        <!-- Trust score loading / error states -->
+                        <ActivityIndicator x:Name="TrustScoreLoading"
+                                           IsRunning="True" IsVisible="False"
+                                           Color="#7DB8E0"
+                                           HorizontalOptions="Center"
+                                           Margin="0,10,0,14"/>
+                        <Label x:Name="TrustScoreErrorLabel"
+                               IsVisible="False"
+                               FontSize="12" TextColor="#DC2626"
                                HorizontalOptions="Center"
-                               Margin="0,12,0,12"
-                               IsVisible="False"/>
+                               Margin="0,0,0,14"
+                               HorizontalTextAlignment="Center"/>
 
                     </VerticalStackLayout>
                 </Frame>
 
-                <!-- ══════════════════════════════════════════════════ -->
-                <!-- ARTISAN BUSINESS CARD                              -->
-                <!-- ══════════════════════════════════════════════════ -->
+                <!-- ─────────────────────── -->
+                <!-- BIO CARD                -->
+                <!-- ─────────────────────── -->
+                <Frame x:Name="BioCard"
+                       CornerRadius="16" Padding="16,14"
+                       HasShadow="False" BorderColor="#E2E8F0"
+                       IsVisible="False"
+                       BackgroundColor="White">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="ABOUT" FontSize="9" TextColor="#8BAFC9"
+                               FontAttributes="Bold" CharacterSpacing="1.2"/>
+                        <Label x:Name="BioLabel" FontSize="13"
+                               TextColor="#1B2D3E"
+                               LineBreakMode="WordWrap" LineHeight="1.6"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- ─────────────────────── -->
+                <!-- BUSINESS CARD           -->
+                <!-- ─────────────────────── -->
                 <Frame x:Name="ArtisanBusinessCard"
                        CornerRadius="16" Padding="0"
-                       HasShadow="False" BorderColor="#E8EDF2"
+                       HasShadow="False" BorderColor="#E2E8F0"
                        IsVisible="False"
                        BackgroundColor="White">
                     <VerticalStackLayout Spacing="0">
 
-                        <Label Text="BUSINESS INFO"
-                               TextColor="#8A9BAD" FontSize="12"
-                               FontAttributes="Bold" CharacterSpacing="1.2"
-                               Margin="16,14,16,10"/>
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"
+                              Padding="16,14,16,10">
+                            <Image Grid.Column="0" Source="briefcase.svg"
+                                   WidthRequest="14" HeightRequest="14"
+                                   VerticalOptions="Center"/>
+                            <Label Grid.Column="1" Text="BUSINESS"
+                                   TextColor="#8BAFC9" FontSize="10"
+                                   FontAttributes="Bold" CharacterSpacing="1.2"
+                                   VerticalOptions="Center"/>
+                        </Grid>
 
-                        <BoxView HeightRequest="1" Color="#F0F4F8"/>
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"/>
 
-                        <!-- Business name + specialization -->
-                        <VerticalStackLayout Padding="16,14,16,0" Spacing="3">
-                            <Label x:Name="BusinessNameLabel"
-                                   FontSize="18" FontAttributes="Bold"
-                                   TextColor="#1B2B3A"/>
-                            <Label x:Name="SpecializationLabel"
-                                   FontSize="13" TextColor="#8A9BAD"/>
-                        </VerticalStackLayout>
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13">
+                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB"
+                                   CornerRadius="12" Padding="0" HasShadow="False"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="briefcase.svg"
+                                       WidthRequest="18" HeightRequest="18"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"/>
+                            </Frame>
+                            <VerticalStackLayout Grid.Column="1"
+                                                 VerticalOptions="Center" Spacing="1">
+                                <Label Text="BUSINESS NAME" FontSize="8"
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
+                                <Label x:Name="BusinessNameLabel"
+                                       FontSize="14" TextColor="#1B2D3E"
+                                       FontAttributes="Bold"/>
+                                <Label x:Name="SpecializationLabel"
+                                       FontSize="12" TextColor="#8BAFC9"/>
+                            </VerticalStackLayout>
+                        </Grid>
 
-                        <BoxView HeightRequest="1" Color="#F0F4F8" Margin="0,12,0,0"/>
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"/>
 
-                        <!-- Artisan Speciality -->
                         <Grid x:Name="ArtisanSpecialityRow"
-                              ColumnDefinitions="44,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
+                              ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="12"
                                    Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="⭐" FontSize="16"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="availability.svg"
+                                       WidthRequest="18" HeightRequest="18"
                                        HorizontalOptions="Center"
                                        VerticalOptions="Center"/>
                             </Frame>
                             <VerticalStackLayout Grid.Column="1"
                                                  VerticalOptions="Center" Spacing="1">
                                 <Label Text="SPECIALITY" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
                                 <Label x:Name="ArtisanSpecialityLabel"
-                                       FontSize="14" TextColor="#1B2B3A"/>
+                                       FontSize="14" TextColor="#1B2D3E"/>
                             </VerticalStackLayout>
                         </Grid>
-                        <BoxView HeightRequest="1" Color="#F0F4F8"
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"
                                  IsVisible="{Binding Source={x:Reference ArtisanSpecialityRow}, Path=IsVisible}"/>
 
-                        <!-- Experience level -->
                         <Grid x:Name="ExperienceLevelRow"
-                              ColumnDefinitions="44,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
+                              ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="12"
                                    Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="📈" FontSize="16"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="chart.svg"
+                                       WidthRequest="18" HeightRequest="18"
                                        HorizontalOptions="Center"
                                        VerticalOptions="Center"/>
                             </Frame>
                             <VerticalStackLayout Grid.Column="1"
                                                  VerticalOptions="Center" Spacing="1">
                                 <Label Text="EXPERIENCE LEVEL" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
                                 <Label x:Name="ExperienceLevelLabel"
-                                       FontSize="14" TextColor="#1B2B3A"
+                                       FontSize="14" TextColor="#1B2D3E"
                                        FontAttributes="Bold"/>
                             </VerticalStackLayout>
                         </Grid>
-                        <BoxView HeightRequest="1" Color="#F0F4F8"
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"
                                  IsVisible="{Binding Source={x:Reference ExperienceLevelRow}, Path=IsVisible}"/>
 
-                        <!-- Rate + Radius -->
-                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12"
-                              Padding="16,12">
+                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8"
+                              Padding="16,13">
+
                             <Frame x:Name="HourlyRateBox" Grid.Column="0"
-                                   BackgroundColor="#F8FAFC" CornerRadius="10"
+                                   BackgroundColor="#F8FAFC" CornerRadius="12"
                                    Padding="12,10" HasShadow="False"
-                                   BorderColor="#E8EDF2" IsVisible="False">
-                                <VerticalStackLayout Spacing="2">
-                                    <Label Text="💰  RATE" FontSize="8"
-                                           TextColor="#2563EB" FontAttributes="Bold"
-                                           CharacterSpacing="0.6"/>
+                                   BorderColor="#E2E8F0" IsVisible="False">
+                                <VerticalStackLayout Spacing="3">
+                                    <Label Text="RATE" FontSize="8"
+                                           TextColor="#8BAFC9" CharacterSpacing="0.6"/>
                                     <Label x:Name="HourlyRateLabel"
-                                           FontSize="15" TextColor="#1B2B3A"
+                                           FontSize="13" TextColor="#1B2D3E"
                                            FontAttributes="Bold"/>
                                 </VerticalStackLayout>
                             </Frame>
 
                             <Frame x:Name="ServiceRadiusBox" Grid.Column="1"
-                                   BackgroundColor="#F8FAFC" CornerRadius="10"
+                                   BackgroundColor="#F8FAFC" CornerRadius="12"
                                    Padding="12,10" HasShadow="False"
-                                   BorderColor="#E8EDF2" IsVisible="False">
-                                <VerticalStackLayout Spacing="2">
-                                    <Label Text="📍  RADIUS" FontSize="8"
-                                           TextColor="#2563EB" FontAttributes="Bold"
-                                           CharacterSpacing="0.6"/>
+                                   BorderColor="#E2E8F0" IsVisible="False">
+                                <VerticalStackLayout Spacing="3">
+                                    <Label Text="RADIUS" FontSize="8"
+                                           TextColor="#8BAFC9" CharacterSpacing="0.6"/>
                                     <Label x:Name="ServiceRadiusLabel"
-                                           FontSize="15" TextColor="#1B2B3A"
+                                           FontSize="13" TextColor="#1B2D3E"
                                            FontAttributes="Bold"/>
+                                </VerticalStackLayout>
+                            </Frame>
+
+                            <Frame x:Name="AvailabilityBadge" Grid.Column="2"
+                                   CornerRadius="12" Padding="12,10"
+                                   HasShadow="False"
+                                   BackgroundColor="#DCFCE7"
+                                   BorderColor="Transparent">
+                                <VerticalStackLayout Spacing="3">
+                                    <Label Text="STATUS" FontSize="8"
+                                           TextColor="#8BAFC9" CharacterSpacing="0.6"/>
+                                    <Label x:Name="AvailabilityLabel"
+                                           FontSize="12" FontAttributes="Bold"
+                                           TextColor="#16A34A"/>
                                 </VerticalStackLayout>
                             </Frame>
                         </Grid>
 
-                        <BoxView HeightRequest="1" Color="#F0F4F8"/>
-
-                        <!-- Availability -->
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12"
-                              Padding="16,12">
-                            <Frame x:Name="AvailabilityBadge" Grid.Column="0"
-                                   CornerRadius="8" Padding="12,5"
-                                   HasShadow="False"
-                                   VerticalOptions="Center"
-                                   BackgroundColor="#DCFCE7">
-                                <Label x:Name="AvailabilityLabel"
-                                       FontSize="12" FontAttributes="Bold"
-                                       TextColor="#16A34A" CharacterSpacing="0.2"/>
-                            </Frame>
-                            <Label Grid.Column="1"
-                                   Text="Current availability"
-                                   FontSize="12" TextColor="#8A9BAD"
-                                   VerticalOptions="Center"/>
-                        </Grid>
-
-                        <BoxView HeightRequest="1" Color="#F0F4F8"/>
-
-                        <!-- Business Address -->
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"/>
                         <Grid x:Name="BusinessAddressRow"
-                              ColumnDefinitions="44,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
+                              ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="12"
                                    Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="🏢" FontSize="16"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="icon_location.svg"
+                                       WidthRequest="18" HeightRequest="18"
                                        HorizontalOptions="Center"
                                        VerticalOptions="Center"/>
                             </Frame>
                             <VerticalStackLayout Grid.Column="1"
                                                  VerticalOptions="Center" Spacing="1">
                                 <Label Text="BUSINESS ADDRESS" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
                                 <Label x:Name="BusinessAddressLabel"
-                                       FontSize="14" TextColor="#1B2B3A"
+                                       FontSize="14" TextColor="#1B2D3E"
                                        LineBreakMode="WordWrap"/>
                             </VerticalStackLayout>
                         </Grid>
-                        <BoxView HeightRequest="1" Color="#F0F4F8"
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"
                                  IsVisible="{Binding Source={x:Reference BusinessAddressRow}, Path=IsVisible}"/>
 
-                        <!-- Slug -->
                         <Grid x:Name="SlugRow"
-                              ColumnDefinitions="44,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
+                              ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="12"
                                    Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="🔗" FontSize="16"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="icon_send.svg"
+                                       WidthRequest="18" HeightRequest="18"
                                        HorizontalOptions="Center"
                                        VerticalOptions="Center"/>
                             </Frame>
                             <VerticalStackLayout Grid.Column="1"
                                                  VerticalOptions="Center" Spacing="1">
                                 <Label Text="PROFILE SLUG" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
                                 <Label x:Name="SlugLabel"
                                        FontSize="14" TextColor="#2563EB"/>
                             </VerticalStackLayout>
                         </Grid>
-                        <BoxView HeightRequest="1" Color="#F0F4F8"
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"
                                  IsVisible="{Binding Source={x:Reference SlugRow}, Path=IsVisible}"/>
 
-                        <!-- About -->
                         <VerticalStackLayout x:Name="AboutSection"
                                              Spacing="5" IsVisible="False"
-                                             Padding="16,12,16,0">
+                                             Padding="16,13,16,0">
                             <Label Text="ABOUT" FontSize="8"
-                                   TextColor="#8A9BAD" CharacterSpacing="1.2"/>
-                            <Label x:Name="AboutLabel" FontSize="14"
-                                   TextColor="#1B2B3A"
-                                   LineBreakMode="WordWrap" LineHeight="1.5"/>
+                                   TextColor="#8BAFC9" CharacterSpacing="0.8"/>
+                            <Label x:Name="AboutLabel" FontSize="13"
+                                   TextColor="#1B2D3E"
+                                   LineBreakMode="WordWrap" LineHeight="1.6"/>
                         </VerticalStackLayout>
 
-                        <!-- Professional Bio -->
                         <VerticalStackLayout x:Name="ProfBioSection"
                                              Spacing="5" IsVisible="False"
-                                             Padding="16,12,16,0">
+                                             Padding="16,13,16,0">
                             <Label Text="PROFESSIONAL BIO" FontSize="8"
-                                   TextColor="#8A9BAD" CharacterSpacing="1.2"/>
-                            <Label x:Name="ProfBioLabel" FontSize="14"
-                                   TextColor="#1B2B3A"
-                                   LineBreakMode="WordWrap" LineHeight="1.5"/>
+                                   TextColor="#8BAFC9" CharacterSpacing="0.8"/>
+                            <Label x:Name="ProfBioLabel" FontSize="13"
+                                   TextColor="#1B2D3E"
+                                   LineBreakMode="WordWrap" LineHeight="1.6"/>
                         </VerticalStackLayout>
 
-                        <!-- Services Offered -->
                         <VerticalStackLayout x:Name="ServicesSection"
                                              Spacing="8" IsVisible="False"
-                                             Padding="16,12,16,12">
-                            <Label Text="SERVICES OFFERED" FontSize="8"
-                                   TextColor="#8A9BAD" CharacterSpacing="1.2"/>
+                                             Padding="16,13,16,13">
+                            <Label Text="SERVICES" FontSize="8"
+                                   TextColor="#8BAFC9" CharacterSpacing="0.8"/>
                             <FlexLayout x:Name="ServicesLayout"
                                         Wrap="Wrap" Direction="Row"
                                         JustifyContent="Start"
                                         AlignItems="Start"/>
                         </VerticalStackLayout>
 
-                        <!-- Last Updated -->
                         <VerticalStackLayout x:Name="UpdatedAtRow"
-                                             IsVisible="False" Spacing="1"
-                                             Padding="16,0,16,14">
+                                             IsVisible="False" Spacing="2"
+                                             Padding="16,5,16,14">
                             <Label Text="LAST UPDATED" FontSize="8"
-                                   TextColor="#8A9BAD" CharacterSpacing="1"/>
+                                   TextColor="#8BAFC9" CharacterSpacing="0.8"/>
                             <Label x:Name="UpdatedAtLabel"
-                                   FontSize="12" TextColor="#8A9BAD"/>
+                                   FontSize="11" TextColor="#8BAFC9"/>
                         </VerticalStackLayout>
 
                     </VerticalStackLayout>
                 </Frame>
 
-                <!-- ══════════════════════════════════════════════════ -->
-                <!-- ARTISAN CREDENTIALS CARD                           -->
-                <!-- ══════════════════════════════════════════════════ -->
-                <Frame x:Name="CredentialsCard"
+                <!-- ─────────────────────── -->
+                <!-- PERSONAL INFO CARD      -->
+                <!-- ─────────────────────── -->
+                <Frame x:Name="PersonalInfoCard"
                        CornerRadius="16" Padding="0"
-                       HasShadow="False" BorderColor="#E8EDF2"
+                       HasShadow="False" BorderColor="#E2E8F0"
                        IsVisible="False"
                        BackgroundColor="White">
                     <VerticalStackLayout Spacing="0">
 
-                        <Label Text="PROFESSIONAL CREDENTIALS"
-                               TextColor="#8A9BAD" FontSize="12"
-                               FontAttributes="Bold" CharacterSpacing="1.2"
-                               Margin="16,14,16,10"/>
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"
+                              Padding="16,14,16,10">
+                            <Image Grid.Column="0" Source="person.svg"
+                                   WidthRequest="14" HeightRequest="14"
+                                   VerticalOptions="Center"/>
+                            <Label Grid.Column="1" Text="PERSONAL INFO"
+                                   TextColor="#8BAFC9" FontSize="10"
+                                   FontAttributes="Bold" CharacterSpacing="1.2"
+                                   VerticalOptions="Center"/>
+                        </Grid>
 
-                        <BoxView HeightRequest="1" Color="#F0F4F8"/>
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"/>
 
-                        <!-- License -->
-                        <Grid x:Name="LicenseRow"
-                              ColumnDefinitions="44,*,Auto" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
+                        <VerticalStackLayout x:Name="PersonalBioSection"
+                                             IsVisible="False" Spacing="4"
+                                             Padding="16,13,16,0">
+                            <Label Text="ABOUT ME" FontSize="8"
+                                   TextColor="#8BAFC9" CharacterSpacing="0.8"/>
+                            <Label x:Name="PersonalBioLabel" FontSize="13"
+                                   TextColor="#1B2D3E"
+                                   LineBreakMode="WordWrap" LineHeight="1.6"/>
+                        </VerticalStackLayout>
+
+                        <Grid x:Name="PersonalEmailRow"
+                              ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="12"
                                    Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="📄" FontSize="16"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="icon_send.svg"
+                                       WidthRequest="18" HeightRequest="18"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"/>
+                            </Frame>
+                            <VerticalStackLayout Grid.Column="1"
+                                                 VerticalOptions="Center" Spacing="1">
+                                <Label Text="EMAIL" FontSize="8"
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
+                                <Label x:Name="PersonalEmailLabel"
+                                       FontSize="13" TextColor="#1B2D3E"
+                                       LineBreakMode="TailTruncation"/>
+                            </VerticalStackLayout>
+                        </Grid>
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"
+                                 IsVisible="{Binding Source={x:Reference PersonalEmailRow}, Path=IsVisible}"/>
+
+                        <Grid x:Name="PersonalPhoneRow"
+                              ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="12"
+                                   Padding="0" HasShadow="False"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="icon_comment.svg"
+                                       WidthRequest="18" HeightRequest="18"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"/>
+                            </Frame>
+                            <VerticalStackLayout Grid.Column="1"
+                                                 VerticalOptions="Center" Spacing="1">
+                                <Label Text="PHONE" FontSize="8"
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
+                                <Label x:Name="PersonalPhoneLabel"
+                                       FontSize="13" TextColor="#1B2D3E"/>
+                            </VerticalStackLayout>
+                        </Grid>
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"
+                                 IsVisible="{Binding Source={x:Reference PersonalPhoneRow}, Path=IsVisible}"/>
+
+                        <Grid x:Name="DateOfBirthRow"
+                              ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="12"
+                                   Padding="0" HasShadow="False"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="icon_bookmark.svg"
+                                       WidthRequest="18" HeightRequest="18"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"/>
+                            </Frame>
+                            <VerticalStackLayout Grid.Column="1"
+                                                 VerticalOptions="Center" Spacing="1">
+                                <Label Text="DATE OF BIRTH" FontSize="8"
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
+                                <Label x:Name="DateOfBirthLabel"
+                                       FontSize="13" TextColor="#1B2D3E"/>
+                            </VerticalStackLayout>
+                        </Grid>
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"
+                                 IsVisible="{Binding Source={x:Reference DateOfBirthRow}, Path=IsVisible}"/>
+
+                        <Grid x:Name="EmergencyContactRow"
+                              ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#FEF2F2" CornerRadius="12"
+                                   Padding="0" HasShadow="False"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="bell.svg"
+                                       WidthRequest="18" HeightRequest="18"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"/>
+                            </Frame>
+                            <VerticalStackLayout Grid.Column="1"
+                                                 VerticalOptions="Center" Spacing="1">
+                                <Label Text="EMERGENCY CONTACT" FontSize="8"
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
+                                <Label x:Name="EmergencyContactLabel"
+                                       FontSize="13" TextColor="#1B2D3E"
+                                       LineBreakMode="WordWrap"/>
+                            </VerticalStackLayout>
+                        </Grid>
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"
+                                 IsVisible="{Binding Source={x:Reference EmergencyContactRow}, Path=IsVisible}"/>
+
+                        <Grid x:Name="StaffTypeRow"
+                              ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="12"
+                                   Padding="0" HasShadow="False"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="users.svg"
+                                       WidthRequest="18" HeightRequest="18"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"/>
+                            </Frame>
+                            <VerticalStackLayout Grid.Column="1"
+                                                 VerticalOptions="Center" Spacing="1">
+                                <Label Text="STAFF TYPE" FontSize="8"
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
+                                <Label x:Name="StaffTypeLabel"
+                                       FontSize="13" TextColor="#1B2D3E"/>
+                            </VerticalStackLayout>
+                        </Grid>
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"
+                                 IsVisible="{Binding Source={x:Reference StaffTypeRow}, Path=IsVisible}"/>
+
+                        <Grid x:Name="AddressRow"
+                              ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="12"
+                                   Padding="0" HasShadow="False"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="icon_location.svg"
+                                       WidthRequest="18" HeightRequest="18"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"/>
+                            </Frame>
+                            <VerticalStackLayout Grid.Column="1"
+                                                 VerticalOptions="Center" Spacing="1">
+                                <Label Text="ADDRESS" FontSize="8"
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
+                                <Label x:Name="AddressLabel"
+                                       FontSize="13" TextColor="#1B2D3E"
+                                       LineBreakMode="WordWrap"/>
+                            </VerticalStackLayout>
+                        </Grid>
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"
+                                 IsVisible="{Binding Source={x:Reference AddressRow}, Path=IsVisible}"/>
+
+                        <Grid x:Name="CityCountryRow"
+                              ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="12"
+                                   Padding="0" HasShadow="False"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="icon_location.svg"
+                                       WidthRequest="18" HeightRequest="18"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"/>
+                            </Frame>
+                            <VerticalStackLayout Grid.Column="1"
+                                                 VerticalOptions="Center" Spacing="1">
+                                <Label Text="LOCATION" FontSize="8"
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
+                                <Label x:Name="CityCountryLabel"
+                                       FontSize="13" TextColor="#1B2D3E"/>
+                            </VerticalStackLayout>
+                        </Grid>
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"
+                                 IsVisible="{Binding Source={x:Reference CityCountryRow}, Path=IsVisible}"/>
+
+                        <Grid x:Name="PostalCodeRow"
+                              ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="12"
+                                   Padding="0" HasShadow="False"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="document.svg"
+                                       WidthRequest="18" HeightRequest="18"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"/>
+                            </Frame>
+                            <VerticalStackLayout Grid.Column="1"
+                                                 VerticalOptions="Center" Spacing="1">
+                                <Label Text="POSTAL CODE" FontSize="8"
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
+                                <Label x:Name="PostalCodeLabel"
+                                       FontSize="13" TextColor="#1B2D3E"/>
+                            </VerticalStackLayout>
+                        </Grid>
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"
+                                 IsVisible="{Binding Source={x:Reference PostalCodeRow}, Path=IsVisible}"/>
+
+                        <Grid x:Name="LanguageTimezoneRow"
+                              ColumnDefinitions="*,*" ColumnSpacing="8"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0"
+                                   BackgroundColor="#F8FAFC" CornerRadius="12"
+                                   Padding="12,10" HasShadow="False"
+                                   BorderColor="#E2E8F0">
+                                <VerticalStackLayout Spacing="3">
+                                    <Label Text="LANGUAGE" FontSize="8"
+                                           TextColor="#8BAFC9" CharacterSpacing="0.6"/>
+                                    <Label x:Name="LanguageLabel"
+                                           FontSize="13" TextColor="#1B2D3E"/>
+                                </VerticalStackLayout>
+                            </Frame>
+                            <Frame Grid.Column="1"
+                                   BackgroundColor="#F8FAFC" CornerRadius="12"
+                                   Padding="12,10" HasShadow="False"
+                                   BorderColor="#E2E8F0">
+                                <VerticalStackLayout Spacing="3">
+                                    <Label Text="TIMEZONE" FontSize="8"
+                                           TextColor="#8BAFC9" CharacterSpacing="0.6"/>
+                                    <Label x:Name="TimezoneLabel"
+                                           FontSize="13" TextColor="#1B2D3E"
+                                           LineBreakMode="TailTruncation"/>
+                                </VerticalStackLayout>
+                            </Frame>
+                        </Grid>
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"
+                                 IsVisible="{Binding Source={x:Reference LanguageTimezoneRow}, Path=IsVisible}"/>
+
+                        <Grid x:Name="DateJoinedRow"
+                              ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="12"
+                                   Padding="0" HasShadow="False"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="icon_bookmark.svg"
+                                       WidthRequest="18" HeightRequest="18"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"/>
+                            </Frame>
+                            <VerticalStackLayout Grid.Column="1"
+                                                 VerticalOptions="Center" Spacing="1">
+                                <Label Text="MEMBER SINCE" FontSize="8"
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
+                                <Label x:Name="DateJoinedLabel"
+                                       FontSize="13" TextColor="#1B2D3E"/>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <Label x:Name="NoPersonalInfoLabel"
+                               Text="No personal information added yet."
+                               FontSize="13" TextColor="#8BAFC9"
+                               HorizontalOptions="Center"
+                               Margin="0,14,0,14"
+                               IsVisible="False"/>
+
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- ─────────────────────── -->
+                <!-- CREDENTIALS CARD        -->
+                <!-- ─────────────────────── -->
+                <Frame x:Name="CredentialsCard"
+                       CornerRadius="16" Padding="0"
+                       HasShadow="False" BorderColor="#E2E8F0"
+                       IsVisible="False"
+                       BackgroundColor="White">
+                    <VerticalStackLayout Spacing="0">
+
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"
+                              Padding="16,14,16,10">
+                            <Image Grid.Column="0" Source="shield_check.svg"
+                                   WidthRequest="14" HeightRequest="14"
+                                   VerticalOptions="Center"/>
+                            <Label Grid.Column="1" Text="CREDENTIALS"
+                                   TextColor="#8BAFC9" FontSize="10"
+                                   FontAttributes="Bold" CharacterSpacing="1.2"
+                                   VerticalOptions="Center"/>
+                        </Grid>
+
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"/>
+
+                        <Grid x:Name="LicenseRow"
+                              ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="12"
+                                   Padding="0" HasShadow="False"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="document.svg"
+                                       WidthRequest="18" HeightRequest="18"
                                        HorizontalOptions="Center"
                                        VerticalOptions="Center"/>
                             </Frame>
                             <VerticalStackLayout Grid.Column="1"
                                                  VerticalOptions="Center" Spacing="1">
                                 <Label Text="LICENSE NUMBER" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
                                 <Label x:Name="LicenseLabel"
-                                       FontSize="14" TextColor="#1B2B3A"
+                                       FontSize="13" TextColor="#1B2D3E"
                                        FontAttributes="Bold"/>
                             </VerticalStackLayout>
                             <Frame Grid.Column="2"
-                                   BackgroundColor="#F0FDF4" CornerRadius="7"
-                                   Padding="8,3" HasShadow="False"
+                                   BackgroundColor="#F0FDF4" CornerRadius="8"
+                                   Padding="8,4" HasShadow="False"
                                    VerticalOptions="Center"
                                    BorderColor="#BBF7D0">
-                                <Label Text="LICENSED" FontSize="8"
-                                       TextColor="#16A34A" FontAttributes="Bold"
-                                       CharacterSpacing="0.5"/>
+                                <Label Text="Licensed" FontSize="9"
+                                       TextColor="#16A34A" FontAttributes="Bold"/>
                             </Frame>
                         </Grid>
-                        <BoxView HeightRequest="1" Color="#F0F4F8"
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"
                                  IsVisible="{Binding Source={x:Reference LicenseRow}, Path=IsVisible}"/>
 
-                        <!-- Certification -->
                         <Grid x:Name="CertificationRow"
-                              ColumnDefinitions="44,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
+                              ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="12"
                                    Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="🏅" FontSize="16"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="shield_check.svg"
+                                       WidthRequest="18" HeightRequest="18"
                                        HorizontalOptions="Center"
                                        VerticalOptions="Center"/>
                             </Frame>
                             <VerticalStackLayout Grid.Column="1"
                                                  VerticalOptions="Center" Spacing="1">
                                 <Label Text="CERTIFICATION" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
                                 <Label x:Name="CertificationLabel"
-                                       FontSize="14" TextColor="#1B2B3A"
+                                       FontSize="13" TextColor="#1B2D3E"
                                        FontAttributes="Bold"
                                        LineBreakMode="WordWrap"/>
                             </VerticalStackLayout>
                         </Grid>
-                        <BoxView HeightRequest="1" Color="#F0F4F8"
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"
                                  IsVisible="{Binding Source={x:Reference CertificationRow}, Path=IsVisible}"/>
 
-                        <!-- Business Registration -->
                         <Grid x:Name="BusinessRegRow"
-                              ColumnDefinitions="44,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
+                              ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="12"
                                    Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="📋" FontSize="16"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="document.svg"
+                                       WidthRequest="18" HeightRequest="18"
                                        HorizontalOptions="Center"
                                        VerticalOptions="Center"/>
                             </Frame>
                             <VerticalStackLayout Grid.Column="1"
                                                  VerticalOptions="Center" Spacing="1">
                                 <Label Text="BUSINESS REGISTRATION" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
                                 <Label x:Name="BusinessRegLabel"
-                                       FontSize="14" TextColor="#1B2B3A"
+                                       FontSize="13" TextColor="#1B2D3E"
                                        FontAttributes="Bold"/>
                             </VerticalStackLayout>
                         </Grid>
-                        <BoxView HeightRequest="1" Color="#F0F4F8"
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"
                                  IsVisible="{Binding Source={x:Reference BusinessRegRow}, Path=IsVisible}"/>
 
-                        <!-- Tax ID -->
                         <Grid x:Name="TaxIdRow"
-                              ColumnDefinitions="44,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
+                              ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="12"
                                    Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="🧾" FontSize="16"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="card.svg"
+                                       WidthRequest="18" HeightRequest="18"
                                        HorizontalOptions="Center"
                                        VerticalOptions="Center"/>
                             </Frame>
                             <VerticalStackLayout Grid.Column="1"
                                                  VerticalOptions="Center" Spacing="1">
                                 <Label Text="TAX ID" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
                                 <Label x:Name="TaxIdLabel"
-                                       FontSize="14" TextColor="#1B2B3A"
+                                       FontSize="13" TextColor="#1B2D3E"
                                        FontAttributes="Bold"/>
                             </VerticalStackLayout>
                         </Grid>
-                        <BoxView HeightRequest="1" Color="#F0F4F8"
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"
                                  IsVisible="{Binding Source={x:Reference TaxIdRow}, Path=IsVisible}"/>
 
-                        <!-- Insurance -->
                         <Grid x:Name="InsuranceRow"
-                              ColumnDefinitions="44,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="10"
+                              ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#EBF3FB" CornerRadius="12"
                                    Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="🛡" FontSize="16"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="lock.svg"
+                                       WidthRequest="18" HeightRequest="18"
                                        HorizontalOptions="Center"
                                        VerticalOptions="Center"/>
                             </Frame>
                             <VerticalStackLayout Grid.Column="1"
                                                  VerticalOptions="Center" Spacing="1">
                                 <Label Text="INSURANCE" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
                                 <Label x:Name="InsuranceLabel"
-                                       FontSize="14" TextColor="#1B2B3A"
+                                       FontSize="13" TextColor="#1B2D3E"
                                        LineBreakMode="WordWrap"/>
                             </VerticalStackLayout>
                         </Grid>
-                        <BoxView HeightRequest="1" Color="#F0F4F8"
+                        <BoxView HeightRequest="0.5" Color="#EFF3F8"
                                  IsVisible="{Binding Source={x:Reference InsuranceRow}, Path=IsVisible}"/>
 
-                        <!-- Verified Date -->
                         <Grid x:Name="VerifiedDateRow"
-                              ColumnDefinitions="44,*" ColumnSpacing="12"
-                              Padding="16,12" IsVisible="False">
-                            <Frame Grid.Column="0" BackgroundColor="#F0FDF4" CornerRadius="10"
+                              ColumnDefinitions="Auto,*" ColumnSpacing="12"
+                              Padding="16,13" IsVisible="False">
+                            <Frame Grid.Column="0" BackgroundColor="#F0FDF4" CornerRadius="12"
                                    Padding="0" HasShadow="False"
-                                   WidthRequest="36" HeightRequest="36">
-                                <Label Text="✅" FontSize="16"
+                                   WidthRequest="38" HeightRequest="38">
+                                <Image Source="shield_check.svg"
+                                       WidthRequest="18" HeightRequest="18"
                                        HorizontalOptions="Center"
                                        VerticalOptions="Center"/>
                             </Frame>
                             <VerticalStackLayout Grid.Column="1"
                                                  VerticalOptions="Center" Spacing="1">
                                 <Label Text="VERIFIED ON" FontSize="8"
-                                       TextColor="#8A9BAD" CharacterSpacing="1"/>
+                                       TextColor="#8BAFC9" CharacterSpacing="0.8"/>
                                 <Label x:Name="VerifiedDateLabel"
-                                       FontSize="14" TextColor="#16A34A"
+                                       FontSize="13" TextColor="#16A34A"
                                        FontAttributes="Bold"/>
                             </VerticalStackLayout>
                         </Grid>
 
                         <Label x:Name="NoCredentialsLabel"
                                Text="No credentials added yet."
-                               FontSize="13" TextColor="#8A9BAD"
+                               FontSize="13" TextColor="#8BAFC9"
                                HorizontalOptions="Center"
-                               Margin="0,12,0,12"
+                               Margin="0,14,0,14"
                                IsVisible="False"/>
 
                     </VerticalStackLayout>
                 </Frame>
 
-                <!-- ── Edit Profile Button ── -->
+                <!-- Edit Profile Button -->
                 <Frame x:Name="EditProfileButton" IsVisible="False"
-                       CornerRadius="14" Padding="0" HasShadow="False"
-                       HeightRequest="52" Margin="0,4,0,0"
+                       CornerRadius="16" Padding="0" HasShadow="False"
+                       HeightRequest="54" Margin="0,6,0,0"
                        BorderColor="Transparent"
-                       BackgroundColor="#2563EB">
-                    <Label Text="Edit Profile"
-                           TextColor="#FFFFFF" FontSize="15"
-                           FontAttributes="Bold"
-                           HorizontalOptions="Center"
-                           VerticalOptions="Center"
-                           CharacterSpacing="0.3"/>
+                       BackgroundColor="#1B2D3E">
+                    <Grid ColumnDefinitions="Auto,*" HorizontalOptions="Center"
+                          ColumnSpacing="8">
+                        <Image Grid.Column="0" Source="edit.svg"
+                               WidthRequest="16" HeightRequest="16"
+                               VerticalOptions="Center"/>
+                        <Label Grid.Column="1" Text="Edit Profile"
+                               TextColor="#FFFFFF" FontSize="15"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               CharacterSpacing="0.3"/>
+                    </Grid>
                     <Frame.GestureRecognizers>
                         <TapGestureRecognizer Tapped="OnEditTapped"/>
                     </Frame.GestureRecognizers>

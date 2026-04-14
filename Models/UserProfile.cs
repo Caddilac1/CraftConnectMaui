@@ -85,6 +85,7 @@ namespace CraftConnect_Mobile_App.Models
         public string ArtisanSpeciality { get; set; }
         public string ExperienceLevel { get; set; }
         public int YearsOfExperience { get; set; }
+        public int CompanyId { get; set; }
 
         // ── Stats ─────────────────────────────────────────────────────
         public decimal AverageRating { get; set; }
