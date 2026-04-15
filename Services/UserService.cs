@@ -194,6 +194,8 @@ namespace CraftConnect_Mobile_App.Services
                         IsVerified = false, // extend DTO if server exposes IsVerified
                         CreatedAt = ap.CreatedAt,
                         UpdatedAt = ap.UpdatedAt,
+                        // Map CompanyId from artisan profile DTO when present
+                        CompanyId = ap.CompanyId ?? 0,
 
                         // ── From UserProfile / envelope ───────────────
                         // FIX 1: Never fall back to IdentityUserId (GUID)
@@ -212,8 +214,13 @@ namespace CraftConnect_Mobile_App.Services
                         PreferredLanguage = up?.PreferredLanguage,
                         Timezone = up?.Timezone,
                         DateJoined = up?.CreatedDate,
-                        Role = role
+                        // If the server returned an ArtisanProfile, prefer that and mark role as Artisan
+                        Role = "Artisan"
                     };
+
+                    // Log mismatch between token role and presence of artisan profile
+                    if (!string.Equals(role, "Artisan", StringComparison.OrdinalIgnoreCase))
+                        Debug.WriteLine($"[USER SERVICE] Warning: JWT role='{role}' but server returned an ArtisanProfile; forcing Role='Artisan' for UI.");
                 }
                 else
                 {
@@ -483,6 +490,7 @@ namespace CraftConnect_Mobile_App.Services
         private class MobileArtisanProfileDto
         {
             public string Id { get; set; }
+            public int? CompanyId { get; set; }
             public string BusinessName { get; set; }
             public string Slug { get; set; }
             public string Specialization { get; set; }

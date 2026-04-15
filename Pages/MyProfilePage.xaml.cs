@@ -3,32 +3,12 @@ using CraftConnect_Mobile_App.Services;
 using Microsoft.Maui.Controls;
 using System;
 using System.Collections.Generic;
-using System.Threading;
+using System.Text.Json;
 using System.Threading.Tasks;
+using System.Text.Json;
 
 namespace CraftConnect_Mobile_App.Pages
 {
-    /// <summary>
-    /// MyProfilePage — dark navy header redesign with integrated Trust Score.
-    ///
-    /// Header (non-scrolling):
-    ///   - Top bar: back | "My Profile" | edit
-    ///   - Profile row: avatar + name / email / role badge
-    ///   - Stats bar: Rating · Projects · Reviews · Exp
-    ///
-    /// Scrollable body (light grey #EFF3F8):
-    ///   1. Trust Score card  (dark navy, artisan only)
-    ///        · Big score number + band pill + ring visual
-    ///        · Score breakdown bars
-    ///        · Referral count summary strip
-    ///        · "Score History" accordion  → timeline rows
-    ///        · "Referral Details" accordion → Work / Vendor / Colleague cards
-    ///   2. Bio card
-    ///   3. Business card     (artisan only)
-    ///   4. Personal info card
-    ///   5. Credentials card  (artisan only)
-    ///   6. Edit profile button
-    /// </summary>
     public partial class MyProfilePage : ContentPage
     {
         private readonly IUserService _userService;
@@ -39,25 +19,29 @@ namespace CraftConnect_Mobile_App.Pages
         private bool _historyExpanded = false;
         private bool _referralExpanded = false;
 
-        // Cached artisan company id (resolved from artisan profile id)
-        private int? _artisanCompanyId;
+        // Cached company data from token
+        private int? _userCompanyId;
+        private string? _userCompanyName;
+        private decimal? _userCompanyTrustScore;
+        private string? _userCompanyTrustBand;
 
         public MyProfilePage(IUserService userService, ApiConfig apiConfig)
         {
             InitializeComponent();
+            System.Diagnostics.Debug.WriteLine("[MY PROFILE] Constructor: InitializeComponent completed");
             _userService = userService;
             _apiConfig = apiConfig;
         }
 
-        // ── Lifecycle ──────────────────────────────────────────────────
-
         protected override async void OnAppearing()
         {
             base.OnAppearing();
+            System.Diagnostics.Debug.WriteLine("[MY PROFILE] OnAppearing start");
             await LoadProfileAsync();
+            System.Diagnostics.Debug.WriteLine("[MY PROFILE] OnAppearing end");
         }
 
-        // ── Load ───────────────────────────────────────────────────────
+        // ── Load Profile ─────────────────────────────────────────────────────
 
         private async Task LoadProfileAsync()
         {
@@ -66,7 +50,18 @@ namespace CraftConnect_Mobile_App.Pages
 
             try
             {
+                // First, extract company details from JWT token
+                await LoadCompanyDetailsFromTokenAsync();
+
+                System.Diagnostics.Debug.WriteLine($"[MY PROFILE] Company from token: ID={_userCompanyId}, Name={_userCompanyName}, TrustScore={_userCompanyTrustScore}, Band={_userCompanyTrustBand}");
+
+                // Then load user profile
+                System.Diagnostics.Debug.WriteLine("[MY PROFILE] LoadProfileAsync: calling LoadUserProfileAsync");
                 var profile = await _userService.LoadUserProfileAsync();
+
+                System.Diagnostics.Debug.WriteLine(profile == null
+                    ? "[MY PROFILE] LoadProfileAsync: profile == null"
+                    : $"[MY PROFILE] LoadProfileAsync: profile loaded Role={profile.Role} Email={profile.Email} DisplayName={profile.DisplayName}");
 
                 if (profile == null)
                 {
@@ -79,17 +74,37 @@ namespace CraftConnect_Mobile_App.Pages
                 PopulatePersonalInfoCard(profile);
                 PersonalInfoCard.IsVisible = true;
 
+                // Check if user has company association (from token)
+                if (_userCompanyId.HasValue && _userCompanyId.Value > 0)
+                {
+                    // Show Trust Score card with data from token
+                    TrustScoreCard.IsVisible = true;
+
+                    // If trust score is in token, display it immediately
+                    if (_userCompanyTrustScore.HasValue)
+                    {
+                        DisplayTrustScoreFromToken();
+                    }
+
+                    // Load full trust score details from API (history, referrals, etc.)
+                    _ = LoadFullTrustScoreDetailsAsync(_userCompanyId.Value);
+                    System.Diagnostics.Debug.WriteLine($"[MY PROFILE] Loading full trust score details for CompanyId={_userCompanyId}");
+                }
+                else
+                {
+                    TrustScoreCard.IsVisible = false;
+                    System.Diagnostics.Debug.WriteLine("[MY PROFILE] No company association found, hiding trust score card");
+                }
+
+                // Show artisan-specific sections if user is artisan
                 if (profile is ArtisanUser artisan)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[MY PROFILE] Profile is ArtisanUser - CompanyId={artisan.CompanyId}");
                     PopulateArtisanStatsStrip(artisan);
                     PopulateArtisanBusinessCard(artisan);
                     PopulateCredentialsCard(artisan);
                     ArtisanBusinessCard.IsVisible = true;
                     CredentialsCard.IsVisible = true;
-
-                    // Show trust score card and kick off async load
-                    TrustScoreCard.IsVisible = true;
-                    _ = LoadTrustScoreAsync(artisan);
                 }
 
                 EditProfileButton.IsVisible = true;
@@ -97,13 +112,12 @@ namespace CraftConnect_Mobile_App.Pages
             }
             catch (UnauthorizedAccessException)
             {
-                await DisplayAlert("Session expired",
-                    "Your session has expired. Please log in again.", "OK");
+                await DisplayAlert("Session expired", "Your session has expired. Please log in again.", "OK");
                 await Shell.Current.GoToAsync("//LoginPage");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[MY PROFILE] Load error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[MY PROFILE] Load error: {ex}");
                 ShowError("Failed to load profile. Please check your connection.");
             }
             finally
@@ -112,78 +126,29 @@ namespace CraftConnect_Mobile_App.Pages
             }
         }
 
-        // ── Trust Score ────────────────────────────────────────────────
-
-        private async Task LoadTrustScoreAsync(ArtisanUser artisan)
-        {
-            // Try artisan.CompanyId first (mapped from profile response)
-            int companyId = artisan.CompanyId;
-
-            // Fallback: decode CompanyId from the JWT claim directly
-            if (companyId <= 0)
-                companyId = await GetCompanyIdFromTokenAsync();
-
-            System.Diagnostics.Debug.WriteLine($"[TRUST SCORE] Resolved companyId={companyId}");
-
-            if (companyId <= 0)
-            {
-                TrustScoreErrorLabel.Text = "Trust score not available — company ID missing.";
-                TrustScoreErrorLabel.IsVisible = true;
-                return;
-            }
-
-            _artisanCompanyId = companyId;
-            TrustScoreLoading.IsVisible = true;
-            TrustScoreLoading.IsRunning = true;
-
-            try
-            {
-                _profileApiService ??= new ProfileApiService(_apiConfig);
-                var snapshot = await _profileApiService.GetTrustScoreSnapshotAsync(companyId);
-
-                if (snapshot?.CurrentScore != null)
-                    PopulateTrustScoreHero(snapshot.CurrentScore);
-
-                if (snapshot != null)
-                    PopulateReferralSummary(snapshot);
-
-                TrustScoreErrorLabel.IsVisible = false;
-                _ = PreloadTrustHistoryAsync(companyId);
-            }
-            catch (UnauthorizedAccessException)
-            {
-                TrustScoreErrorLabel.Text = "You don't have access to this trust score.";
-                TrustScoreErrorLabel.IsVisible = true;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[TRUST SCORE] {ex.Message}");
-                TrustScoreErrorLabel.Text = "Could not load trust score. Tap to retry.";
-                TrustScoreErrorLabel.IsVisible = true;
-            }
-            finally
-            {
-                TrustScoreLoading.IsRunning = false;
-                TrustScoreLoading.IsVisible = false;
-            }
-        }
+        // ── Load Company Details from JWT Token ──────────────────────────────
 
         /// <summary>
-        /// Decodes the JWT from SecureStorage and reads the CompanyId claim.
-        /// The backend sets either "CompanyId" or "company_id" — we check both.
+        /// Extracts company information directly from the JWT token
         /// </summary>
-        private static async Task<int> GetCompanyIdFromTokenAsync()
+        private async Task LoadCompanyDetailsFromTokenAsync()
         {
             try
             {
                 var token = await SecureStorage.GetAsync("auth_token");
-                if (string.IsNullOrWhiteSpace(token)) return 0;
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    System.Diagnostics.Debug.WriteLine("[JWT] No token found");
+                    return;
+                }
 
-                // JWT = header.payload.signature — decode the payload (middle segment)
                 var parts = token.Split('.');
-                if (parts.Length != 3) return 0;
+                if (parts.Length != 3)
+                {
+                    System.Diagnostics.Debug.WriteLine("[JWT] Invalid token format");
+                    return;
+                }
 
-                // Base64url → Base64 standard padding
                 var payload = parts[1];
                 payload = payload.Replace('-', '+').Replace('_', '/');
                 switch (payload.Length % 4)
@@ -193,34 +158,171 @@ namespace CraftConnect_Mobile_App.Pages
                 }
 
                 var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(payload));
+                System.Diagnostics.Debug.WriteLine($"[JWT] Payload: {json}");
+
                 using var doc = System.Text.Json.JsonDocument.Parse(json);
                 var root = doc.RootElement;
 
-                // Try both claim name variants the backend uses
+                // Extract CompanyId
                 foreach (var claimName in new[] { "CompanyId", "company_id", "companyId" })
                 {
                     if (root.TryGetProperty(claimName, out var el))
                     {
-                        if (el.ValueKind == System.Text.Json.JsonValueKind.Number &&
-                            el.TryGetInt32(out var id))
-                            return id;
+                        if (el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out var id))
+                            _userCompanyId = id;
+                        else if (el.ValueKind == JsonValueKind.String && int.TryParse(el.GetString(), out var sid))
+                            _userCompanyId = sid;
 
-                        if (el.ValueKind == System.Text.Json.JsonValueKind.String &&
-                            int.TryParse(el.GetString(), out var sid))
-                            return sid;
+                        if (_userCompanyId.HasValue) break;
                     }
                 }
+
+                // Extract CompanyName
+                foreach (var claimName in new[] { "CompanyName", "company_name" })
+                {
+                    if (root.TryGetProperty(claimName, out var el) && el.ValueKind == JsonValueKind.String)
+                    {
+                        _userCompanyName = el.GetString();
+                        break;
+                    }
+                }
+
+                // Extract Trust Score - Fixed: Use TryGetProperty and parse the value
+                if (root.TryGetProperty("CompanyTrustScore", out var scoreEl))
+                {
+                    if (scoreEl.ValueKind == JsonValueKind.Number)
+                    {
+                        // For number type, get the raw text and parse
+                        var scoreStr = scoreEl.GetRawText();
+                        if (decimal.TryParse(scoreStr, out var scoreValue))
+                            _userCompanyTrustScore = scoreValue;
+                    }
+                    else if (scoreEl.ValueKind == JsonValueKind.String)
+                    {
+                        var scoreStr = scoreEl.GetString();
+                        if (!string.IsNullOrEmpty(scoreStr) && decimal.TryParse(scoreStr, out var scoreValue))
+                            _userCompanyTrustScore = scoreValue;
+                    }
+                }
+
+                // Extract Trust Band
+                if (root.TryGetProperty("CompanyTrustBand", out var bandEl) && bandEl.ValueKind == JsonValueKind.String)
+                {
+                    _userCompanyTrustBand = bandEl.GetString();
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[JWT] Company details - ID:{_userCompanyId}, Name:{_userCompanyName}, Score:{_userCompanyTrustScore}, Band:{_userCompanyTrustBand}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[JWT DECODE] {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[JWT] Error decoding token: {ex.Message}");
             }
-            return 0;
         }
-        
+
+        /// <summary>
+        /// Displays trust score using data from JWT token (fast, no API call)
+        /// </summary>
+        private void DisplayTrustScoreFromToken()
+        {
+            if (!_userCompanyTrustScore.HasValue)
+            {
+                TrustScoreValueLabel.Text = "—";
+                TrustBandLabel.Text = "NOT RATED";
+                return;
+            }
+
+            // Display score (already on 0-1000 scale from backend)
+            TrustScoreValueLabel.Text = _userCompanyTrustScore.Value.ToString("F0");
+            TrustBandLabel.Text = (_userCompanyTrustBand ?? "Not Rated").ToUpper();
+            TrustCalcLabel.Text = "From your company profile";
+
+            // Band colour scheme
+            (Color pillBg, Color pillText) = (_userCompanyTrustBand?.ToLower()) switch
+            {
+                "elite" => (Color.FromArgb("#F59E0B"), Color.FromArgb("#1B2D3E")),
+                "strong" => (Color.FromArgb("#94A3B8"), Color.FromArgb("#1B2D3E")),
+                "moderate" => (Color.FromArgb("#B45309"), Color.FromArgb("#FFFFFF")),
+                "risky" => (Color.FromArgb("#DC2626"), Color.FromArgb("#FFFFFF")),
+                "high risk" => (Color.FromArgb("#991B1B"), Color.FromArgb("#FFFFFF")),
+                _ => (Color.FromArgb("#4A7A9B"), Color.FromArgb("#FFFFFF"))
+            };
+
+            TrustBandPill.BackgroundColor = pillBg;
+            TrustBandLabel.TextColor = pillText;
+
+            // Score value colour based on 0-1000 scale
+            TrustScoreValueLabel.TextColor = _userCompanyTrustScore.Value >= 700
+                ? Color.FromArgb("#4ADE80")
+                : _userCompanyTrustScore.Value >= 550
+                    ? Color.FromArgb("#F59E0B")
+                    : Color.FromArgb("#F87171");
+        }
+
+        // ── Load Full Trust Score Details from API ───────────────────────────
+
+        /// <summary>
+        /// Loads full trust score details (breakdown, history, referrals) from API
+        /// </summary>
+        private async Task LoadFullTrustScoreDetailsAsync(int companyId)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TRUST SCORE] Loading full details for companyId={companyId}");
+
+            TrustScoreLoading.IsVisible = true;
+            TrustScoreLoading.IsRunning = true;
+
+            try
+            {
+                _profileApiService ??= new ProfileApiService(_apiConfig);
+
+                // Get full snapshot from API
+                var snapshot = await _profileApiService.GetTrustScoreSnapshotAsync(companyId);
+
+                System.Diagnostics.Debug.WriteLine(snapshot == null
+                    ? "[TRUST SCORE] snapshot == null"
+                    : $"[TRUST SCORE] snapshot received - TotalReferrals={snapshot.TotalReferrals}");
+
+                if (snapshot?.CurrentScore != null)
+                {
+                    // Update hero section with full data (overrides token display)
+                    PopulateTrustScoreHero(snapshot.CurrentScore);
+                }
+
+                if (snapshot != null)
+                {
+                    PopulateReferralSummary(snapshot);
+                    TrustScoreErrorLabel.IsVisible = false;
+                }
+
+                // Preload history for accordion
+                _ = PreloadTrustHistoryAsync(companyId);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                TrustScoreErrorLabel.Text = "You don't have access to this trust score.";
+                TrustScoreErrorLabel.IsVisible = true;
+                System.Diagnostics.Debug.WriteLine("[TRUST SCORE] UnauthorizedAccessException");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TRUST SCORE] exception: {ex}");
+                TrustScoreErrorLabel.Text = "Could not load full trust score details. Tap to retry.";
+                TrustScoreErrorLabel.IsVisible = true;
+            }
+            finally
+            {
+                TrustScoreLoading.IsRunning = false;
+                TrustScoreLoading.IsVisible = false;
+            }
+        }
+
+        // ── Trust Score Hero Population ─────────────────────────────────────
 
         private void PopulateTrustScoreHero(MobileTrustScore score)
         {
+            System.Diagnostics.Debug.WriteLine(score == null
+                ? "[TRUST SCORE] PopulateTrustScoreHero called with null"
+                : $"[TRUST SCORE] PopulateTrustScoreHero score={score.Score} band={score.Band}");
+
             TrustScoreValueLabel.Text = score.DisplayScore;
             TrustBandLabel.Text = score.DisplayBand.ToUpper();
             TrustCalcLabel.Text = $"Calculated {score.CalculatedAt:dd MMM yyyy}";
@@ -228,30 +330,32 @@ namespace CraftConnect_Mobile_App.Pages
             // Band colour scheme
             (Color pillBg, Color pillText, Color ringAccent) = score.Band?.ToLower() switch
             {
-                "gold" => (Color.FromArgb("#F59E0B"), Color.FromArgb("#1B2D3E"), Color.FromArgb("#F59E0B")),
-                "silver" => (Color.FromArgb("#94A3B8"), Color.FromArgb("#1B2D3E"), Color.FromArgb("#94A3B8")),
-                "bronze" => (Color.FromArgb("#B45309"), Color.FromArgb("#FFFFFF"), Color.FromArgb("#B45309")),
-                "platinum" => (Color.FromArgb("#7DB8E0"), Color.FromArgb("#1B2D3E"), Color.FromArgb("#7DB8E0")),
+                "elite" => (Color.FromArgb("#F59E0B"), Color.FromArgb("#1B2D3E"), Color.FromArgb("#F59E0B")),
+                "strong" => (Color.FromArgb("#94A3B8"), Color.FromArgb("#1B2D3E"), Color.FromArgb("#94A3B8")),
+                "moderate" => (Color.FromArgb("#B45309"), Color.FromArgb("#FFFFFF"), Color.FromArgb("#B45309")),
+                "risky" => (Color.FromArgb("#DC2626"), Color.FromArgb("#FFFFFF"), Color.FromArgb("#DC2626")),
+                "high risk" => (Color.FromArgb("#991B1B"), Color.FromArgb("#FFFFFF"), Color.FromArgb("#991B1B")),
                 _ => (Color.FromArgb("#4A7A9B"), Color.FromArgb("#FFFFFF"), Color.FromArgb("#4A7A9B"))
             };
 
             TrustBandPill.BackgroundColor = pillBg;
             TrustBandLabel.TextColor = pillText;
 
-            // Score value colour — green for good, amber for mid, red for low
-            TrustScoreValueLabel.TextColor = score.Score >= 70
+            // Score value colour based on 0-1000 scale
+            TrustScoreValueLabel.TextColor = score.Score >= 700
                 ? Color.FromArgb("#4ADE80")
-                : score.Score >= 40
+                : score.Score >= 550
                     ? Color.FromArgb("#F59E0B")
                     : Color.FromArgb("#F87171");
 
-            // Breakdown bars
+            // Breakdown bars (score is 0-1000, convert to percentage)
             if (score.Breakdown?.Count > 0)
             {
                 TrustBreakdownLayout.Children.Clear();
                 foreach (var kv in score.Breakdown)
                 {
-                    var pct = Math.Clamp((double)kv.Value, 0, 100);
+                    // Convert from 0-1000 to percentage for display
+                    var pct = Math.Clamp((double)kv.Value / 10, 0, 100);
                     TrustBreakdownLayout.Children.Add(BuildBreakdownRow(kv.Key, pct));
                 }
                 TrustBreakdownSection.IsVisible = true;
@@ -266,7 +370,7 @@ namespace CraftConnect_Mobile_App.Pages
             {
                 ColumnDefinitions =
                 {
-                    new ColumnDefinition { Width = new GridLength(100) },
+                    new ColumnDefinition { Width = new GridLength(120) },
                     new ColumnDefinition { Width = GridLength.Star },
                     new ColumnDefinition { Width = new GridLength(40) }
                 },
@@ -281,7 +385,6 @@ namespace CraftConnect_Mobile_App.Pages
                 VerticalOptions = LayoutOptions.Center
             }, 0);
 
-            // Track bar
             var track = new Grid { HeightRequest = 5, VerticalOptions = LayoutOptions.Center };
             track.Add(new Frame
             {
@@ -299,13 +402,13 @@ namespace CraftConnect_Mobile_App.Pages
                 Padding = 0,
                 BorderColor = Colors.Transparent,
                 HorizontalOptions = LayoutOptions.Start,
-                WidthRequest = 0  // animated below
+                WidthRequest = 0
             });
             grid.Add(track, 1);
 
             grid.Add(new Label
             {
-                Text = $"{pct:F0}",
+                Text = $"{pct:F0}%",
                 FontSize = 11,
                 FontAttributes = FontAttributes.Bold,
                 TextColor = Color.FromArgb(barColor),
@@ -313,7 +416,6 @@ namespace CraftConnect_Mobile_App.Pages
                 VerticalOptions = LayoutOptions.Center
             }, 2);
 
-            // Animate bar width after layout
             track.SizeChanged += (s, e) =>
             {
                 if (track.Width <= 0) return;
@@ -325,6 +427,8 @@ namespace CraftConnect_Mobile_App.Pages
             return grid;
         }
 
+        // ── Referral Summary ───────────────────────────────────────────────
+
         private void PopulateReferralSummary(MobileTrustScoreSnapshot snapshot)
         {
             WorkReferralCountLabel.Text = (snapshot.WorkReferrals?.Count ?? 0).ToString();
@@ -332,7 +436,6 @@ namespace CraftConnect_Mobile_App.Pages
             ColleagueReferralCountLabel.Text = (snapshot.ColleagueReferrals?.Count ?? 0).ToString();
             ReferralSummaryStrip.IsVisible = true;
 
-            // Pre-populate detail panels while we have the data
             PopulateWorkReferralCards(snapshot.WorkReferrals);
             PopulateVendorReferralCards(snapshot.VendorReferrals);
             PopulateColleagueReferralCards(snapshot.ColleagueReferrals);
@@ -341,7 +444,7 @@ namespace CraftConnect_Mobile_App.Pages
             NoReferralsLabel.IsVisible = !anyReferrals;
         }
 
-        // ── History pre-load ───────────────────────────────────────────
+        // ── History Preload ────────────────────────────────────────────────
 
         private IReadOnlyList<MobileTrustScoreHistoryItem> _cachedHistory;
 
@@ -351,36 +454,38 @@ namespace CraftConnect_Mobile_App.Pages
             {
                 _profileApiService ??= new ProfileApiService(_apiConfig);
                 _cachedHistory = await _profileApiService.GetTrustScoreHistoryAsync(companyId);
+                System.Diagnostics.Debug.WriteLine(_cachedHistory == null
+                    ? "[TRUST HISTORY] preload: history == null"
+                    : $"[TRUST HISTORY] preload: items={_cachedHistory.Count}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[TRUST HISTORY] preload: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[TRUST HISTORY] preload exception: {ex}");
             }
         }
 
-        // ── Accordion toggles ──────────────────────────────────────────
+        // ── Accordion Toggles ──────────────────────────────────────────────
 
         private async void OnTrustHistoryToggled(object sender, TappedEventArgs e)
         {
             _historyExpanded = !_historyExpanded;
             TrustHistoryPanel.IsVisible = _historyExpanded;
-
-            // Animate chevron
             await HistoryChevron.RotateTo(_historyExpanded ? 180 : 0, 200, Easing.CubicOut);
 
             if (_historyExpanded)
+            {
                 PopulateHistoryPanel();
+            }
         }
 
         private async void OnReferralDetailsToggled(object sender, TappedEventArgs e)
         {
             _referralExpanded = !_referralExpanded;
             ReferralDetailsPanel.IsVisible = _referralExpanded;
-
             await ReferralChevron.RotateTo(_referralExpanded ? 180 : 0, 200, Easing.CubicOut);
         }
 
-        // ── History panel population ───────────────────────────────────
+        // ── History Panel ─────────────────────────────────────────────────
 
         private void PopulateHistoryPanel()
         {
@@ -404,7 +509,9 @@ namespace CraftConnect_Mobile_App.Pages
 
         private View BuildHistoryRow(MobileTrustScoreHistoryItem item, bool isLast)
         {
-            var scoreColor = item.Score >= 70 ? "#4ADE80" : item.Score >= 40 ? "#F59E0B" : "#F87171";
+            // Score is 0-1000 from backend, convert to 0-100 for display
+            var displayScore = item.Score / 10;
+            var scoreColor = displayScore >= 70 ? "#4ADE80" : displayScore >= 55 ? "#F59E0B" : "#F87171";
             var bandColor = GetBandAccentHex(item.Band);
 
             var outerGrid = new Grid
@@ -418,10 +525,8 @@ namespace CraftConnect_Mobile_App.Pages
                 Margin = new Thickness(0, 0, 0, 0)
             };
 
-            // Timeline column: dot + vertical line
             var timelineStack = new VerticalStackLayout { Spacing = 0, HorizontalOptions = LayoutOptions.Center };
 
-            // Dot
             timelineStack.Add(new Frame
             {
                 WidthRequest = 10,
@@ -435,7 +540,6 @@ namespace CraftConnect_Mobile_App.Pages
                 Margin = new Thickness(0, 4, 0, 0)
             });
 
-            // Vertical connector line (hidden for last item)
             if (!isLast)
             {
                 timelineStack.Add(new BoxView
@@ -449,10 +553,8 @@ namespace CraftConnect_Mobile_App.Pages
 
             outerGrid.Add(timelineStack, 0);
 
-            // Content column
             var contentStack = new VerticalStackLayout { Spacing = 3, Padding = new Thickness(0, 0, 0, isLast ? 6 : 14) };
 
-            // Date row
             var dateRow = new Grid { ColumnDefinitions = { new ColumnDefinition { Width = GridLength.Star }, new ColumnDefinition { Width = GridLength.Auto } } };
             dateRow.Add(new Label
             {
@@ -462,12 +564,11 @@ namespace CraftConnect_Mobile_App.Pages
                 VerticalOptions = LayoutOptions.Center
             }, 0);
 
-            // Band pill (small)
             if (!string.IsNullOrWhiteSpace(item.Band))
             {
                 dateRow.Add(new Frame
                 {
-                    BackgroundColor = Color.FromArgb(bandColor + "33"), // 20% opacity
+                    BackgroundColor = Color.FromArgb(bandColor + "33"),
                     CornerRadius = 8,
                     Padding = new Thickness(7, 2),
                     HasShadow = false,
@@ -483,7 +584,6 @@ namespace CraftConnect_Mobile_App.Pages
             }
             contentStack.Add(dateRow);
 
-            // Score line
             var scoreRow = new Grid
             {
                 ColumnDefinitions =
@@ -496,7 +596,7 @@ namespace CraftConnect_Mobile_App.Pages
 
             scoreRow.Add(new Label
             {
-                Text = $"{item.Score:F1}",
+                Text = $"{displayScore:F0}",
                 FontSize = 20,
                 FontAttributes = FontAttributes.Bold,
                 TextColor = Color.FromArgb(scoreColor),
@@ -514,7 +614,6 @@ namespace CraftConnect_Mobile_App.Pages
 
             contentStack.Add(scoreRow);
 
-            // Change reason
             if (!string.IsNullOrWhiteSpace(item.ChangeReason))
             {
                 contentStack.Add(new Label
@@ -531,7 +630,7 @@ namespace CraftConnect_Mobile_App.Pages
             return outerGrid;
         }
 
-        // ── Referral card builders ─────────────────────────────────────
+        // ── Referral Card Builders ─────────────────────────────────────────
 
         private void PopulateWorkReferralCards(IReadOnlyList<MobileWorkReferral> referrals)
         {
@@ -575,7 +674,6 @@ namespace CraftConnect_Mobile_App.Pages
 
             var stack = new VerticalStackLayout { Spacing = 6 };
 
-            // Header: name + rating
             var header = new Grid
             {
                 ColumnDefinitions =
@@ -618,7 +716,6 @@ namespace CraftConnect_Mobile_App.Pages
 
             stack.Add(header);
 
-            // Comment
             if (!string.IsNullOrWhiteSpace(comment))
             {
                 stack.Add(new Label
@@ -631,7 +728,6 @@ namespace CraftConnect_Mobile_App.Pages
                 });
             }
 
-            // Date footer
             stack.Add(new Label
             {
                 Text = submittedAt.ToString("dd MMM yyyy"),
@@ -644,18 +740,19 @@ namespace CraftConnect_Mobile_App.Pages
             return card;
         }
 
-        // ── Band accent helper ─────────────────────────────────────────
+        // ── Helpers ─────────────────────────────────────────────────────────
 
         private static string GetBandAccentHex(string band) => band?.ToLower() switch
         {
-            "gold" => "#F59E0B",
-            "silver" => "#94A3B8",
-            "bronze" => "#B45309",
-            "platinum" => "#7DB8E0",
+            "elite" => "#F59E0B",
+            "strong" => "#94A3B8",
+            "moderate" => "#B45309",
+            "risky" => "#DC2626",
+            "high risk" => "#991B1B",
             _ => "#4A7A9B"
         };
 
-        // ── Header ─────────────────────────────────────────────────────
+        // ── Header Population ───────────────────────────────────────────────
 
         private void PopulateHeader(UserProfile profile)
         {
@@ -694,8 +791,6 @@ namespace CraftConnect_Mobile_App.Pages
                 VerifiedBadge.IsVisible = true;
         }
 
-        // ── Stats strip (artisan only) ─────────────────────────────────
-
         private void PopulateArtisanStatsStrip(ArtisanUser au)
         {
             StatRatingLabel.Text = au.AverageRating > 0 ? $"{au.AverageRating:F1} ★" : "—";
@@ -703,8 +798,6 @@ namespace CraftConnect_Mobile_App.Pages
             StatReviewsLabel.Text = au.TotalReviews > 0 ? au.TotalReviews.ToString() : "—";
             StatExperienceLabel.Text = au.YearsOfExperience > 0 ? $"{au.YearsOfExperience} yrs" : "—";
         }
-
-        // ── Bio card ───────────────────────────────────────────────────
 
         private void PopulateBioCard(UserProfile profile)
         {
@@ -714,8 +807,6 @@ namespace CraftConnect_Mobile_App.Pages
                 BioCard.IsVisible = true;
             }
         }
-
-        // ── Personal info card ─────────────────────────────────────────
 
         private void PopulatePersonalInfoCard(UserProfile profile)
         {
@@ -809,8 +900,6 @@ namespace CraftConnect_Mobile_App.Pages
                 NoPersonalInfoLabel.IsVisible = true;
         }
 
-        // ── Artisan business card ──────────────────────────────────────
-
         private void PopulateArtisanBusinessCard(ArtisanUser au)
         {
             BusinessNameLabel.Text = au.BusinessName ?? "—";
@@ -884,8 +973,7 @@ namespace CraftConnect_Mobile_App.Pages
             if (!string.IsNullOrWhiteSpace(au.ServicesOffered))
             {
                 ServicesLayout.Children.Clear();
-                foreach (var svc in au.ServicesOffered
-                             .Split(',', StringSplitOptions.RemoveEmptyEntries))
+                foreach (var svc in au.ServicesOffered.Split(',', StringSplitOptions.RemoveEmptyEntries))
                 {
                     ServicesLayout.Children.Add(new Frame
                     {
@@ -912,8 +1000,6 @@ namespace CraftConnect_Mobile_App.Pages
                 UpdatedAtRow.IsVisible = true;
             }
         }
-
-        // ── Credentials card ───────────────────────────────────────────
 
         private void PopulateCredentialsCard(ArtisanUser au)
         {
@@ -945,7 +1031,7 @@ namespace CraftConnect_Mobile_App.Pages
                 NoCredentialsLabel.IsVisible = true;
         }
 
-        // ── Avatar helpers ─────────────────────────────────────────────
+        // ── Avatar Helpers ─────────────────────────────────────────────────
 
         private void TryLoadPhoto(string path)
         {
@@ -987,7 +1073,7 @@ namespace CraftConnect_Mobile_App.Pages
             ProfileInitialsFrame.IsVisible = true;
         }
 
-        // ── Helpers ────────────────────────────────────────────────────
+        // ── General Helpers ────────────────────────────────────────────────
 
         private static bool IsLikelyGuid(string value) =>
             !string.IsNullOrWhiteSpace(value) && Guid.TryParse(value, out _);
@@ -1005,7 +1091,7 @@ namespace CraftConnect_Mobile_App.Pages
                 : $"{parts[0][0]}{parts[^1][0]}".ToUpper();
         }
 
-        // ── UI state helpers ───────────────────────────────────────────
+        // ── UI State Helpers ───────────────────────────────────────────────
 
         private void ShowLoading(bool loading)
         {
@@ -1023,18 +1109,15 @@ namespace CraftConnect_Mobile_App.Pages
             EditProfileButton.IsVisible = false;
             ErrorState.IsVisible = false;
 
-            // Header reset
             ProfilePhotoFrame.IsVisible = false;
             ProfileInitialsFrame.IsVisible = true;
             VerifiedBadge.IsVisible = false;
 
-            // Stats
             StatRatingLabel.Text = "—";
             StatProjectsLabel.Text = "—";
             StatReviewsLabel.Text = "—";
             StatExperienceLabel.Text = "—";
 
-            // Trust score
             TrustScoreValueLabel.Text = "—";
             TrustBandLabel.Text = "—";
             TrustCalcLabel.Text = "";
@@ -1057,9 +1140,11 @@ namespace CraftConnect_Mobile_App.Pages
             _historyExpanded = false;
             _referralExpanded = false;
             _cachedHistory = null;
-            _artisanCompanyId = null;
+            _userCompanyId = null;
+            _userCompanyName = null;
+            _userCompanyTrustScore = null;
+            _userCompanyTrustBand = null;
 
-            // Personal info rows
             PersonalBioSection.IsVisible = false;
             PersonalEmailRow.IsVisible = false;
             PersonalPhoneRow.IsVisible = false;
@@ -1073,7 +1158,6 @@ namespace CraftConnect_Mobile_App.Pages
             DateJoinedRow.IsVisible = false;
             NoPersonalInfoLabel.IsVisible = false;
 
-            // Business rows
             ArtisanSpecialityRow.IsVisible = false;
             ExperienceLevelRow.IsVisible = false;
             HourlyRateBox.IsVisible = false;
@@ -1085,7 +1169,6 @@ namespace CraftConnect_Mobile_App.Pages
             ServicesSection.IsVisible = false;
             UpdatedAtRow.IsVisible = false;
 
-            // Credentials rows
             LicenseRow.IsVisible = false;
             CertificationRow.IsVisible = false;
             BusinessRegRow.IsVisible = false;
@@ -1101,7 +1184,7 @@ namespace CraftConnect_Mobile_App.Pages
             ErrorState.IsVisible = true;
         }
 
-        // ── Navigation ─────────────────────────────────────────────────
+        // ── Navigation ─────────────────────────────────────────────────────
 
         private async void OnBackClicked(object sender, EventArgs e)
             => await Shell.Current.GoToAsync("..");

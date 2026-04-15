@@ -51,73 +51,75 @@
                 </Frame>
             </Grid>
 
-            <!-- Profile row: avatar + name / email / badge -->
-            <Grid Grid.Row="1"
-                  ColumnDefinitions="Auto,*"
-                  ColumnSpacing="16"
-                  Padding="16,0,16,20">
+            <!-- Profile row: centered avatar with name and email below -->
+            <VerticalStackLayout Grid.Row="1"
+                                 HorizontalOptions="Center"
+                                 VerticalOptions="Center"
+                                 Spacing="12"
+                                 Margin="0,0,0,20">
 
-                <!-- Avatar stack -->
-                <Grid Grid.Column="0"
-                      WidthRequest="68" HeightRequest="68"
-                      VerticalOptions="Center">
+                <!-- Avatar stack - centered -->
+                <Grid WidthRequest="80" HeightRequest="80"
+                      HorizontalOptions="Center">
 
                     <Frame x:Name="ProfileInitialsFrame"
-                           WidthRequest="68" HeightRequest="68"
-                           CornerRadius="34" Padding="0"
+                           WidthRequest="80" HeightRequest="80"
+                           CornerRadius="40" Padding="0"
                            HasShadow="False" IsClippedToBounds="True"
                            HorizontalOptions="Center" VerticalOptions="Center"
                            BackgroundColor="#2E4D6A">
                         <Label x:Name="ProfileInitialsLabel" Text="?"
-                               FontSize="24" FontAttributes="Bold"
+                               FontSize="28" FontAttributes="Bold"
                                TextColor="#FFFFFF"
                                HorizontalOptions="Center"
                                VerticalOptions="Center"/>
                     </Frame>
 
                     <Frame x:Name="ProfilePhotoFrame"
-                           WidthRequest="68" HeightRequest="68"
-                           CornerRadius="34" Padding="0"
+                           WidthRequest="80" HeightRequest="80"
+                           CornerRadius="40" Padding="0"
                            HasShadow="False" IsClippedToBounds="True"
                            HorizontalOptions="Center" VerticalOptions="Center"
                            IsVisible="False">
                         <Image x:Name="ProfilePhoto"
                                Aspect="AspectFill"
-                               WidthRequest="68" HeightRequest="68"/>
+                               WidthRequest="80" HeightRequest="80"/>
                     </Frame>
 
                     <Frame x:Name="VerifiedBadge"
-                           WidthRequest="20" HeightRequest="20"
-                           CornerRadius="10" Padding="0"
+                           WidthRequest="24" HeightRequest="24"
+                           CornerRadius="12" Padding="0"
                            HasShadow="False" IsClippedToBounds="True"
                            HorizontalOptions="End" VerticalOptions="End"
-                           Margin="0,0,1,1"
+                           Margin="0,0,2,2"
                            IsVisible="False"
                            BackgroundColor="#1D9E75">
                         <Image Source="shield_check.svg"
-                               WidthRequest="11" HeightRequest="11"
+                               WidthRequest="14" HeightRequest="14"
                                HorizontalOptions="Center"
                                VerticalOptions="Center"/>
                     </Frame>
                 </Grid>
 
-                <!-- Name / email / role badge -->
-                <VerticalStackLayout Grid.Column="1"
-                                     VerticalOptions="Center" Spacing="4">
-
+                <!-- Name / email / role badge - centered -->
+                <VerticalStackLayout HorizontalOptions="Center"
+                                     VerticalOptions="Center" 
+                                     Spacing="4">
                     <Label x:Name="ProfileNameLabel" Text="User"
-                           FontSize="18" FontAttributes="Bold"
+                           FontSize="20" FontAttributes="Bold"
                            TextColor="#FFFFFF"
+                           HorizontalOptions="Center"
                            LineBreakMode="TailTruncation"/>
 
                     <Label x:Name="ProfileEmailLabel" Text=""
                            FontSize="13" TextColor="#8BAFC9"
+                           HorizontalOptions="Center"
                            LineBreakMode="TailTruncation"/>
 
                     <Frame x:Name="RoleBadgeFrame"
                            CornerRadius="20" Padding="10,4"
                            HasShadow="False"
-                           HorizontalOptions="Start"
+                           HorizontalOptions="Center"
                            Margin="0,2,0,0"
                            BackgroundColor="#243B52"
                            BorderColor="#3A5A78">
@@ -127,7 +129,7 @@
                                CharacterSpacing="0.6"/>
                     </Frame>
                 </VerticalStackLayout>
-            </Grid>
+            </VerticalStackLayout>
 
             <!-- Stats strip -->
             <Grid Grid.Row="2"
@@ -261,7 +263,7 @@
                                     <VerticalStackLayout Grid.Column="1"
                                                          VerticalOptions="End"
                                                          Spacing="3" Margin="0,0,0,6">
-                                        <Label Text="/ 100" FontSize="14"
+                                        <Label Text="/ 1000" FontSize="14"
                                                TextColor="#8BAFC9"/>
                                         <!-- Band pill -->
                                         <Frame x:Name="TrustBandPill"
