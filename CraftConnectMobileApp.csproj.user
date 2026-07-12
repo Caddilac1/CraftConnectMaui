@@ -3,7 +3,7 @@
   <PropertyGroup>
     <ActiveDebugFramework>net9.0-android</ActiveDebugFramework>
     <IsFirstTimeProjectOpen>False</IsFirstTimeProjectOpen>
-    <ActiveDebugProfile>Android Emulator</ActiveDebugProfile>
+    <ActiveDebugProfile>Samsung SM-A075F (Android 16.0 - API 36)</ActiveDebugProfile>
     <SelectedPlatformGroup>PhysicalDevice</SelectedPlatformGroup>
     <DefaultDevice>pixel_7_-_api_36</DefaultDevice>
     <SelectedDevice>Samsung SM-A075F</SelectedDevice>
