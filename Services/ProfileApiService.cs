@@ -445,28 +445,27 @@ namespace CraftConnect_Mobile_App.Services
         // Short-lived in-memory cache. Avoids redundant network calls for read-heavy
         // trust-score data that the backend itself caches for 15–60 s.
         private readonly IMemoryCache _cache;
-        private readonly MemoryCacheEntryOptions _shortTtl = new() { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(15) };
-        private readonly MemoryCacheEntryOptions _mediumTtl = new() { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30) };
-        private readonly MemoryCacheEntryOptions _longTtl = new() { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60) };
+        private readonly MemoryCacheEntryOptions _shortTtl = new() { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(15), Size = 1 };
+        private readonly MemoryCacheEntryOptions _mediumTtl = new() { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30), Size = 1 };
+        private readonly MemoryCacheEntryOptions _longTtl = new() { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60), Size = 1 };
 
         private readonly HttpClient _httpClient;
 
         // ── Constructor ──────────────────────────────────────────────────
 
-        public ProfileApiService(ApiConfig config, IMemoryCache cache = null)
+        public ProfileApiService(ApiConfig config, HttpMessageHandler devHandler = null, IMemoryCache cache = null)
         {
             if (string.IsNullOrWhiteSpace(config?.BaseUrl))
                 throw new ArgumentException("BaseUrl must not be empty.", nameof(config));
 
             _cache = cache ?? new MemoryCache(new MemoryCacheOptions { SizeLimit = 512 });
 
-            _httpClient = new HttpClient(_sharedHandler, disposeHandler: false)
-            {
-                BaseAddress = new Uri(config.BaseUrl.TrimEnd('/')),
-                Timeout = TimeSpan.FromSeconds(20)
-            };
+            _httpClient = devHandler != null
+                ? new HttpClient(devHandler)
+                : new HttpClient(_sharedHandler, disposeHandler: false);
 
-            // Prefer HTTP/2, accept Brotli/GZip for reduced payload size
+            _httpClient.BaseAddress = new Uri(config.BaseUrl.TrimEnd('/'));
+            _httpClient.Timeout = TimeSpan.FromSeconds(20);
             _httpClient.DefaultRequestHeaders.AcceptEncoding.ParseAdd("br, gzip");
             _httpClient.DefaultRequestHeaders.Accept.ParseAdd("application/json");
 

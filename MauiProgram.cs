@@ -95,7 +95,18 @@ namespace CraftConnect_Mobile_App
             builder.Services.AddSingleton<ArtisanProposalService>();
 
             builder.Services.AddSingleton<IProfileApiService>(sp =>
-                new ProfileApiService(sp.GetRequiredService<ApiConfig>()));
+            {
+#if ANDROID && DEBUG
+                var handler = new Xamarin.Android.Net.AndroidMessageHandler
+                {
+                    ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+                };
+                var config = sp.GetRequiredService<ApiConfig>();
+                return new ProfileApiService(config, devHandler: handler);
+#else
+    return new ProfileApiService(sp.GetRequiredService<ApiConfig>());
+#endif
+            });
 
             builder.Services.AddSingleton<IStoreService, StoreService>(sp =>
                 new StoreService(sp.GetRequiredService<ApiConfig>()));
